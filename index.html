@@ -4052,8 +4052,7 @@
             
             // Cargar configuración
             loadContactConfig();
-            syncRateFromBCV && syncRateFromBCV(); // Fuente única: bcvRateHistory
-            loadManualRates();
+            loadManualRates(); // syncRateFromBCV se llama dentro de loadManualRates
             loadManualExchangeRates();
             
             // Establecer fechas por defecto
@@ -8626,32 +8625,6 @@
                     datalist.appendChild(option);
                 });
             }
-            // Compatibilidad: si existe el select antiguo también poblarlo
-            const select = document.getElementById('customer-name-select');
-            if (select) {
-                select.innerHTML = '<option value="">Seleccionar cliente</option>';
-                const sortedClients = [...clientsData].sort((a, b) => a.name.localeCompare(b.name, 'es'));
-                sortedClients.forEach(client => {
-                    const option = document.createElement('option');
-                    option.value = client.name;
-                    option.textContent = client.name;
-                    select.appendChild(option);
-                });
-            }
-            
-            // Agregar opción para agregar nuevo cliente
-            const newOption = document.createElement('option');
-            newOption.value = 'new';
-            newOption.textContent = '+ Agregar nuevo cliente';
-            select.appendChild(newOption);
-            
-            // Manejar selección de nuevo cliente
-            select.addEventListener('change', function() {
-                if (this.value === 'new') {
-                    showAddClientModal();
-                    this.value = '';
-                }
-            });
         }
 
         function addToSale(productKey) {
