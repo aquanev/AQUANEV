@@ -2,8 +2,8 @@
   "name": "AQUANEV Sistema Profesional",
   "short_name": "AQUANEV",
   "description": "Sistema de Gestión Comercial, Inventario y Créditos — Agua Nueva Venezuela",
-  "start_url": "./index.html?pwa=1",
-  "scope": "./",
+  "start_url": "/AQUANEV/index.html?pwa=1",
+  "scope": "/AQUANEV/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#667eea",
@@ -13,13 +13,13 @@
   "categories": ["business", "productivity", "finance"],
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "/AQUANEV/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./icon-512.png",
+      "src": "/AQUANEV/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -30,22 +30,22 @@
       "name": "Nueva Venta",
       "short_name": "Venta",
       "description": "Registrar una venta rápida",
-      "url": "./index.html?tab=ventas&pwa=1",
-      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+      "url": "/AQUANEV/index.html?tab=ventas&pwa=1",
+      "icons": [{ "src": "/AQUANEV/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Ver Créditos",
       "short_name": "Créditos",
       "description": "Ver créditos pendientes",
-      "url": "./index.html?tab=creditos&pwa=1",
-      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+      "url": "/AQUANEV/index.html?tab=creditos&pwa=1",
+      "icons": [{ "src": "/AQUANEV/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "Panel principal de métricas",
-      "url": "./index.html?tab=dashboard&pwa=1",
-      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+      "url": "/AQUANEV/index.html?tab=dashboard&pwa=1",
+      "icons": [{ "src": "/AQUANEV/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [],
