@@ -1081,10 +1081,13 @@
                 
                 <div class="form-group">
                     <label for="customer-name">Cliente</label>
-                    <select id="customer-name" required>
-                        <option value="">Seleccionar cliente</option>
+                    <input type="text" id="customer-name" list="customer-datalist" required
+                           placeholder="Escribe para buscar cliente..."
+                           autocomplete="off"
+                           style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:15px;box-sizing:border-box;">
+                    <datalist id="customer-datalist">
                         <!-- Los clientes se cargarán aquí -->
-                    </select>
+                    </datalist>
                 </div>
                 
                 <div class="form-group">
@@ -1270,8 +1273,9 @@
                 
                 <div class="form-group">
                     <label for="price-exchange-rate">Tasa de Cambio para Precios (BS por USD)</label>
-                    <input type="number" id="price-exchange-rate" step="0.01" min="0" value="38.50" inputmode="decimal">
-                    <small>Esta tasa se usa para convertir precios USD a BS en las ventas</small>
+                    <input type="number" id="price-exchange-rate" step="0.01" min="0" value="38.50" inputmode="decimal" readonly
+                           style="background:#f0f4ff;color:#4A5FC4;font-weight:700;">
+                    <small>✅ Se actualiza automáticamente desde el registro de Tasas BCV — no editar aquí</small>
                 </div>
                 
                 <button class="btn btn-secondary" onclick="saveSettings()">
@@ -1540,7 +1544,9 @@
                 
                 <div class="form-group">
                     <label for="manual-bcv-rate">Dólar BCV (BS)</label>
-                    <input type="number" id="manual-bcv-rate" step="0.01" value="38.50" inputmode="decimal">
+                    <input type="number" id="manual-bcv-rate" step="0.01" value="38.50" inputmode="decimal" readonly
+                           style="background:#f0f4ff;color:#4A5FC4;font-weight:700;">
+                    <small>✅ Se actualiza automáticamente desde el registro de Tasas BCV</small>
                 </div>
                 
                 <div class="form-group">
@@ -1792,12 +1798,10 @@
                         <label for="expense-category">Categoría *</label>
                         <select id="expense-category" required onchange="onExpenseCategoryChange()">
                             <option value="">Seleccione una categoría</option>
-                            <option value="Compras">🛒 Compras (actualiza inventario)</option>
                             <option value="Transporte">🚚 Transporte</option>
                             <option value="Suministros">🧴 Suministros</option>
                             <option value="Mantenimiento">🔧 Mantenimiento</option>
                             <option value="Personal">👤 Personal (Salarios/Sueldos)</option>
-                            <option value="Hielo">❄️ Hielo</option>
                             <option value="Crédito">🏦 Crédito (Pago de Cuota)</option>
                             <option value="Otros">📌 Otros</option>
                         </select>
@@ -2159,7 +2163,7 @@
             </div>
             
             <!-- Adelantos para Hielo -->
-            <div class="card">
+            <div class="card" style="display:none;">
                 <div class="card-header">
                     <div class="card-title">❄️ Registrar Adelanto para Hielo</div>
                 </div>
@@ -2194,7 +2198,7 @@
             </div>
             
             <!-- Lista de Adelantos de Hielo -->
-            <div class="card">
+            <div class="card" style="display:none;">
                 <div class="card-header">
                     <div class="card-title">📋 Adelantos de Hielo Activos</div>
                 </div>
@@ -4048,6 +4052,7 @@
             
             // Cargar configuración
             loadContactConfig();
+            syncRateFromBCV && syncRateFromBCV(); // Fuente única: bcvRateHistory
             loadManualRates();
             loadManualExchangeRates();
             
@@ -4970,10 +4975,13 @@
                 return;
             }
 
+            const mostrarTodasComp = container.dataset.showAll === '1';
+            const listaVis = mostrarTodasComp ? lista : lista.slice(0, 10);
+
             const pagoColor  = { pagado: '#4caf50', pendiente: '#f44336', parcial: '#ff9800' };
             const pagoLabel  = { pagado: '✅ Pagado', pendiente: '⏳ Pendiente', parcial: '⚡ Parcial' };
 
-            container.innerHTML = lista.map(compra => {
+            container.innerHTML = listaVis.map(compra => {
                 const itemsSummary = compra.items.map(i =>
                     `<span style="background:#f0f4ff; border-radius:4px; padding:2px 7px; font-size:11px; margin:2px;">${i.cantidad}× ${i.nombre}</span>`
                 ).join('');
@@ -5007,6 +5015,14 @@
                     </div>
                 </div>`;
             }).join('');
+            // Botón Ver todos compras
+            if (lista.length > 10) {
+                container.innerHTML += `<div style="text-align:center; padding:10px;">
+                    <button class="btn btn-secondary btn-small" style="width:100%"
+                        onclick="this.closest('#compras-historial-container, [id=compras-historial-container]') && (document.getElementById('compras-historial-container').dataset.showAll = document.getElementById('compras-historial-container').dataset.showAll === '1' ? '0' : '1') || (document.getElementById('compras-historial-container').dataset.showAll = document.getElementById('compras-historial-container').dataset.showAll === '1' ? '0' : '1'); filtrarCompras();">
+                        ${mostrarTodasComp ? '▲ Ver menos (últimas 10)' : '▼ Ver todas (' + lista.length + ' compras)'}
+                    </button></div>`;
+            }
         }
 
         // ---- Ver detalle ----
@@ -8199,23 +8215,35 @@
         }
 
         // ========== GESTIÓN DE TASAS MANUALES ==========
+        // ── Sincronizar tasa BCV desde bcvRateHistory (fuente única) ──────────
+        function syncRateFromBCV() {
+            const today = new Date().toISOString().split('T')[0];
+            const tasaHoy = getBCVRateForDate(today);
+            if (tasaHoy && tasaHoy > 0) {
+                appConfig.exchangeRates.bcv      = tasaHoy;
+                appConfig.exchangeRates.priceRate = tasaHoy;
+                priceExchangeRate                 = tasaHoy;
+                localStorage.setItem('appConfig', JSON.stringify(appConfig));
+            }
+            return tasaHoy || appConfig.exchangeRates.bcv;
+        }
+
         function loadManualRates() {
-            document.getElementById('manual-bcv-rate').value = appConfig.exchangeRates.bcv;
+            const tasa = syncRateFromBCV();
+            document.getElementById('manual-bcv-rate').value    = tasa.toFixed(2);
+            document.getElementById('price-exchange-rate').value = tasa.toFixed(2);
             document.getElementById('manual-binance-rate').value = appConfig.exchangeRates.binance;
-            document.getElementById('price-exchange-rate').value = appConfig.exchangeRates.priceRate;
-            document.getElementById('iva-percentage').value = ivaPercentage;
+            document.getElementById('iva-percentage').value      = ivaPercentage;
         }
 
         function saveManualRates() {
-            appConfig.exchangeRates.bcv = parseFloat(document.getElementById('manual-bcv-rate').value);
+            // Solo Binance e IVA son editables; BCV viene de bcvRateHistory
             appConfig.exchangeRates.binance = parseFloat(document.getElementById('manual-binance-rate').value);
-            appConfig.exchangeRates.priceRate = parseFloat(document.getElementById('price-exchange-rate').value);
             ivaPercentage = parseFloat(document.getElementById('iva-percentage').value);
+            syncRateFromBCV();
             
             localStorage.setItem('appConfig', JSON.stringify(appConfig));
             localStorage.setItem('ivaPercentage', ivaPercentage.toString());
-            
-            priceExchangeRate = appConfig.exchangeRates.priceRate;
             
             loadManualExchangeRates();
             loadCurrentPrices();
@@ -8230,8 +8258,9 @@
             document.getElementById('binance-rate').textContent = appConfig.exchangeRates.binance.toFixed(2) + ' BS';
             
             const now = new Date();
-            document.getElementById('bcv-last-update').textContent = formatShortDate(now.toISOString());
-            document.getElementById('binance-last-update').textContent = formatShortDate(now.toISOString());
+            const horaLegible = now.toLocaleTimeString('es-VE', {hour:'2-digit', minute:'2-digit'});
+            document.getElementById('bcv-last-update').textContent = horaLegible;
+            document.getElementById('binance-last-update').textContent = horaLegible;
         }
 
         function updateExchangeRates() {
@@ -8586,18 +8615,29 @@
         }
 
         function loadCustomerSelect() {
-            const select = document.getElementById('customer-name');
-            select.innerHTML = '<option value="">Seleccionar cliente</option>';
-            
-            // Ordenar alfabéticamente
-            const sortedClients = [...clientsData].sort((a, b) => a.name.localeCompare(b.name, 'es'));
-            
-            sortedClients.forEach(client => {
-                const option = document.createElement('option');
-                option.value = client.name;
-                option.textContent = client.name;
-                select.appendChild(option);
-            });
+            // Poblar datalist para búsqueda rápida en móvil
+            const datalist = document.getElementById('customer-datalist');
+            if (datalist) {
+                datalist.innerHTML = '';
+                const sortedClients = [...clientsData].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+                sortedClients.forEach(client => {
+                    const option = document.createElement('option');
+                    option.value = client.name;
+                    datalist.appendChild(option);
+                });
+            }
+            // Compatibilidad: si existe el select antiguo también poblarlo
+            const select = document.getElementById('customer-name-select');
+            if (select) {
+                select.innerHTML = '<option value="">Seleccionar cliente</option>';
+                const sortedClients = [...clientsData].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+                sortedClients.forEach(client => {
+                    const option = document.createElement('option');
+                    option.value = client.name;
+                    option.textContent = client.name;
+                    select.appendChild(option);
+                });
+            }
             
             // Agregar opción para agregar nuevo cliente
             const newOption = document.createElement('option');
@@ -9796,7 +9836,9 @@
                 return;
             }
             
-            filteredSales.forEach(sale => {
+            const mostrarTodas = tbody.dataset.showAll === '1';
+            const ventasVis = mostrarTodas ? filteredSales : filteredSales.slice(0, 10);
+            ventasVis.forEach(sale => {
                 const productsSummary = sale.items.map(item => 
                     `${item.quantity} ${item.name}`
                 ).join(', ');
@@ -9820,6 +9862,27 @@
                 `;
                 tbody.appendChild(row);
             });
+            // Botón "Ver todos / Ver menos"
+            if (filteredSales.length > 10) {
+                const trBtn = document.createElement('tr');
+                const tdBtn = document.createElement('td');
+                tdBtn.colSpan = 7;
+                tdBtn.style.textAlign = 'center';
+                tdBtn.style.padding = '10px';
+                const btnVer = document.createElement('button');
+                btnVer.className = 'btn btn-secondary btn-small';
+                btnVer.style.width = '100%';
+                btnVer.textContent = mostrarTodas
+                    ? `▲ Ver menos (mostrar últimas 10 de ${filteredSales.length})`
+                    : `▼ Ver todos (${filteredSales.length} ventas)`;
+                btnVer.onclick = () => {
+                    tbody.dataset.showAll = mostrarTodas ? '0' : '1';
+                    loadSalesHistory();
+                };
+                tdBtn.appendChild(btnVer);
+                trBtn.appendChild(tdBtn);
+                tbody.appendChild(trBtn);
+            }
         }
         
         function filterSalesHistory() {
@@ -10302,7 +10365,9 @@
                 return;
             }
             
-            expensesData.forEach(expense => {
+            const mostrarTodosG = tbody.dataset.showAll === '1';
+            const expVis = mostrarTodosG ? expensesData : expensesData.slice(0, 10);
+            expVis.forEach(expense => {
                 const totalUSD    = expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0);
                 const invoiceInfo = expense.invoiceNumber ? `<br><small>Fact. ${expense.invoiceNumber}</small>` : '';
                 const ivaInfo     = (expense.iva && expense.iva > 0) ? ` | IVA: ${expense.iva}%` : ' | Sin IVA';
@@ -10352,6 +10417,27 @@
                 `;
                 tbody.appendChild(row);
             });
+            // Botón "Ver todos / Ver menos" gastos
+            if (expensesData.length > 10) {
+                const trBtn = document.createElement('tr');
+                const tdBtn = document.createElement('td');
+                tdBtn.colSpan = 6;
+                tdBtn.style.textAlign = 'center';
+                tdBtn.style.padding = '10px';
+                const btnVer = document.createElement('button');
+                btnVer.className = 'btn btn-secondary btn-small';
+                btnVer.style.width = '100%';
+                btnVer.textContent = mostrarTodosG
+                    ? `▲ Ver menos (mostrar últimos 10 de ${expensesData.length})`
+                    : `▼ Ver todos (${expensesData.length} gastos)`;
+                btnVer.onclick = () => {
+                    tbody.dataset.showAll = mostrarTodosG ? '0' : '1';
+                    loadExpensesHistory();
+                };
+                tdBtn.appendChild(btnVer);
+                trBtn.appendChild(tdBtn);
+                tbody.appendChild(trBtn);
+            }
         }
         
         function filterExpenses() {
@@ -10551,6 +10637,8 @@
             let vencidos = 0, porVencer = 0;
             
             let rendered = 0;
+            const mostrarTodosCr = tbody.dataset.showAll === '1';
+            const limCr = mostrarTodosCr ? sortedCredits.length : 10;
             sortedCredits.forEach(credit => {
                 // Asegurar propiedades
                 if (!credit.paid) credit.paid = 0;
@@ -10625,12 +10713,35 @@
                         }
                     </td>
                 `;
+                if (rendered >= limCr) return;
                 tbody.appendChild(row);
                 rendered++;
             });
             
             if (rendered === 0) {
                 tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#999; padding:20px;">No hay créditos que coincidan con el filtro</td></tr>`;
+            }
+            // Botón Ver todos créditos
+            const totalCr = sortedCredits.length;
+            if (totalCr > 10) {
+                const trBtn = document.createElement('tr');
+                const tdBtn = document.createElement('td');
+                tdBtn.colSpan = 8;
+                tdBtn.style.textAlign = 'center';
+                tdBtn.style.padding = '8px';
+                const btnVer = document.createElement('button');
+                btnVer.className = 'btn btn-secondary btn-small';
+                btnVer.style.width = '100%';
+                btnVer.textContent = mostrarTodosCr
+                    ? '▲ Ver menos (últimos 10)'
+                    : '▼ Ver todos (' + totalCr + ' créditos)';
+                btnVer.onclick = () => {
+                    tbody.dataset.showAll = mostrarTodosCr ? '0' : '1';
+                    loadPendingCredits && loadPendingCredits();
+                };
+                tdBtn.appendChild(btnVer);
+                trBtn.appendChild(tdBtn);
+                tbody.appendChild(trBtn);
             }
             
             // B1: Barra de alertas
@@ -13875,13 +13986,36 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 return;
             }
             
-            bcvRateHistory.forEach(function(entry) {
+            const mostrarTodasBCV = tbody.dataset.showAll === '1';
+            const bcvVis = mostrarTodasBCV ? bcvRateHistory : bcvRateHistory.slice(0, 10);
+            bcvVis.forEach(function(entry) {
                 const row = document.createElement('tr');
                 row.innerHTML = '<td>' + formatDate(entry.date) + '</td>' +
                     '<td><strong style="color: #1976d2;">' + entry.rate.toFixed(2) + ' BS/USD</strong></td>' +
                     '<td><button class="btn btn-danger btn-small" onclick="eliminarTasaBCV(\'' + entry.date + '\')" title="Eliminar"><i class="fas fa-trash"></i> Eliminar</button></td>';
                 tbody.appendChild(row);
             });
+            // Botón Ver todos tasas BCV
+            if (bcvRateHistory.length > 10) {
+                const trBtn = document.createElement('tr');
+                const tdBtn = document.createElement('td');
+                tdBtn.colSpan = 3;
+                tdBtn.style.textAlign = 'center';
+                tdBtn.style.padding = '8px';
+                const btnVer = document.createElement('button');
+                btnVer.className = 'btn btn-secondary btn-small';
+                btnVer.style.width = '100%';
+                btnVer.textContent = mostrarTodasBCV
+                    ? '▲ Ver menos (últimas 10)'
+                    : '▼ Ver todas (' + bcvRateHistory.length + ' tasas)';
+                btnVer.onclick = function() {
+                    tbody.dataset.showAll = mostrarTodasBCV ? '0' : '1';
+                    cargarHistorialTasasBCV();
+                };
+                tdBtn.appendChild(btnVer);
+                trBtn.appendChild(tdBtn);
+                tbody.appendChild(trBtn);
+            }
         }
         
         function eliminarTasaBCV(fecha) {
