@@ -3938,12 +3938,21 @@
         let editUserId  = null;
 
         // ========== B8: DATOS DE SINCRONIZACIÓN ==========
+        // URL del Apps Script — preconfigurada para todos los dispositivos
+        const APPS_SCRIPT_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbyX7FjArSkiGabghylTRsRaNtIrReILMFzJOSVwN4hRlDTFU2rtscifoKlWJw2sdTk4hA/exec';
+
         let syncConfig = JSON.parse(localStorage.getItem('syncConfig')) || {
-            appsScriptUrl: '',
-            frecuenciaMin: 5,
+            appsScriptUrl: APPS_SCRIPT_URL_DEFAULT,
+            frecuenciaMin: 15,
             modo: 'bidireccional',
-            activa: false
+            activa: true
         };
+        // Si ya existe en localStorage pero sin URL, inyectar la URL por defecto
+        if (!syncConfig.appsScriptUrl) {
+            syncConfig.appsScriptUrl = APPS_SCRIPT_URL_DEFAULT;
+            syncConfig.activa = true;
+            localStorage.setItem('syncConfig', JSON.stringify(syncConfig));
+        }
         let syncQueue    = JSON.parse(localStorage.getItem('syncQueue'))    || [];   // [{id,tabla,accion,datos,timestamp,intentos}]
         let syncLog      = JSON.parse(localStorage.getItem('syncLog'))      || [];   // [{timestamp,usuario,accion,tabla,enviados,recibidos,errores,msg}]
         let syncTimer    = null;   // setInterval handle
