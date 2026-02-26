@@ -986,6 +986,7 @@
             <div class="tab" data-tab="adelantos">💰 Adelantos</div>
             <div class="tab" data-tab="expenses">Gastos</div>
             <div class="tab" data-tab="compras">🛒 Compras</div>
+            <div class="tab" data-tab="proveedores">🏭 Proveedores</div>
             <div class="tab" data-tab="consignaciones">📋 Consignaciones</div>
             <div class="tab" data-tab="prestamos">🏦 Préstamos</div>
             <div class="tab" data-tab="ecuador">Vista Ecuador</div>
@@ -1887,6 +1888,11 @@
                     <!-- ===== CAMPOS NORMALES (ocultos en Crédito) ===== -->
                     <div id="expense-campos-normales">
                         <div class="form-group">
+                            <label for="expense-supplier">Proveedor</label>
+                            <input type="text" id="expense-supplier" placeholder="Nombre del proveedor" list="gastos-proveedores-list" oninput="onGastosProveedorChange()">
+                            <datalist id="gastos-proveedores-list"></datalist>
+                        </div>
+                        <div class="form-group">
                             <label for="expense-description">Descripción *</label>
                             <input type="text" id="expense-description" placeholder="Descripción del gasto">
                         </div>
@@ -2073,6 +2079,141 @@
             </div>
         </div>
         
+
+        <!-- Proveedores Tab -->
+        <div id="proveedores" class="tab-content">
+
+            <!-- Dashboard resumen -->
+            <div id="prov-dashboard" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-bottom:14px;"></div>
+
+            <!-- Botón nuevo proveedor -->
+            <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+                <button class="btn btn-primary" onclick="abrirProvModal()">
+                    <i class="fas fa-plus"></i> Nuevo Proveedor
+                </button>
+            </div>
+
+            <!-- Buscador -->
+            <div class="card" style="margin-bottom:10px;">
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="prov-search" placeholder="🔍 Buscar proveedor..." oninput="filtrarProveedores()"
+                        style="flex:1; min-width:180px; padding:9px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px;">
+                    <select id="prov-filtro-tipo" onchange="filtrarProveedores()" style="padding:9px; border:1px solid #ddd; border-radius:8px;">
+                        <option value="todos">Todos</option>
+                        <option value="gastos">Gastos</option>
+                        <option value="compras">Compras</option>
+                        <option value="ambos">Ambos</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Lista de proveedores -->
+            <div id="prov-lista-container"></div>
+
+        </div>
+
+        <!-- Modal Proveedor -->
+        <div id="prov-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1500; justify-content:center; align-items:flex-start; overflow-y:auto; padding:16px 0;">
+            <div style="background:white; border-radius:12px; width:92%; max-width:500px; margin:auto; display:flex; flex-direction:column; max-height:calc(100vh - 32px);">
+                <div style="background:linear-gradient(135deg,#1565c0,#0d47a1); color:white; padding:14px 18px; display:flex; justify-content:space-between; align-items:center; border-radius:12px 12px 0 0; flex-shrink:0;">
+                    <h3 id="prov-modal-title" style="margin:0; font-size:16px;">🏭 Nuevo Proveedor</h3>
+                    <span onclick="cerrarProvModal()" style="cursor:pointer; font-size:26px; line-height:1;">&times;</span>
+                </div>
+                <div style="padding:16px; overflow-y:auto; flex:1;">
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-group" style="grid-column:1/-1;">
+                            <label>Nombre / Razón Social *</label>
+                            <input type="text" id="prov-nombre" placeholder="Empresa o persona natural">
+                        </div>
+                        <div class="form-group">
+                            <label>RIF / Cédula</label>
+                            <input type="text" id="prov-rif" placeholder="J-12345678-9">
+                        </div>
+                        <div class="form-group">
+                            <label>Teléfono</label>
+                            <input type="tel" id="prov-telefono" placeholder="0414-1234567" inputmode="tel">
+                        </div>
+                        <div class="form-group" style="grid-column:1/-1;">
+                            <label>Email</label>
+                            <input type="email" id="prov-email" placeholder="proveedor@empresa.com">
+                        </div>
+                        <div class="form-group" style="grid-column:1/-1;">
+                            <label>Dirección</label>
+                            <input type="text" id="prov-direccion" placeholder="Dirección física">
+                        </div>
+                        <div class="form-group" style="grid-column:1/-1;">
+                            <label>Persona de Contacto</label>
+                            <input type="text" id="prov-contacto" placeholder="Nombre del representante">
+                        </div>
+                    </div>
+
+                    <!-- Uso -->
+                    <div style="background:#f0f4ff; border-radius:10px; padding:12px; margin:10px 0; border:1px solid #c5cae9;">
+                        <div style="font-weight:700; color:#3949ab; margin-bottom:10px; font-size:13px;">📋 Tipo de Proveedor</div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:8px 14px; border:2px solid #3f51b5; border-radius:8px; background:white; font-size:13px;">
+                                <input type="checkbox" id="prov-tipo-gastos" style="width:auto;"> 💸 Gastos
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:8px 14px; border:2px solid #4caf50; border-radius:8px; background:white; font-size:13px;">
+                                <input type="checkbox" id="prov-tipo-compras" style="width:auto;"> 🛒 Compras
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Tipos de documento que maneja -->
+                    <div style="background:#f9f9f9; border-radius:10px; padding:12px; margin:10px 0; border:1px solid #e0e0e0;">
+                        <div style="font-weight:700; color:#333; margin-bottom:10px; font-size:13px;">📄 Documentos que Emite</div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 12px; border:1px solid #ddd; border-radius:20px; background:white; font-size:13px;">
+                                <input type="checkbox" id="prov-doc-factura" style="width:auto;"> 🧾 Factura Fiscal
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 12px; border:1px solid #ddd; border-radius:20px; background:white; font-size:13px;">
+                                <input type="checkbox" id="prov-doc-nota-entrega" style="width:auto;"> 📦 Nota de Entrega
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 12px; border:1px solid #ddd; border-radius:20px; background:white; font-size:13px;">
+                                <input type="checkbox" id="prov-doc-recibo" style="width:auto;"> 🖊️ Recibo
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 12px; border:1px solid #ddd; border-radius:20px; background:white; font-size:13px;">
+                                <input type="checkbox" id="prov-doc-orden" style="width:auto;"> 📋 Orden de Compra
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 12px; border:1px solid #ddd; border-radius:20px; background:white; font-size:13px;">
+                                <input type="checkbox" id="prov-doc-sin-doc" style="width:auto;"> ❌ Sin Documento
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Condiciones comerciales -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px;">
+                        <div class="form-group">
+                            <label>Días de Crédito</label>
+                            <input type="number" id="prov-dias-credito" min="0" value="0" placeholder="0 = Contado" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label>Moneda Preferida</label>
+                            <select id="prov-moneda">
+                                <option value="USD">USD</option>
+                                <option value="BS">Bolívares</option>
+                                <option value="Ambas">Ambas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notas / Observaciones</label>
+                        <textarea id="prov-notas" rows="2" placeholder="Condiciones especiales, horarios, etc." style="width:100%; padding:8px; border:1px solid #ddd; border-radius:8px; font-size:14px; resize:vertical; box-sizing:border-box;"></textarea>
+                    </div>
+
+                </div>
+                <div style="padding:12px 16px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e0e0e0; flex-shrink:0; background:white; border-radius:0 0 12px 12px;">
+                    <button class="btn btn-secondary" onclick="cerrarProvModal()">Cancelar</button>
+                    <button class="btn btn-primary" onclick="guardarProveedor()" style="background:#1565c0;">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Créditos Tab -->
         <div id="credits" class="tab-content">
             <div class="card">
@@ -2846,7 +2987,7 @@
                         </div>
                         <div class="form-group">
                             <label>Proveedor *</label>
-                            <input type="text" id="c-proveedor" placeholder="Nombre del proveedor" list="compras-proveedores-list">
+                            <input type="text" id="c-proveedor" placeholder="Nombre del proveedor" list="compras-proveedores-list" oninput="onComprasProveedorSelChange()">
                             <datalist id="compras-proveedores-list"></datalist>
                         </div>
                     </div>
@@ -3189,13 +3330,13 @@
     </div>
     
     <!-- ========== MODAL USUARIO B7 ========== -->
-    <div id="user-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1500; justify-content:center; align-items:center;">
-        <div style="background:white; border-radius:12px; width:90%; max-width:460px; overflow:hidden;">
-            <div style="background:linear-gradient(135deg,#455a64,#263238); color:white; padding:18px 22px; display:flex; justify-content:space-between; align-items:center;">
-                <h3 id="user-modal-title" style="margin:0;">👤 Nuevo Usuario</h3>
-                <span onclick="cerrarUserModal()" style="cursor:pointer; font-size:26px;">&times;</span>
+    <div id="user-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1500; justify-content:center; align-items:flex-start; overflow-y:auto; padding:16px 0;">
+        <div style="background:white; border-radius:12px; width:90%; max-width:460px; margin:auto; display:flex; flex-direction:column; max-height:calc(100vh - 32px);">
+            <div style="background:linear-gradient(135deg,#455a64,#263238); color:white; padding:14px 18px; display:flex; justify-content:space-between; align-items:center; border-radius:12px 12px 0 0; flex-shrink:0;">
+                <h3 id="user-modal-title" style="margin:0; font-size:16px;">👤 Nuevo Usuario</h3>
+                <span onclick="cerrarUserModal()" style="cursor:pointer; font-size:26px; line-height:1;">&times;</span>
             </div>
-            <div style="padding:20px;">
+            <div style="padding:16px; overflow-y:auto; flex:1;">
                 <div class="form-group">
                     <label>Nombre *</label>
                     <input type="text" id="user-nombre" placeholder="Nombre completo">
@@ -3228,13 +3369,15 @@
                     <label>Cargo</label>
                     <input type="text" id="user-cargo" placeholder="Vendedor, Despachador...">
                 </div>
-                <div class="form-group">
-                    <label>PIN de acceso * <small style="color:#888;">(mínimo 4 dígitos)</small></label>
-                    <input type="password" id="user-pin" maxlength="8" placeholder="••••" style="letter-spacing:3px; font-size:18px;" autocomplete="current-password" autocorrect="off" autocapitalize="off">
-                </div>
-                <div class="form-group">
-                    <label>Confirmar PIN *</label>
-                    <input type="password" id="user-pin2" maxlength="8" placeholder="••••" style="letter-spacing:3px; font-size:18px;" autocomplete="current-password" autocorrect="off" autocapitalize="off">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="form-group">
+                        <label>PIN * <small style="color:#888;">(min. 4)</small></label>
+                        <input type="password" id="user-pin" maxlength="8" placeholder="••••" style="letter-spacing:3px; font-size:16px;" autocomplete="current-password" autocorrect="off" autocapitalize="off">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmar PIN *</label>
+                        <input type="password" id="user-pin2" maxlength="8" placeholder="••••" style="letter-spacing:3px; font-size:16px;" autocomplete="current-password" autocorrect="off" autocapitalize="off">
+                    </div>
                 </div>
                 <!-- 2FA -->
                 <div style="background:#f0f4ff; border-radius:10px; padding:14px; margin-top:8px; border:1px solid #c5cae9;">
@@ -3260,7 +3403,7 @@
                 </div>
                 <div id="user-permisos-info" style="background:#f8f9fa; border-radius:8px; padding:10px; font-size:12px; color:#555; margin-top:8px;"></div>
             </div>
-            <div style="padding:0 20px 20px; display:flex; justify-content:flex-end; gap:10px;">
+            <div style="padding:12px 16px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e0e0e0; flex-shrink:0; background:white; border-radius:0 0 12px 12px;">
                 <button class="btn btn-secondary" onclick="cerrarUserModal()">Cancelar</button>
                 <button class="btn btn-primary" onclick="guardarUsuario()" style="background:#263238;">
                     <i class="fas fa-save"></i> Guardar
@@ -4013,6 +4156,10 @@
             syncConfig.activa = true;
             localStorage.setItem('syncConfig', JSON.stringify(syncConfig));
         }
+        // ========== PROVEEDORES ==========
+        let proveedoresData = JSON.parse(localStorage.getItem('proveedoresData')) || [];
+        function saveProveedores() { localStorage.setItem('proveedoresData', JSON.stringify(proveedoresData)); }
+
         let syncQueue    = JSON.parse(localStorage.getItem('syncQueue'))    || [];   // [{id,tabla,accion,datos,timestamp,intentos}]
         let syncLog      = JSON.parse(localStorage.getItem('syncLog'))      || [];   // [{timestamp,usuario,accion,tabla,enviados,recibidos,errores,msg}]
         let syncTimer    = null;   // setInterval handle
@@ -4219,6 +4366,7 @@
             
             // Configurar navegación y formularios
             setupTabs();
+            actualizarDatalistProveedores();
             setupForms();
             setupClientSearch();
             
@@ -8489,6 +8637,13 @@
                         loadProductsList();
                     } else if (tabId === 'ecuador') {
                         loadEcuadorView();
+                    } else if (tabId === 'proveedores') {
+                        loadProveedoresList();
+                        actualizarDatalistProveedores();
+                    } else if (tabId === 'expenses') {
+                        actualizarDatalistProveedores();
+                    } else if (tabId === 'compras') {
+                        actualizarDatalistProveedores();
                     }
                 });
             });
@@ -10582,6 +10737,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     document.querySelectorAll('input[name="credito-tipo-pago"]').forEach(r => r.checked = false);
                     document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
                     document.getElementById('expense-category').value = '';
+                    if(document.getElementById('expense-supplier')) document.getElementById('expense-supplier').value = '';
                     onExpenseCategoryChange();
                     loadPrestamosDashboard(); loadPrestamosList();
                     loadEcuadorView(); loadExpensesHistory(); loadDashboard();
@@ -10608,6 +10764,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 
                 const expense = {
                     id: Date.now(), date: fecha,
+                    supplier:      (document.getElementById('expense-supplier')?.value || '').trim(),
                     description:   document.getElementById('expense-description').value,
                     invoiceNumber: document.getElementById('expense-invoice-number').value,
                     documentType,  amount, amountUSD: amount, iva, category,
@@ -10795,7 +10952,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${formatDate(expense.date)}</td>
-                    <td><strong>${expense.description}</strong>${invoiceInfo}${extraDetail}</td>
+                    <td><strong>${expense.description}</strong>${expense.supplier ? '<br><small style="color:#888;">🏭 '+expense.supplier+'</small>' : ''}${invoiceInfo}${extraDetail}</td>
                     <td>${categoryBadge}</td>
                     <td><strong>$${totalUSD.toFixed(2)} USD</strong>${(expense.iva > 0) ? `<br><small>IVA ${expense.iva}%</small>` : '<br><small style="color:#9e9e9e;">Sin IVA</small>'}</td>
                     <td><small>${expense.documentType || 'N/A'}</small></td>
@@ -11650,44 +11807,75 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const expense = expensesData.find(e => e.id === id);
             if (!expense) return;
 
-            let confirmMsg = '¿Está seguro de que desea eliminar este gasto?';
-            if (expense.category === 'Compras' && expense.comprasItems && expense.comprasItems.length > 0) {
-                confirmMsg = '⚠️ Este gasto es una Compra vinculada al inventario.\n\n¿Desea eliminar el gasto y REVERTIR el stock actualizado?';
+            let confirmMsg = '¿Eliminar este gasto?';
+
+            // Mensaje especial para gastos vinculados
+            if (expense.category === 'Compras' && expense.comprasItems?.length > 0) {
+                confirmMsg = '⚠️ Este gasto es una Compra vinculada al inventario.\n\n¿Eliminar el gasto y REVERTIR el stock?';
+            } else if (expense.category === 'Crédito' && expense.creditoRef) {
+                const ref = expense.creditoRef;
+                confirmMsg = `⚠️ Este gasto es un pago de cuota de préstamo.\n\nCuota #${ref.nroCuota} - $${ref.montoPagadoUSD?.toFixed(2)} USD\n\n¿Eliminar el gasto y REVERTIR el abono en la tabla de amortización?`;
             }
 
-            if (confirm(confirmMsg)) {
-                // Revertir inventario si era una Compra
-                if (expense.category === 'Compras' && expense.comprasItems && expense.comprasItems.length > 0) {
-                    expense.comprasItems.forEach(item => {
-                        const idx = inventoryData.findIndex(i => i.productoKey === item.productoKey);
-                        if (idx === -1) return;
-                        const inv      = inventoryData[idx];
-                        const stockAnt = inv.stockActual;
-                        const nuevoStock = Math.max(0, stockAnt - item.cantidad);
-                        inv.stockActual   = nuevoStock;
-                        inv.totalCompras  = Math.max(0, (inv.totalCompras || 0) - item.cantidad);
-                        inv.diasSinMovimiento = 0;
-                        const est = calcularEstadoInventario(inv);
-                        inv.estado         = est.estado;
-                        inv.requiereAlerta = est.estado !== 'normal';
-                        inv.modificadoEn   = new Date().toISOString();
-                        registrarMovimiento(
-                            item.productoKey, 'ajuste', item.cantidad,
-                            stockAnt, nuevoStock,
-                            `Eliminación Gasto #${expense.id}`
-                        );
-                    });
-                    saveInventory();
-                    loadInventoryList();
-                    loadMovimientosHistorial();
+            if (!confirm(confirmMsg)) return;
+
+            // Revertir inventario si era Compra
+            if (expense.category === 'Compras' && expense.comprasItems?.length > 0) {
+                expense.comprasItems.forEach(item => {
+                    const idx = inventoryData.findIndex(i => i.productoKey === item.productoKey);
+                    if (idx === -1) return;
+                    const inv        = inventoryData[idx];
+                    const stockAnt   = inv.stockActual;
+                    const nuevoStock = Math.max(0, stockAnt - item.cantidad);
+                    inv.stockActual       = nuevoStock;
+                    inv.totalCompras      = Math.max(0, (inv.totalCompras || 0) - item.cantidad);
+                    inv.diasSinMovimiento = 0;
+                    const est             = calcularEstadoInventario(inv);
+                    inv.estado            = est.estado;
+                    inv.requiereAlerta    = est.estado !== 'normal';
+                    inv.modificadoEn      = new Date().toISOString();
+                    registrarMovimiento(item.productoKey, 'ajuste', item.cantidad, stockAnt, nuevoStock, `Eliminación Gasto #${expense.id}`);
+                });
+                saveInventory();
+                loadInventoryList();
+                loadMovimientosHistorial();
+            }
+
+            // Revertir pago de cuota si era Crédito
+            if (expense.category === 'Crédito' && expense.creditoRef) {
+                const ref   = expense.creditoRef;
+                const prest = prestamosData.find(p => p.id === ref.prestId);
+                if (prest) {
+                    const cuota = prest.amortizacion.find(c => c.numero === ref.nroCuota);
+                    if (cuota) {
+                        const montoRevertir = parseFloat(ref.montoPagadoUSD || 0);
+                        // Restar el monto pagado
+                        cuota.montoPagadoUSD    = parseFloat(Math.max(0, (cuota.montoPagadoUSD || 0) - montoRevertir).toFixed(2));
+                        cuota.saldoPendienteUSD = parseFloat((cuota.cuotaUSD - cuota.montoPagadoUSD).toFixed(2));
+                        // Restaurar estado correcto
+                        if (cuota.montoPagadoUSD <= 0) {
+                            cuota.estado            = 'pendiente';
+                            cuota.montoPagadoUSD    = 0;
+                            cuota.saldoPendienteUSD = cuota.cuotaUSD;
+                            cuota.fechaPago         = null;
+                            cuota.pagos             = (cuota.pagos || []).filter(p => p.fecha !== expense.date || Math.abs(p.monto - montoRevertir) > 0.01);
+                        } else {
+                            cuota.estado = 'parcial';
+                            cuota.pagos  = (cuota.pagos || []).filter(p => p.fecha !== expense.date || Math.abs(p.monto - montoRevertir) > 0.01);
+                        }
+                        recalcularEstadoPrestamo(prest);
+                        savePrestamos();
+                        loadPrestamosDashboard && loadPrestamosDashboard();
+                        loadPrestamosList && loadPrestamosList();
+                    }
                 }
-
-                expensesData = expensesData.filter(e => e.id !== id);
-                localStorage.setItem('expensesData', JSON.stringify(expensesData));
-                loadExpensesHistory();
-                loadDashboard();
-                loadEcuadorView();
             }
+
+            expensesData = expensesData.filter(e => e.id !== id);
+            localStorage.setItem('expensesData', JSON.stringify(expensesData));
+            loadExpensesHistory();
+            loadDashboard();
+            loadEcuadorView();
         }
         
         function deleteOrder(id) {
@@ -14467,6 +14655,228 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             URL.revokeObjectURL(url);
             
             alert('Respaldo descargado correctamente');
+        }
+
+        // ========== MÓDULO PROVEEDORES ==========
+
+        let editProvId = null;
+
+        function abrirProvModal(provId = null) {
+            editProvId = provId;
+            const fields = ['prov-nombre','prov-rif','prov-telefono','prov-email',
+                            'prov-direccion','prov-contacto','prov-notas'];
+
+            if (provId) {
+                const p = proveedoresData.find(x => x.id === provId);
+                if (!p) return;
+                document.getElementById('prov-modal-title').textContent = 'Editar Proveedor';
+                document.getElementById('prov-nombre').value    = p.nombre    || '';
+                document.getElementById('prov-rif').value       = p.rif       || '';
+                document.getElementById('prov-telefono').value  = p.telefono  || '';
+                document.getElementById('prov-email').value     = p.email     || '';
+                document.getElementById('prov-direccion').value = p.direccion || '';
+                document.getElementById('prov-contacto').value  = p.contacto  || '';
+                document.getElementById('prov-notas').value     = p.notas     || '';
+                document.getElementById('prov-dias-credito').value = p.diasCredito || 0;
+                document.getElementById('prov-moneda').value    = p.moneda    || 'USD';
+                document.getElementById('prov-tipo-gastos').checked        = p.tipos?.includes('gastos')         || false;
+                document.getElementById('prov-tipo-compras').checked       = p.tipos?.includes('compras')        || false;
+                document.getElementById('prov-doc-factura').checked        = p.docs?.includes('Factura')         || false;
+                document.getElementById('prov-doc-nota-entrega').checked   = p.docs?.includes('Nota de Entrega') || false;
+                document.getElementById('prov-doc-recibo').checked         = p.docs?.includes('Recibo')          || false;
+                document.getElementById('prov-doc-orden').checked          = p.docs?.includes('Orden de Compra') || false;
+                document.getElementById('prov-doc-sin-doc').checked        = p.docs?.includes('Sin Documento')   || false;
+            } else {
+                document.getElementById('prov-modal-title').textContent = 'Nuevo Proveedor';
+                ['prov-nombre','prov-rif','prov-telefono','prov-email','prov-direccion','prov-contacto','prov-notas'].forEach(id => document.getElementById(id).value = '');
+                ['prov-tipo-gastos','prov-tipo-compras','prov-doc-factura','prov-doc-nota-entrega','prov-doc-recibo','prov-doc-orden','prov-doc-sin-doc'].forEach(id => document.getElementById(id).checked = false);
+                document.getElementById('prov-dias-credito').value = 0;
+                document.getElementById('prov-moneda').value = 'USD';
+            }
+            document.getElementById('prov-modal').style.display = 'flex';
+        }
+
+        function cerrarProvModal() {
+            document.getElementById('prov-modal').style.display = 'none';
+            editProvId = null;
+        }
+
+        function guardarProveedor() {
+            const nombre = document.getElementById('prov-nombre').value.trim();
+            if (!nombre) { alert('Ingresa el nombre del proveedor'); return; }
+
+            const tipos = [];
+            if (document.getElementById('prov-tipo-gastos').checked)  tipos.push('gastos');
+            if (document.getElementById('prov-tipo-compras').checked) tipos.push('compras');
+            if (tipos.length === 0) { alert('Selecciona al menos un tipo: Gastos o Compras'); return; }
+
+            const docs = [];
+            if (document.getElementById('prov-doc-factura').checked)        docs.push('Factura');
+            if (document.getElementById('prov-doc-nota-entrega').checked)   docs.push('Nota de Entrega');
+            if (document.getElementById('prov-doc-recibo').checked)         docs.push('Recibo');
+            if (document.getElementById('prov-doc-orden').checked)          docs.push('Orden de Compra');
+            if (document.getElementById('prov-doc-sin-doc').checked)        docs.push('Sin Documento');
+
+            const data = {
+                nombre,
+                rif:         document.getElementById('prov-rif').value.trim(),
+                telefono:    document.getElementById('prov-telefono').value.trim(),
+                email:       document.getElementById('prov-email').value.trim(),
+                direccion:   document.getElementById('prov-direccion').value.trim(),
+                contacto:    document.getElementById('prov-contacto').value.trim(),
+                notas:       document.getElementById('prov-notas').value.trim(),
+                diasCredito: parseInt(document.getElementById('prov-dias-credito').value) || 0,
+                moneda:      document.getElementById('prov-moneda').value,
+                tipos, docs,
+                activo: true
+            };
+
+            if (editProvId) {
+                const idx = proveedoresData.findIndex(x => x.id === editProvId);
+                if (idx !== -1) proveedoresData[idx] = { ...proveedoresData[idx], ...data, modificadoEn: new Date().toISOString() };
+            } else {
+                proveedoresData.unshift({ id: 'prov-' + Date.now(), ...data, creadoEn: new Date().toISOString() });
+            }
+            saveProveedores();
+            cerrarProvModal();
+            loadProveedoresList();
+            actualizarDatalistProveedores();
+            alert('Proveedor guardado correctamente.');
+        }
+
+        function eliminarProveedor(id) {
+            const p = proveedoresData.find(x => x.id === id);
+            if (!p) return;
+            if (!confirm('Eliminar el proveedor "' + p.nombre + '"?')) return;
+            proveedoresData = proveedoresData.filter(x => x.id !== id);
+            saveProveedores();
+            loadProveedoresList();
+            actualizarDatalistProveedores();
+        }
+
+        function toggleProvActivo(id) {
+            const p = proveedoresData.find(x => x.id === id);
+            if (!p) return;
+            p.activo = !p.activo;
+            saveProveedores();
+            loadProveedoresList();
+        }
+
+        function filtrarProveedores() { loadProveedoresList(); }
+
+        function loadProveedoresList() {
+            const container = document.getElementById('prov-lista-container');
+            if (!container) return;
+
+            const busq = (document.getElementById('prov-search')?.value || '').toLowerCase();
+            const tipo = document.getElementById('prov-filtro-tipo')?.value || 'todos';
+
+            let lista = [...proveedoresData];
+            if (busq) lista = lista.filter(p => (p.nombre + ' ' + (p.rif||'') + ' ' + (p.contacto||'')).toLowerCase().includes(busq));
+            if (tipo !== 'todos') lista = lista.filter(p => tipo === 'ambos' ? (p.tipos?.length >= 2) : p.tipos?.includes(tipo));
+
+            // Dashboard stats
+            const dash = document.getElementById('prov-dashboard');
+            if (dash) {
+                const stats = [
+                    ['Total', proveedoresData.length, '#1565c0', '#e3f2fd'],
+                    ['Activos', proveedoresData.filter(p => p.activo).length, '#2e7d32', '#e8f5e9'],
+                    ['Gastos', proveedoresData.filter(p => p.tipos?.includes('gastos')).length, '#7b1fa2', '#f3e5f5'],
+                    ['Compras', proveedoresData.filter(p => p.tipos?.includes('compras')).length, '#e65100', '#fff3e0'],
+                ];
+                dash.innerHTML = stats.map(([label, val, color, bg]) =>
+                    `<div style="background:${bg}; border-radius:10px; padding:12px; text-align:center;">
+                        <div style="font-size:11px; color:#666; margin-bottom:4px;">${label.toUpperCase()}</div>
+                        <div style="font-size:22px; font-weight:700; color:${color};">${val}</div>
+                    </div>`
+                ).join('');
+            }
+
+            if (lista.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:40px; color:#999;">
+                    <div style="font-size:40px; margin-bottom:10px;">&#127981;</div>
+                    <p>No hay proveedores. Agrega el primero.</p>
+                    <button class="btn btn-primary" onclick="abrirProvModal()"><i class="fas fa-plus"></i> Agregar Proveedor</button></div>`;
+                return;
+            }
+
+            const tipoColors = { gastos:'#7b1fa2', compras:'#4caf50' };
+            const docIcons   = { 'Factura':'&#129534;', 'Nota de Entrega':'&#128230;', 'Recibo':'&#128394;', 'Orden de Compra':'&#128203;', 'Sin Documento':'&#10060;' };
+
+            container.innerHTML = lista.map(p => {
+                const tipoLabels = (p.tipos || []).map(t =>
+                    `<span style="background:${tipoColors[t]||'#999'}20; color:${tipoColors[t]||'#999'}; border-radius:12px; padding:2px 9px; font-size:11px; font-weight:600;">${t === 'gastos' ? 'Gastos' : 'Compras'}</span>`
+                ).join(' ');
+                const docLabels = (p.docs || []).map(d =>
+                    `<span style="background:#f5f5f5; border-radius:12px; padding:2px 8px; font-size:11px; color:#555;">${d}</span>`
+                ).join(' ');
+                return `<div style="border:1px solid #e0e0e0; border-left:4px solid ${p.activo ? '#1565c0' : '#bdbdbd'}; border-radius:10px; padding:14px 16px; margin-bottom:10px; background:${p.activo ? 'white' : '#fafafa'}; opacity:${p.activo ? 1 : 0.7};">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:15px; margin-bottom:4px;">${p.nombre}</div>
+                            <div style="font-size:12px; color:#888; margin-bottom:6px;">
+                                ${p.rif ? '<strong>' + p.rif + '</strong>' : ''}
+                                ${p.telefono ? ' &middot; ' + p.telefono : ''}
+                                ${p.email ? ' &middot; ' + p.email : ''}
+                                ${p.contacto ? ' &middot; ' + p.contacto : ''}
+                            </div>
+                            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${tipoLabels}</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:4px;">${docLabels}</div>
+                            ${p.diasCredito > 0 ? `<div style="font-size:11px; color:#555; margin-top:4px;">Credito: ${p.diasCredito} dias - ${p.moneda || 'USD'}</div>` : ''}
+                            ${p.notas ? `<div style="font-size:11px; color:#888; margin-top:4px; font-style:italic;">${p.notas}</div>` : ''}
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+                            <span style="background:${p.activo ? '#e8f5e9' : '#fce4ec'}; color:${p.activo ? '#2e7d32' : '#c62828'}; border-radius:20px; padding:2px 10px; font-size:11px;">${p.activo ? 'Activo' : 'Inactivo'}</span>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-small" style="background:#e3f2fd; color:#1565c0;" onclick="abrirProvModal('${p.id}')"><i class="fas fa-edit"></i></button>
+                                <button class="btn btn-small" style="background:${p.activo ? '#fff3e0' : '#e8f5e9'}; color:${p.activo ? '#e65100' : '#2e7d32'};" onclick="toggleProvActivo('${p.id}')">${p.activo ? 'Pausar' : 'Activar'}</button>
+                                <button class="btn btn-small btn-danger" onclick="eliminarProveedor('${p.id}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function actualizarDatalistProveedores() {
+            const activos = proveedoresData.filter(p => p.activo);
+            // Datalist para Compras (ya existe en HTML)
+            const dlCompras = document.getElementById('compras-proveedores-list');
+            if (dlCompras) {
+                dlCompras.innerHTML = activos
+                    .filter(p => p.tipos?.includes('compras'))
+                    .map(p => `<option value="${p.nombre}">`)
+                    .join('');
+                // Tambien incluir los que no estan en proveedoresData (historial antiguo)
+                const antiguo = [...new Set(comprasData.map(c => c.proveedor).filter(Boolean))];
+                antiguo.forEach(nombre => {
+                    if (!activos.find(p => p.nombre === nombre)) {
+                        dlCompras.innerHTML += `<option value="${nombre}">`;
+                    }
+                });
+            }
+            // Datalist para Gastos - agregar si tiene campo proveedor
+            let dlGastos = document.getElementById('gastos-proveedores-list');
+            if (dlGastos) {
+                dlGastos.innerHTML = activos
+                    .filter(p => p.tipos?.includes('gastos'))
+                    .map(p => `<option value="${p.nombre}">`)
+                    .join('');
+            }
+        }
+
+
+
+        function onComprasProveedorSelChange() {
+            const nombre = document.getElementById('c-proveedor')?.value?.trim();
+            if (!nombre) return;
+            const prov = proveedoresData.find(p => p.nombre === nombre && p.activo);
+            if (!prov) return;
+            const facEl = document.getElementById('c-factura');
+            if (facEl && !facEl.value && prov.docs?.length === 1) {
+                facEl.placeholder = prov.docs[0] === 'Factura' ? 'F-001-0001 (Factura)' :
+                                    prov.docs[0] === 'Nota de Entrega' ? 'N/E-001' : 'Ref...';
+            }
         }
     </script>
 </body>
