@@ -6183,17 +6183,36 @@
 
         // ---- Recalcular saldos y estado tras pago ----
         function recalcularEstadoPrestamo(p) {
+            // Normalizar primero: si saldoPendienteUSD <= 0 en una parcial, marcarla pagada
+            p.amortizacion.forEach(c => {
+                if (c.estado === 'parcial' && c.saldoPendienteUSD != null && c.saldoPendienteUSD <= 0.005) {
+                    c.estado            = 'pagado';
+                    c.saldoPendienteUSD = 0;
+                    c.montoPagadoUSD    = c.cuotaUSD;
+                }
+            });
+
             const pagadas   = p.amortizacion.filter(c => c.estado === 'pagado');
             const parciales = p.amortizacion.filter(c => c.estado === 'parcial');
-            p.cuotasPagadas  = pagadas.length;
-            // totalPagadoUSD = suma de cuotas completas + montos parciales abonados
-            const totalParcialAbonado = parciales.reduce((s, c) => s + (c.montoPagadoUSD || 0), 0);
-            p.totalPagadoUSD = pagadas.reduce((s, c) => s + c.cuotaUSD, 0) + totalParcialAbonado;
-            // saldoPendienteUSD = suma de cuotas pendientes + saldo de cuotas parciales
             const pendientes = p.amortizacion.filter(c => c.estado === 'pendiente');
+
+            p.cuotasPagadas = pagadas.length;
+
+            // Total pagado = suma cuotas completas + abonos en parciales
+            const totalParcialAbonado = parciales.reduce((s, c) => s + (c.montoPagadoUSD || 0), 0);
+            p.totalPagadoUSD = parseFloat((
+                pagadas.reduce((s, c) => s + c.cuotaUSD, 0) + totalParcialAbonado
+            ).toFixed(2));
+
+            // Saldo pendiente = cuotas sin tocar + saldo restante de parciales
             const saldoParciales = parciales.reduce((s, c) => s + (c.saldoPendienteUSD ?? c.cuotaUSD), 0);
-            p.saldoPendienteUSD = pendientes.reduce((s, c) => s + c.cuotaUSD, 0) + saldoParciales;
-            if (p.cuotasPagadas >= p.plazoMeses) p.estado = 'finalizado';
+            p.saldoPendienteUSD = parseFloat((
+                pendientes.reduce((s, c) => s + c.cuotaUSD, 0) + saldoParciales
+            ).toFixed(2));
+
+            // Finalizar préstamo solo cuando todas las cuotas estén pagadas
+            const todasPagadas = p.amortizacion.every(c => c.estado === 'pagado');
+            if (todasPagadas) p.estado = 'finalizado';
         }
 
         // ---- Ver tabla de amortización ----
@@ -6346,15 +6365,18 @@
             const notas    = document.getElementById('prest-pago-notas').value.trim();
             if (!fecha) { alert('Ingresa la fecha de pago'); return; }
 
-            cuota.estado          = 'pagado';
-            cuota.fechaPago       = fecha;
-            cuota.metodoPago      = metodo;
-            cuota.notas           = notas || null;
-            // Si era parcial, registrar el monto total (cuotaUSD completa)
-            if (cuota.montoPagadoUSD != null) {
-                cuota.montoPagadoUSD    = cuota.cuotaUSD;
-                cuota.saldoPendienteUSD = 0;
-            }
+            // Calcular saldo real antes de marcar pagado
+            const saldoAntes = (cuota.estado === 'parcial' && cuota.saldoPendienteUSD != null)
+                ? cuota.saldoPendienteUSD : cuota.cuotaUSD;
+
+            cuota.estado            = 'pagado';
+            cuota.fechaPago         = fecha;
+            cuota.metodoPago        = metodo;
+            cuota.notas             = notas || null;
+            cuota.montoPagadoUSD    = cuota.cuotaUSD;
+            cuota.saldoPendienteUSD = 0;
+            if (!cuota.pagos) cuota.pagos = [];
+            cuota.pagos.push({ fecha, monto: saldoAntes, tipo: 'completo_desde_tabla' });
 
             recalcularEstadoPrestamo(p);
             savePrestamos();
@@ -9306,9 +9328,14 @@
             
             const pendientes = (p.amortizacion || []).filter(c => c.estado !== 'pagado');
             pendientes.forEach(c => {
-                const vencida = c.vencimiento < new Date().toISOString().split('T')[0];
-                const tag = vencida ? ' ⚠️ VENCIDA' : '';
-                cuotasSel.innerHTML += `<option value="${c.numero}">Cuota #${c.numero} - $${c.cuotaUSD.toFixed(2)} USD · vence ${c.vencimiento}${tag}</option>`;
+                const vencida    = c.vencimiento < new Date().toISOString().split('T')[0];
+                const tag        = vencida ? ' ⚠️ VENCIDA' : '';
+                const esParcial  = c.estado === 'parcial';
+                const saldoReal  = esParcial && c.saldoPendienteUSD != null ? c.saldoPendienteUSD : c.cuotaUSD;
+                const labelMonto = esParcial
+                    ? `$${saldoReal.toFixed(2)} pendiente (de $${c.cuotaUSD.toFixed(2)}) ⚡`
+                    : `$${c.cuotaUSD.toFixed(2)} USD`;
+                cuotasSel.innerHTML += `<option value="${c.numero}">Cuota #${c.numero} - ${labelMonto} · vence ${c.vencimiento}${tag}</option>`;
             });
             
             cuotasPanel.style.display = 'block';
@@ -9333,6 +9360,12 @@
             const vencida = cuota.vencimiento < hoy;
             const diasDiff = Math.round((new Date(cuota.vencimiento) - new Date(hoy)) / 86400000);
             
+            const esParcial   = cuota.estado === 'parcial';
+            const saldoReal   = esParcial
+                ? (cuota.saldoPendienteUSD != null ? cuota.saldoPendienteUSD : cuota.cuotaUSD)
+                : cuota.cuotaUSD;
+            const abonado     = cuota.montoPagadoUSD || 0;
+
             infoDiv.style.display = 'block';
             infoDiv.innerHTML = `
                 <div style="font-weight:700; margin-bottom:8px; color:#283593;">📋 Cuota #${cuota.numero} de ${p.plazoMeses}</div>
@@ -9344,10 +9377,18 @@
                         ? `<span style="color:#f44336;">⚠️ Vencida hace ${Math.abs(diasDiff)} días</span>`
                         : `<span style="color:#4caf50;">✅ Vence en ${diasDiff} días</span>`}</div>
                 </div>
-                <div style="margin-top:10px; font-size:18px; font-weight:700; color:#1565c0; border-top:1px solid #c5cae9; padding-top:8px;">
-                    Total cuota: $${cuota.cuotaUSD.toFixed(2)} USD
+                ${esParcial ? `
+                <div style="margin-top:8px; padding:8px; background:#fff3e0; border-radius:6px; font-size:13px;">
+                    <div>⚡ Abono anterior: <strong style="color:#388e3c;">$${abonado.toFixed(2)} USD</strong></div>
+                    <div>📋 Cuota original: $${cuota.cuotaUSD.toFixed(2)} USD</div>
+                </div>` : ''}
+                <div style="margin-top:10px; font-size:18px; font-weight:700; color:${esParcial ? '#c62828' : '#1565c0'}; border-top:1px solid #c5cae9; padding-top:8px;">
+                    ${esParcial ? '🔴 Saldo pendiente' : 'Total cuota'}: $${saldoReal.toFixed(2)} USD
                 </div>
             `;
+            // Guardar saldo real para validaciones
+            infoDiv.dataset.saldoReal   = saldoReal;
+            infoDiv.dataset.esParcial   = esParcial ? '1' : '0';
             
             // Reset tipo pago
             document.querySelectorAll('input[name="credito-tipo-pago"]').forEach(r => r.checked = false);
@@ -9386,14 +9427,22 @@
             const p     = prestamosData.find(x => x.id === prestId);
             const cuota = p?.amortizacion?.find(c => c.numero === nroCuota);
             if (!cuota) return;
-            
+
+            // Usar saldo pendiente real (si ya tuvo abonos parciales)
+            const esParcial  = cuota.estado === 'parcial';
+            const saldoReal  = esParcial
+                ? (cuota.saldoPendienteUSD != null ? cuota.saldoPendienteUSD : cuota.cuotaUSD)
+                : cuota.cuotaUSD;
+            const abonado    = cuota.montoPagadoUSD || 0;
+
             const resumen = document.getElementById('credito-resumen');
             
             if (tipo === 'completo') {
                 resumen.style.display = 'block';
                 resumen.innerHTML = `
-                    <div style="font-weight:700; color:#2e7d32; margin-bottom:6px;">✅ Pago Completo</div>
-                    <div>Monto: <strong>$${cuota.cuotaUSD.toFixed(2)} USD</strong></div>
+                    <div style="font-weight:700; color:#2e7d32; margin-bottom:6px;">✅ Pago ${esParcial ? 'del Saldo Pendiente' : 'Completo'}</div>
+                    ${esParcial ? `<div style="font-size:12px; color:#888;">Abono anterior: $${abonado.toFixed(2)} USD</div>` : ''}
+                    <div>Monto a pagar: <strong>$${saldoReal.toFixed(2)} USD</strong></div>
                     <div style="font-size:12px; color:#555; margin-top:4px;">La cuota #${cuota.numero} quedará marcada como <strong>PAGADA</strong>.</div>
                 `;
             } else {
@@ -9405,19 +9454,20 @@
                     hint.textContent = 'Ingresa el monto pagado';
                     return;
                 }
-                if (montoPagado >= cuota.cuotaUSD) {
-                    hint.textContent = `⚠️ El monto ($${montoPagado.toFixed(2)}) es igual o mayor a la cuota completa ($${cuota.cuotaUSD.toFixed(2)}). Usa "Pago Completo".`;
+                // Validar contra saldo real, no contra cuotaUSD completa
+                if (montoPagado >= saldoReal) {
+                    hint.textContent = `⚠️ El monto ($${montoPagado.toFixed(2)}) iguala o supera el saldo pendiente ($${saldoReal.toFixed(2)}). Usa "Pago Completo del Saldo".`;
                     resumen.style.display = 'none';
                     return;
                 }
                 hint.textContent = '';
-                const saldo = cuota.cuotaUSD - montoPagado;
+                const saldoNuevo = saldoReal - montoPagado;
                 resumen.style.display = 'block';
                 resumen.innerHTML = `
-                    <div style="font-weight:700; color:#e65100; margin-bottom:6px;">⚠️ Pago Parcial</div>
+                    <div style="font-weight:700; color:#e65100; margin-bottom:6px;">⚡ Pago Parcial</div>
                     <div>Pagado ahora: <strong>$${montoPagado.toFixed(2)} USD</strong></div>
-                    <div>Saldo pendiente cuota: <strong style="color:#f44336;">$${saldo.toFixed(2)} USD</strong></div>
-                    <div style="font-size:12px; color:#555; margin-top:4px;">La cuota #${cuota.numero} quedará marcada como <strong>PARCIAL</strong>. Podrás abonar el resto en un nuevo gasto.</div>
+                    <div>Saldo pendiente cuota: <strong style="color:#f44336;">$${saldoNuevo.toFixed(2)} USD</strong></div>
+                    <div style="font-size:12px; color:#555; margin-top:4px;">Podrás abonar el resto en un nuevo gasto.</div>
                 `;
             }
         }
@@ -10427,47 +10477,102 @@
                     const cuota = p?.amortizacion?.find(c => c.numero === nroCuota);
                     if (!cuota) { alert('Cuota no encontrada'); return; }
                     
-                    let montoPagadoUSD = cuota.cuotaUSD;
+                    // Saldo real de la cuota (considera abonos previos)
+                    const saldoRealCuota = (cuota.estado === 'parcial' && cuota.saldoPendienteUSD != null)
+                        ? cuota.saldoPendienteUSD
+                        : cuota.cuotaUSD;
+
+                    let montoPagadoUSD = saldoRealCuota; // default: pago completo del saldo
                     let esParcial      = false;
-                    
+                    let excedente      = 0;
+
                     if (tipoPago === 'parcial') {
                         montoPagadoUSD = parseFloat(document.getElementById('credito-monto-parcial').value) || 0;
-                        if (montoPagadoUSD <= 0)              { alert('Ingresa el monto pagado'); return; }
-                        if (montoPagadoUSD >= cuota.cuotaUSD) { alert('Usa "Pago Completo" si pagas el total'); return; }
-                        esParcial = true;
+                        if (montoPagadoUSD <= 0) { alert('Ingresa el monto pagado'); return; }
+                        // Permitir pago mayor al saldo de la cuota - el excedente va a la siguiente
+                        if (montoPagadoUSD < saldoRealCuota) {
+                            esParcial = true;
+                        } else {
+                            // Pago cubre esta cuota y puede exceder
+                            excedente = parseFloat((montoPagadoUSD - saldoRealCuota).toFixed(2));
+                            montoPagadoUSD = saldoRealCuota; // lo que se aplica a esta cuota
+                        }
                     }
-                    
+
+                    // Registrar historial de pagos
+                    if (!cuota.pagos) cuota.pagos = [];
+
                     if (esParcial) {
-                        cuota.estado             = 'parcial';
-                        cuota.montoPagadoUSD     = (cuota.montoPagadoUSD || 0) + montoPagadoUSD;
-                        cuota.saldoPendienteUSD  = cuota.cuotaUSD - cuota.montoPagadoUSD;
-                        if (!cuota.pagos) cuota.pagos = [];
-                        cuota.pagos.push({ fecha, monto: montoPagadoUSD });
+                        cuota.estado            = 'parcial';
+                        cuota.montoPagadoUSD    = parseFloat(((cuota.montoPagadoUSD || 0) + montoPagadoUSD).toFixed(2));
+                        cuota.saldoPendienteUSD = parseFloat((cuota.cuotaUSD - cuota.montoPagadoUSD).toFixed(2));
+                        // Asegurar no queda negativo
+                        if (cuota.saldoPendienteUSD <= 0.005) {
+                            cuota.saldoPendienteUSD = 0;
+                            cuota.estado    = 'pagado';
+                            cuota.fechaPago = fecha;
+                        }
+                        cuota.pagos.push({ fecha, monto: montoPagadoUSD, tipo: 'parcial' });
                     } else {
-                        cuota.estado     = 'pagado';
-                        cuota.fechaPago  = fecha;
-                        cuota.metodoPago = 'Efectivo';
+                        // Pago completo del saldo pendiente
+                        cuota.montoPagadoUSD    = cuota.cuotaUSD;
+                        cuota.saldoPendienteUSD = 0;
+                        cuota.estado            = 'pagado';
+                        cuota.fechaPago         = fecha;
+                        cuota.metodoPago        = 'Efectivo';
+                        cuota.pagos.push({ fecha, monto: montoPagadoUSD, tipo: 'completo' });
                     }
+
+                    // Aplicar excedente a la siguiente cuota pendiente
+                    let mensajeExcedente = '';
+                    if (excedente > 0) {
+                        const siguienteCuota = p.amortizacion.find(c => c.numero > nroCuota && c.estado !== 'pagado');
+                        if (siguienteCuota) {
+                            if (!siguienteCuota.pagos) siguienteCuota.pagos = [];
+                            const abonoSig = Math.min(excedente, siguienteCuota.cuotaUSD);
+                            siguienteCuota.montoPagadoUSD    = parseFloat(((siguienteCuota.montoPagadoUSD || 0) + abonoSig).toFixed(2));
+                            siguienteCuota.saldoPendienteUSD = parseFloat((siguienteCuota.cuotaUSD - siguienteCuota.montoPagadoUSD).toFixed(2));
+                            if (siguienteCuota.saldoPendienteUSD <= 0.005) {
+                                siguienteCuota.saldoPendienteUSD = 0;
+                                siguienteCuota.estado   = 'pagado';
+                                siguienteCuota.fechaPago = fecha;
+                            } else {
+                                siguienteCuota.estado = 'parcial';
+                            }
+                            siguienteCuota.pagos.push({ fecha, monto: abonoSig, tipo: 'excedente_cuota_anterior' });
+                            mensajeExcedente = `
+💡 Excedente $${abonoSig.toFixed(2)} aplicado a Cuota #${siguienteCuota.numero}.`;
+                        }
+                    }
+
                     recalcularEstadoPrestamo(p);
                     savePrestamos();
-                    
-                    const descCredito = esParcial
-                        ? `Pago parcial cuota #${nroCuota} - ${p.prestamista} ($${montoPagadoUSD.toFixed(2)} de $${cuota.cuotaUSD.toFixed(2)} USD)`
-                        : `Pago cuota #${nroCuota} - ${p.prestamista}`;
-                    
+
+                    const montoTotal   = montoPagadoUSD + excedente;
+                    const descCredito  = esParcial
+                        ? `Abono parcial cuota #${nroCuota} - ${p.prestamista} ($${montoPagadoUSD.toFixed(2)} USD, saldo $${cuota.saldoPendienteUSD.toFixed(2)})`
+                        : `Pago cuota #${nroCuota} - ${p.prestamista}${excedente > 0 ? ' + excedente $'+excedente.toFixed(2) : ''}`;
+
                     const expCred = {
                         id: Date.now(), date: fecha, description: descCredito,
                         invoiceNumber: '', documentType: 'Recibo',
-                        amount: montoPagadoUSD, amountUSD: montoPagadoUSD, iva: 0,
+                        amount: montoTotal, amountUSD: montoTotal, iva: 0,
                         category: 'Crédito',
-                        creditoRef: { prestId, nroCuota, tipoPago, montoPagadoUSD, saldoCuota: cuota.cuotaUSD }
+                        creditoRef: {
+                            prestId, nroCuota, tipoPago: esParcial ? 'parcial' : 'completo',
+                            montoPagadoUSD: montoTotal,
+                            saldoCuota: cuota.cuotaUSD,
+                            saldoPendiente: cuota.saldoPendienteUSD
+                        }
                     };
                     expensesData.unshift(expCred);
                     localStorage.setItem('expensesData', JSON.stringify(expensesData));
-                    
+
                     const msgCred = esParcial
-                        ? `✅ Pago parcial registrado.\nCuota #${nroCuota}: $${montoPagadoUSD.toFixed(2)} pagados, $${cuota.saldoPendienteUSD.toFixed(2)} pendientes.`
-                        : `✅ Cuota #${nroCuota} pagada completamente.\nSaldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD`;
+                        ? `✅ Abono registrado.
+Cuota #${nroCuota}: $${montoPagadoUSD.toFixed(2)} abonados, saldo pendiente $${cuota.saldoPendienteUSD.toFixed(2)} USD.`
+                        : `✅ Cuota #${nroCuota} pagada completamente.
+Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     alert(msgCred);
                     
                     document.getElementById('credito-prestamo-sel').value = '';
