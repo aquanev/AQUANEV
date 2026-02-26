@@ -891,6 +891,32 @@
                 </button>
             </div>
 
+            <!-- Paso 3: Verificar 2FA -->
+            <div id="login-step-2fa" style="display:none;">
+                <div id="login-2fa-usuario" style="background:#f0f4ff; border-radius:8px; padding:10px; margin-bottom:14px; font-weight:600; color:#3949ab;"></div>
+                <div id="login-2fa-instruccion" style="color:#555; margin-bottom:12px; font-size:14px;"></div>
+                <input type="text" id="login-2fa-codigo" maxlength="6" placeholder="000000"
+                    style="letter-spacing:6px; font-size:24px; text-align:center; font-weight:700;"
+                    onkeypress="if(event.key==='Enter') verificar2FA()" autocomplete="one-time-code" inputmode="numeric">
+                <button class="btn btn-primary" onclick="verificar2FA()" style="width:100%; margin-top:10px;">
+                    <i class="fas fa-shield-alt"></i> Verificar Código
+                </button>
+                <div id="login-2fa-reenviar" style="display:none; margin-top:8px; text-align:center;">
+                    <button class="btn btn-secondary btn-small" onclick="reenviarCodigo2FA()" style="background:transparent; color:#667eea;">
+                        🔄 Reenviar código por email
+                    </button>
+                </div>
+                <button class="btn btn-secondary" onclick="volverSeleccionUsuario()" style="width:100%; margin-top:6px; background:transparent; color:#666;">
+                    ← Cancelar
+                </button>
+                <!-- QR para TOTP -->
+                <div id="login-2fa-qr-container" style="display:none; text-align:center; margin-top:14px; padding:14px; background:#f9f9f9; border-radius:10px;">
+                    <p style="font-size:13px; color:#555; margin-bottom:8px;">Escanea con Google Authenticator:</p>
+                    <canvas id="login-2fa-qr"></canvas>
+                    <p style="font-size:11px; color:#888; margin-top:6px;">Luego ingresa el código de 6 dígitos</p>
+                </div>
+            </div>
+
             <div id="login-error" class="login-error" style="margin-top:10px;">PIN incorrecto. Intenta de nuevo.</div>
         </div>
     </div>
@@ -3191,6 +3217,18 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label>Email <small style="color:#888;">(para notificaciones y 2FA)</small></label>
+                    <input type="email" id="user-email" placeholder="usuario@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Cédula / RIF</label>
+                    <input type="text" id="user-cedula" placeholder="V-12345678">
+                </div>
+                <div class="form-group">
+                    <label>Cargo</label>
+                    <input type="text" id="user-cargo" placeholder="Vendedor, Despachador...">
+                </div>
+                <div class="form-group">
                     <label>PIN de acceso * <small style="color:#888;">(mínimo 4 dígitos)</small></label>
                     <input type="password" id="user-pin" maxlength="8" placeholder="••••" style="letter-spacing:3px; font-size:18px;" autocomplete="current-password" autocorrect="off" autocapitalize="off">
                 </div>
@@ -3198,7 +3236,29 @@
                     <label>Confirmar PIN *</label>
                     <input type="password" id="user-pin2" maxlength="8" placeholder="••••" style="letter-spacing:3px; font-size:18px;" autocomplete="current-password" autocorrect="off" autocapitalize="off">
                 </div>
-                <div id="user-permisos-info" style="background:#f8f9fa; border-radius:8px; padding:10px; font-size:12px; color:#555; margin-top:4px;"></div>
+                <!-- 2FA -->
+                <div style="background:#f0f4ff; border-radius:10px; padding:14px; margin-top:8px; border:1px solid #c5cae9;">
+                    <div style="font-weight:700; color:#3949ab; margin-bottom:10px; font-size:13px;">🔐 Doble Factor de Autenticación (2FA)</div>
+                    <div class="form-group" style="margin-bottom:8px;">
+                        <label>Método 2FA</label>
+                        <select id="user-2fa-metodo" onchange="onUser2FAChange()">
+                            <option value="ninguno">Sin 2FA (solo PIN)</option>
+                            <option value="email">📧 Código por Email</option>
+                            <option value="totp">📱 Google Authenticator</option>
+                        </select>
+                    </div>
+                    <div id="user-2fa-email-info" style="display:none; font-size:12px; color:#555; background:#e8eaf6; border-radius:6px; padding:8px;">
+                        Se enviará un código de 6 dígitos al email del usuario cada vez que inicie sesión.
+                    </div>
+                    <div id="user-2fa-totp-info" style="display:none; font-size:12px; color:#555; background:#e8eaf6; border-radius:6px; padding:8px;">
+                        El usuario deberá escanear un código QR con Google Authenticator. El QR se genera al guardar.
+                    </div>
+                    <div id="user-2fa-activo-info" style="display:none; margin-top:8px; padding:8px; background:#e8f5e9; border-radius:6px; font-size:12px; color:#2e7d32;">
+                        ✅ 2FA activo — Solo el administrador puede resetearlo.
+                        <br><button class="btn btn-danger btn-small" style="margin-top:6px;" onclick="resetear2FA()">🔄 Resetear 2FA</button>
+                    </div>
+                </div>
+                <div id="user-permisos-info" style="background:#f8f9fa; border-radius:8px; padding:10px; font-size:12px; color:#555; margin-top:8px;"></div>
             </div>
             <div style="padding:0 20px 20px; display:flex; justify-content:flex-end; gap:10px;">
                 <button class="btn btn-secondary" onclick="cerrarUserModal()">Cancelar</button>
@@ -6586,6 +6646,11 @@
             document.getElementById('login-error').style.display = 'none';
         }
 
+        // Variables 2FA
+        let codigo2FAActual   = null;
+        let codigo2FAExpira   = null;
+        let totp2FAUserPendiente = null;
+
         function attemptLoginB7() {
             const pin    = document.getElementById('login-pin').value;
             const errDiv = document.getElementById('login-error');
@@ -6595,10 +6660,24 @@
             if (!user) { volverSeleccionUsuario(); return; }
 
             if (pin === user.pin) {
-                currentUser = user;
-                user.ultimaLogin = new Date().toISOString();
-                saveUsers();
-                loginB7();
+                // PIN correcto - verificar si requiere 2FA
+                const metodo = user.twoFA?.metodo || 'ninguno';
+                if (metodo === 'ninguno') {
+                    // Sin 2FA - acceso directo
+                    currentUser = user;
+                    user.ultimaLogin = new Date().toISOString();
+                    saveUsers();
+                    loginB7();
+                } else if (metodo === 'email') {
+                    // 2FA por email
+                    totp2FAUserPendiente = user;
+                    mostrarPaso2FA(user, 'email');
+                    enviarCodigo2FAEmail(user);
+                } else if (metodo === 'totp') {
+                    // Google Authenticator
+                    totp2FAUserPendiente = user;
+                    mostrarPaso2FA(user, 'totp');
+                }
             } else {
                 errDiv.style.display = 'block';
                 errDiv.textContent   = 'PIN incorrecto. Intenta de nuevo.';
@@ -6606,6 +6685,174 @@
                 document.getElementById('login-pin').focus();
                 setTimeout(() => errDiv.style.display = 'none', 3000);
             }
+        }
+
+        function mostrarPaso2FA(user, metodo) {
+            document.getElementById('login-step-pin').style.display  = 'none';
+            document.getElementById('login-step-2fa').style.display  = 'block';
+            document.getElementById('login-2fa-usuario').textContent = (user.rol === 'admin' ? '👑 ' : '🛒 ') + user.nombre;
+            document.getElementById('login-2fa-codigo').value        = '';
+
+            if (metodo === 'email') {
+                document.getElementById('login-2fa-instruccion').innerHTML =
+                    '📧 Se envió un código de 6 dígitos a <strong>' + (user.email || 'tu email') + '</strong><br><small style="color:#888;">Válido por 5 minutos</small>';
+                document.getElementById('login-2fa-reenviar').style.display = 'block';
+                document.getElementById('login-2fa-qr-container').style.display = 'none';
+            } else if (metodo === 'totp') {
+                if (!user.twoFA?.activo) {
+                    // Primera vez: mostrar QR para configurar
+                    document.getElementById('login-2fa-instruccion').innerHTML =
+                        '📱 <strong>Primera vez:</strong> Escanea el QR con Google Authenticator, luego ingresa el código.';
+                    document.getElementById('login-2fa-qr-container').style.display = 'block';
+                    document.getElementById('login-2fa-reenviar').style.display = 'none';
+                    generarQRTotp(user);
+                } else {
+                    document.getElementById('login-2fa-instruccion').innerHTML =
+                        '📱 Ingresa el código de <strong>Google Authenticator</strong>';
+                    document.getElementById('login-2fa-qr-container').style.display = 'none';
+                    document.getElementById('login-2fa-reenviar').style.display = 'none';
+                }
+            }
+            setTimeout(() => document.getElementById('login-2fa-codigo').focus(), 200);
+        }
+
+        function enviarCodigo2FAEmail(user) {
+            // Generar código 6 dígitos
+            codigo2FAActual = String(Math.floor(100000 + Math.random() * 900000));
+            codigo2FAExpira = Date.now() + 5 * 60 * 1000; // 5 minutos
+            
+            // Enviar via Apps Script si está configurado
+            if (syncConfig?.appsScriptUrl) {
+                fetch(syncConfig.appsScriptUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        accion: 'enviar2FA',
+                        email:   user.email,
+                        nombre:  user.nombre,
+                        codigo:  codigo2FAActual
+                    })
+                }).catch(() => {});
+            }
+            // En desarrollo/sin email: mostrar en consola como respaldo
+            console.log('[AQUANEV 2FA] Código para ' + user.nombre + ': ' + codigo2FAActual);
+        }
+
+        function reenviarCodigo2FA() {
+            if (totp2FAUserPendiente) {
+                enviarCodigo2FAEmail(totp2FAUserPendiente);
+                alert('📧 Código reenviado a ' + totp2FAUserPendiente.email);
+            }
+        }
+
+        async function verificar2FA() {
+            const codigo  = document.getElementById('login-2fa-codigo').value.trim();
+            const errDiv  = document.getElementById('login-error');
+            const user    = totp2FAUserPendiente;
+            if (!user || !codigo) return;
+
+            const metodo = user.twoFA?.metodo;
+            let valido = false;
+
+            if (metodo === 'email') {
+                if (Date.now() >= codigo2FAExpira) {
+                    errDiv.style.display = 'block';
+                    errDiv.textContent   = 'Código expirado. Reenvía el código.';
+                    setTimeout(() => errDiv.style.display = 'none', 4000);
+                    return;
+                }
+                valido = codigo === codigo2FAActual;
+            } else if (metodo === 'totp') {
+                valido = await verificarTOTP(user.twoFA.secret, codigo);
+            }
+
+            if (valido) {
+                if (!user.twoFA.activo) {
+                    user.twoFA.activo = true;
+                    user.twoFA.configuradoEn = new Date().toISOString();
+                }
+                currentUser = user;
+                user.ultimaLogin = new Date().toISOString();
+                totp2FAUserPendiente = null;
+                codigo2FAActual = null;
+                saveUsers();
+                document.getElementById('login-step-2fa').style.display = 'none';
+                loginB7();
+            } else {
+                errDiv.style.display = 'block';
+                errDiv.textContent   = 'Código incorrecto. Intenta de nuevo.';
+                document.getElementById('login-2fa-codigo').value = '';
+                document.getElementById('login-2fa-codigo').focus();
+                setTimeout(() => errDiv.style.display = 'none', 3000);
+            }
+        }
+
+        // ── TOTP (Google Authenticator) ────────────────────────────────
+        function generarTOTPSecret() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+            let secret = '';
+            for (let i = 0; i < 32; i++) secret += chars[Math.floor(Math.random() * chars.length)];
+            return secret;
+        }
+
+        function generarQRTotp(user) {
+            if (!user.twoFA?.secret) {
+                user.twoFA.secret = generarTOTPSecret();
+                saveUsers();
+            }
+            const issuer  = 'AQUANEV';
+            const account = encodeURIComponent(user.email || user.nombre);
+            const secret  = user.twoFA.secret;
+            const otpauth = `otpauth://totp/${issuer}:${account}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
+            
+            // Generar QR usando API publica
+            const qrImg = document.createElement('img');
+            qrImg.src   = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(otpauth);
+            qrImg.style.cssText = 'width:180px; height:180px; border-radius:8px;';
+            qrImg.alt = 'QR Google Authenticator';
+            const container = document.getElementById('login-2fa-qr-container');
+            // Remove canvas, add img
+            const canvas = document.getElementById('login-2fa-qr');
+            if (canvas) canvas.replaceWith(qrImg);
+        }
+
+        function verificarTOTP(secret, token) {
+            if (!secret || !token) return false;
+            // Implementacion TOTP RFC 6238
+            function base32Decode(s) {
+                const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+                let bits = 0, value = 0;
+                const output = [];
+                for (const c of s.toUpperCase().replace(/=+$/, '')) {
+                    const idx = alphabet.indexOf(c);
+                    if (idx < 0) continue;
+                    value = (value << 5) | idx;
+                    bits += 5;
+                    if (bits >= 8) { bits -= 8; output.push((value >> bits) & 0xFF); }
+                }
+                return new Uint8Array(output);
+            }
+            async function hmacSHA1(key, data) {
+                const k = await crypto.subtle.importKey('raw', key, { name:'HMAC', hash:'SHA-1' }, false, ['sign']);
+                return new Uint8Array(await crypto.subtle.sign('HMAC', k, data));
+            }
+            // Sincrono aproximado: verificar ventanas -1, 0, +1
+            const now   = Math.floor(Date.now() / 1000);
+            const steps = [Math.floor(now/30)-1, Math.floor(now/30), Math.floor(now/30)+1];
+            // Usamos verificación async en segundo plano y retornamos promise
+            return new Promise(async resolve => {
+                const keyBytes = base32Decode(secret);
+                for (const step of steps) {
+                    const msg = new ArrayBuffer(8);
+                    const view = new DataView(msg);
+                    view.setUint32(4, step);
+                    const mac  = await hmacSHA1(keyBytes, msg);
+                    const off  = mac[19] & 0x0F;
+                    const code = ((mac[off]&0x7F)<<24 | mac[off+1]<<16 | mac[off+2]<<8 | mac[off+3]) % 1000000;
+                    if (String(code).padStart(6,'0') === String(token).padStart(6,'0')) { resolve(true); return; }
+                }
+                resolve(false);
+            });
         }
 
         function loginB7() {
@@ -6672,8 +6919,10 @@
                             </div>
                             <div>
                                 <div style="font-weight:700;">${u.nombre}</div>
-                                <div style="font-size:12px; color:#888;">${u.rol} · ${dispIcon[u.dispositivo]||''} ${u.dispositivo} ${u.email ? '· '+u.email : ''}</div>
-                                <div style="font-size:11px; color:#bbb;">ID: ${u.id}</div>
+                                <div style="font-size:12px; color:#888;">${u.rol} · ${dispIcon[u.dispositivo]||''} ${u.dispositivo}${u.cargo ? ' · '+u.cargo : ''}${u.cedula ? ' · '+u.cedula : ''}</div>
+                                <div style="font-size:11px; color:#888;">${u.email ? '📧 '+u.email : ''}
+                                  ${u.twoFA?.metodo && u.twoFA.metodo !== 'ninguno' ? '<span style="background:'+(u.twoFA.activo?'#e8f5e9':'#fff3e0')+';color:'+(u.twoFA.activo?'#2e7d32':'#e65100')+';border-radius:10px;padding:1px 7px;font-size:10px;margin-left:4px;">'+(u.twoFA.activo?'🔐 2FA activo':'⏳ 2FA pendiente')+'</span>' : ''}
+                                </div>
                             </div>
                         </div>
                         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
@@ -6694,22 +6943,62 @@
             if (userId) {
                 const u = usersData.find(x => x.id === userId);
                 if (!u) return;
-                document.getElementById('user-modal-title').textContent = '👤 Editar Usuario';
+                document.getElementById('user-modal-title').textContent = 'Editar Usuario';
                 document.getElementById('user-nombre').value      = u.nombre;
                 document.getElementById('user-rol').value         = u.rol;
                 document.getElementById('user-dispositivo').value = u.dispositivo;
+                document.getElementById('user-email').value       = u.email       || '';
+                document.getElementById('user-cedula').value      = u.cedula      || '';
+                document.getElementById('user-cargo').value       = u.cargo       || '';
+                document.getElementById('user-2fa-metodo').value  = u.twoFA?.metodo || 'ninguno';
                 document.getElementById('user-pin').value         = '';
                 document.getElementById('user-pin2').value        = '';
+                // Mostrar estado 2FA si ya esta activo
+                const info2fa = document.getElementById('user-2fa-activo-info');
+                if (u.twoFA?.activo && currentUser?.rol === 'admin') {
+                    info2fa.style.display = 'block';
+                    info2fa.dataset.userId = userId;
+                } else {
+                    info2fa.style.display = 'none';
+                }
             } else {
-                document.getElementById('user-modal-title').textContent = '👤 Nuevo Usuario';
+                document.getElementById('user-modal-title').textContent = 'Nuevo Usuario';
                 document.getElementById('user-nombre').value      = '';
                 document.getElementById('user-rol').value         = 'vendedor';
                 document.getElementById('user-dispositivo').value = 'mobile';
+                document.getElementById('user-email').value       = '';
+                document.getElementById('user-cedula').value      = '';
+                document.getElementById('user-cargo').value       = '';
+                document.getElementById('user-2fa-metodo').value  = 'ninguno';
+                document.getElementById('user-2fa-activo-info').style.display = 'none';
                 document.getElementById('user-pin').value         = '';
                 document.getElementById('user-pin2').value        = '';
             }
+            onUser2FAChange();
             onUserRolChange();
             document.getElementById('user-modal').style.display = 'flex';
+        }
+
+        function onUser2FAChange() {
+            const metodo = document.getElementById('user-2fa-metodo')?.value;
+            document.getElementById('user-2fa-email-info').style.display = metodo === 'email' ? 'block' : 'none';
+            document.getElementById('user-2fa-totp-info').style.display  = metodo === 'totp'  ? 'block' : 'none';
+        }
+
+        function resetear2FA() {
+            if (currentUser?.rol !== 'admin') {
+                alert('Solo el administrador puede resetear el 2FA.');
+                return;
+            }
+            const info2fa  = document.getElementById('user-2fa-activo-info');
+            const targetId = info2fa.dataset.userId || editUserId;
+            const u = usersData.find(x => x.id === targetId);
+            if (!u) return;
+            if (!confirm('¿Resetear el 2FA de ' + u.nombre + '?\n\nEl usuario deberá configurarlo nuevamente en su próximo login.')) return;
+            u.twoFA = { metodo: document.getElementById('user-2fa-metodo').value, activo: false, secret: null, resetadoPor: currentUser.id, resetadoEn: new Date().toISOString() };
+            saveUsers();
+            info2fa.style.display = 'none';
+            alert('✅ 2FA reseteado. El usuario deberá reconfigurarlo en su próximo inicio de sesión.');
         }
 
         function cerrarUserModal() {
@@ -6729,15 +7018,20 @@
         }
 
         function guardarUsuario() {
-            const nombre = document.getElementById('user-nombre').value.trim();
-            const rol    = document.getElementById('user-rol').value;
-            const disp   = document.getElementById('user-dispositivo').value;
-            const pin    = document.getElementById('user-pin').value;
-            const pin2   = document.getElementById('user-pin2').value;
+            const nombre  = document.getElementById('user-nombre').value.trim();
+            const rol     = document.getElementById('user-rol').value;
+            const disp    = document.getElementById('user-dispositivo').value;
+            const email   = document.getElementById('user-email').value.trim();
+            const cedula  = document.getElementById('user-cedula').value.trim();
+            const cargo   = document.getElementById('user-cargo').value.trim();
+            const pin     = document.getElementById('user-pin').value;
+            const pin2    = document.getElementById('user-pin2').value;
+            const metodo2fa = document.getElementById('user-2fa-metodo').value;
 
             if (!nombre) { alert('Ingresa el nombre del usuario'); return; }
+            if (metodo2fa === 'email' && !email) { alert('El 2FA por email requiere ingresar un email válido'); return; }
 
-            // PIN: obligatorio para nuevos, opcional para editar (si se deja vacío no cambia)
+            // PIN: obligatorio para nuevos, opcional para editar
             if (!editUserId && pin.length < 4) { alert('El PIN debe tener al menos 4 dígitos'); return; }
             if (pin && pin !== pin2) { alert('Los PINs no coinciden'); return; }
             if (pin && pin.length < 4) { alert('El PIN debe tener al menos 4 dígitos'); return; }
@@ -6748,25 +7042,34 @@
                 u.nombre      = nombre;
                 u.rol         = rol;
                 u.dispositivo = disp;
+                u.email       = email;
+                u.cedula      = cedula;
+                u.cargo       = cargo;
                 u.permisos    = rol === 'admin' ? PERMISOS_ADMIN : PERMISOS_VENDEDOR;
                 if (pin) u.pin = pin;
+                // Actualizar 2FA solo si cambió el método o no estaba activo
+                if (!u.twoFA || u.twoFA.metodo !== metodo2fa) {
+                    u.twoFA = { metodo: metodo2fa, activo: false, secret: null, configuradoEn: null };
+                }
                 u.modificadoEn = new Date().toISOString();
             } else {
+                // Generar secret TOTP si aplica
+                const secret = metodo2fa === 'totp' ? generarTOTPSecret() : null;
                 usersData.push({
-                    id:          'user-' + Date.now(),
-                    nombre, rol,
-                    email:       '',
+                    id: 'user-' + Date.now(),
+                    nombre, rol, email, cedula, cargo,
                     dispositivo: disp,
                     pin,
-                    permisos:    rol === 'admin' ? PERMISOS_ADMIN : PERMISOS_VENDEDOR,
-                    activo:      true,
-                    creadoEn:    new Date().toISOString()
+                    permisos: rol === 'admin' ? PERMISOS_ADMIN : PERMISOS_VENDEDOR,
+                    twoFA: { metodo: metodo2fa, activo: false, secret, configuradoEn: null },
+                    activo: true,
+                    creadoEn: new Date().toISOString()
                 });
             }
             saveUsers();
             cerrarUserModal();
             loadUsersList();
-            alert('✅ Usuario guardado.');
+            alert('✅ Usuario guardado.' + (metodo2fa !== 'ninguno' ? '\n\n🔐 El 2FA se activará en el próximo inicio de sesión del usuario.' : ''));
         }
 
         function toggleUserActivo(userId) {
