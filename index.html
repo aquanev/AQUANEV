@@ -3938,7 +3938,7 @@
         let editUserId  = null;
 
         // ========== B8: DATOS DE SINCRONIZACIÓN ==========
-        // URL del Apps Script — preconfigurada para todos los dispositivos
+        // URL del Apps Script - preconfigurada para todos los dispositivos
         const APPS_SCRIPT_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbyX7FjArSkiGabghylTRsRaNtIrReILMFzJOSVwN4hRlDTFU2rtscifoKlWJw2sdTk4hA/exec';
 
         let syncConfig = JSON.parse(localStorage.getItem('syncConfig')) || {
@@ -4154,7 +4154,7 @@
             // Re-escanear cada 30 minutos
             setInterval(escanearAlertas, 30 * 60 * 1000);
 
-            // B10: Reportes ampliados — inicializar fechas
+            // B10: Reportes ampliados - inicializar fechas
             initReportDates();
             
             // Configurar navegación y formularios
@@ -4338,7 +4338,7 @@
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
                         <div>
                             <div style="font-weight:700; font-size:16px;">${est.icono} ${item.nombre}</div>
-                            <small style="color:#888;">${item.categoria || '—'} · ${item.unidadMedida || 'unidad'}</small>
+                            <small style="color:#888;">${item.categoria || '-'} · ${item.unidadMedida || 'unidad'}</small>
                         </div>
                         <span style="background:${est.color}20; color:${est.color}; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">${est.label}</span>
                     </div>
@@ -4372,7 +4372,7 @@
                         </div>` : ''}
                         <div style="background:#f8f9fa; padding:6px 10px; border-radius:6px;">
                             <div style="color:#888; font-size:11px;">ÚLITMA VENTA</div>
-                            <div style="font-weight:600;">${item.ultimaVenta ? formatDate(item.ultimaVenta) : '—'}</div>
+                            <div style="font-weight:600;">${item.ultimaVenta ? formatDate(item.ultimaVenta) : '-'}</div>
                         </div>
                     </div>
 
@@ -4426,7 +4426,7 @@
                     <td style="font-weight:600; color:${delta >= 0 ? '#4caf50' : '#f44336'}">${signo}${m.cantidad}</td>
                     <td>${m.stockAnterior}</td>
                     <td><strong>${m.stockNuevo}</strong></td>
-                    <td><small style="color:#888;">${m.referencia || '—'}</small></td>
+                    <td><small style="color:#888;">${m.referencia || '-'}</small></td>
                 </tr>`;
             }).join('');
         }
@@ -4453,7 +4453,7 @@
             document.getElementById('inv-prod-costo').value = '0';
             // Poblar select de vinculación
             const vinSel = document.getElementById('inv-prod-vincular');
-            vinSel.innerHTML = '<option value="">— Sin vincular —</option>' +
+            vinSel.innerHTML = '<option value="">- Sin vincular -</option>' +
                 Object.keys(waterPrices).map(k => {
                     const info = getProductInfo(k);
                     return `<option value="${k}">${info.name}</option>`;
@@ -4474,7 +4474,7 @@
             document.getElementById('inv-prod-stock-max').value = item.stockMaximo;
             document.getElementById('inv-prod-costo').value = item.costoPromedioUSD || 0;
             const vinSel = document.getElementById('inv-prod-vincular');
-            vinSel.innerHTML = '<option value="">— Sin vincular —</option>' +
+            vinSel.innerHTML = '<option value="">- Sin vincular -</option>' +
                 Object.keys(waterPrices).map(k => {
                     const info = getProductInfo(k);
                     return `<option value="${k}" ${item.vinculadoA === k ? 'selected' : ''}>${info.name}</option>`;
@@ -4677,7 +4677,7 @@
                     <td style="font-weight:600; color:${delta(m)>=0?'#4caf50':'#f44336'}">${delta(m)>=0?'+':''}${m.cantidad}</td>
                     <td>${m.stockAnterior}</td>
                     <td><strong>${m.stockNuevo}</strong></td>
-                    <td><small style="color:#888;">${m.referencia||'—'}</small></td>
+                    <td><small style="color:#888;">${m.referencia||'-'}</small></td>
                 </tr>`).join('');
             }
             document.getElementById('inv-historial-modal').style.display = 'flex';
@@ -4693,7 +4693,7 @@
             );
             if (itemsSimples.length > 0) descontarStockPorVenta(saleItems, saleId);
 
-            // B5: Kits — descontar componentes
+            // B5: Kits - descontar componentes
             const itemsKit = saleItems.filter(item => item.esKit && item.componentes);
             itemsKit.forEach(kitItem => {
                 kitItem.componentes.forEach(comp => {
@@ -4713,7 +4713,7 @@
                     registrarMovimiento(
                         comp.productoKey, 'venta', descontar,
                         stockAnt, inv.stockActual,
-                        `Kit "${kitItem.name}" × ${kitItem.quantity} — Venta #${saleId}`
+                        `Kit "${kitItem.name}" × ${kitItem.quantity} - Venta #${saleId}`
                     );
                 });
             });
@@ -4840,7 +4840,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; border-radius:7px; padding:9px 13px; margin-bottom:6px; font-size:13px;">
                     <div>
                         <strong>${item.nombre}</strong>
-                        <span style="color:#666;"> — ${item.cantidad} u × $${item.costoUnitarioUSD.toFixed(2)}</span>
+                        <span style="color:#666;"> - ${item.cantidad} u × $${item.costoUnitarioUSD.toFixed(2)}</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:12px;">
                         <strong style="color:#2e7d32;">$${item.subtotalUSD.toFixed(2)}</strong>
@@ -4916,7 +4916,7 @@
                 inv.requiereAlerta = est.estado !== 'normal';
                 inv.modificadoEn   = new Date().toISOString();
                 registrarMovimiento(item.productoKey, 'compra', item.cantidad, stockAnt, nuevoStock,
-                    `Compra #${compra.id} — ${proveedor}`);
+                    `Compra #${compra.id} - ${proveedor}`);
             });
             saveInventory();
 
@@ -5037,7 +5037,7 @@
         function verDetalleCompra(id) {
             const compra = comprasData.find(c => c.id === id);
             if (!compra) return;
-            document.getElementById('compra-detalle-title').textContent = `🛒 Compra — ${compra.proveedor}`;
+            document.getElementById('compra-detalle-title').textContent = `🛒 Compra - ${compra.proveedor}`;
             const pagoColor = { pagado: '#4caf50', pendiente: '#f44336', parcial: '#ff9800' };
             const pagoLabel = { pagado: '✅ Pagado', pendiente: '⏳ Pendiente', parcial: '⚡ Parcial' };
             const color = pagoColor[compra.estadoPago] || '#999';
@@ -5045,7 +5045,7 @@
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; font-size:13px;">
                     <div><strong>Proveedor:</strong> ${compra.proveedor}</div>
                     <div><strong>Fecha:</strong> ${formatDate(compra.fecha)}</div>
-                    <div><strong>Factura:</strong> ${compra.factura || '—'}</div>
+                    <div><strong>Factura:</strong> ${compra.factura || '-'}</div>
                     <div><strong>Método:</strong> ${compra.metodoPago}</div>
                     <div><strong>Estado:</strong> <span style="color:${color}; font-weight:600;">${pagoLabel[compra.estadoPago]||compra.estadoPago}</span></div>
                     <div><strong>Total:</strong> <span style="color:#2e7d32; font-weight:700; font-size:16px;">$${(compra.totalUSD||0).toFixed(2)} USD</span></div>
@@ -5413,7 +5413,7 @@
                     inv.estado         = est.estado;
                     inv.requiereAlerta = est.estado !== 'normal';
                     registrarMovimiento(cons.productoKey, 'ajuste', devueltos, stockAnt, inv.stockActual,
-                        `Devolución consignación #${cons.id} — ${cons.cliente}`);
+                        `Devolución consignación #${cons.id} - ${cons.cliente}`);
                     saveInventory();
                     loadInventoryList();
                 }
@@ -5446,7 +5446,7 @@
                     documentType:  'Nota de Entrega',
                     retencionIva:  0, retencionIslr: 0,
                     totalNeto:     montoCobroBS,
-                    notes:         `Cobro consignación #${cons.id} — precio vigente $${precioVigente.toFixed(2)}`,
+                    notes:         `Cobro consignación #${cons.id} - precio vigente $${precioVigente.toFixed(2)}`,
                     esConsignacion: true
                 };
                 salesData.unshift(ventaCons);
@@ -5472,7 +5472,7 @@
                         fechaVencimiento,
                         diasCredito,
                         diasAlertaAntes: diasAlerta,
-                        notas:           `Crédito por consignación #${cons.id} — ${cons.productoNombre} × ${cobrados} @ $${precioVigente.toFixed(2)}`
+                        notas:           `Crédito por consignación #${cons.id} - ${cons.productoNombre} × ${cobrados} @ $${precioVigente.toFixed(2)}`
                     };
                     creditsData.unshift(creditoCons);
                     localStorage.setItem('creditsData', JSON.stringify(creditsData));
@@ -5817,8 +5817,8 @@
             loadKitsList();
             loadProductsList();            // Refrescar lista de ventas para mostrar nuevo kit
             loadKitsList();
-            poblarConsProductoSelect();    // Consignaciones — kits aparecen como opción
-            refreshOrderProductSelects();  // Pedidos — kits en lista
+            poblarConsProductoSelect();    // Consignaciones - kits aparecen como opción
+            refreshOrderProductSelects();  // Pedidos - kits en lista
             alert('✅ Kit guardado exitosamente.');
         }
 
@@ -6064,7 +6064,7 @@
             const cuotaMensual = calcularCuotaMensual(monto, tasa, plazo);
 
             if (currentPrestId) {
-                // Edición — recalcular amortización preservando pagos existentes
+                // Edición - recalcular amortización preservando pagos existentes
                 const p          = prestamosData.find(x => x.id === currentPrestId);
                 if (!p) return;
                 const oldAmort   = p.amortizacion || [];
@@ -6143,7 +6143,7 @@
             currentPrestId = prestId;
 
             document.getElementById('prest-amort-title').textContent =
-                `📋 ${p.prestamista} — ${p.plazoMeses} cuotas de $${p.cuotaMensualUSD.toFixed(2)}`;
+                `📋 ${p.prestamista} - ${p.plazoMeses} cuotas de $${p.cuotaMensualUSD.toFixed(2)}`;
 
             const hoy        = new Date().toISOString().split('T')[0];
             const pagadas    = p.amortizacion.filter(c => c.estado === 'pagado').length;
@@ -6380,7 +6380,7 @@
             bar.innerHTML = alertas.map(a =>
                 `<div style="margin-bottom:4px;">
                     ${a.tipo === 'vencida' ? '🔴' : '🟡'}
-                    <strong>${a.prestamista}</strong> — Cuota #${a.nro}
+                    <strong>${a.prestamista}</strong> - Cuota #${a.nro}
                     ($${a.monto.toFixed(2)}) · Vence: ${a.fecha}
                     <button class="btn btn-small btn-success" onclick="abrirPagoCuota('${a.prestId}', ${a.nro})" style="margin-left:8px; font-size:11px;">
                         <i class="fas fa-check"></i> Pagar
@@ -6423,7 +6423,7 @@
                 const vencidaCuota = proximaCuota && proximaCuota.vencimiento < hoy;
                 const proximaInfo  = proximaCuota
                     ? `<div style="font-size:12px; color:${vencidaCuota ? '#f44336' : '#e65100'}; margin-top:4px;">
-                           ${vencidaCuota ? '🔴 Cuota vencida' : '⏰ Próxima cuota'}: #${proximaCuota.numero} — $${proximaCuota.cuotaUSD.toFixed(2)} · ${proximaCuota.vencimiento}
+                           ${vencidaCuota ? '🔴 Cuota vencida' : '⏰ Próxima cuota'}: #${proximaCuota.numero} - $${proximaCuota.cuotaUSD.toFixed(2)} · ${proximaCuota.vencimiento}
                        </div>`
                     : p.estado === 'activo' ? '<div style="font-size:12px; color:#4caf50; margin-top:4px;">✅ Todas las cuotas al día</div>' : '';
 
@@ -6446,7 +6446,7 @@
                     <div style="margin:10px 0;">
                         <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; margin-bottom:4px;">
                             <span>${p.cuotasPagadas} cuotas pagadas</span>
-                            <span>${progreso}% — $${(p.totalPagadoUSD||0).toFixed(2)} pagado</span>
+                            <span>${progreso}% - $${(p.totalPagadoUSD||0).toFixed(2)} pagado</span>
                         </div>
                         <div style="background:#e0e0e0; border-radius:4px; height:8px; overflow:hidden;">
                             <div style="background:${color}; height:100%; width:${progreso}%; transition:width .3s;"></div>
@@ -6722,7 +6722,7 @@
             const info = document.getElementById('user-permisos-info');
             if (!info) return;
             if (rol === 'admin') {
-                info.innerHTML = '👑 <strong>Admin:</strong> Acceso completo — ventas, créditos, inventario, gastos, compras, préstamos, configuración, reportes.';
+                info.innerHTML = '👑 <strong>Admin:</strong> Acceso completo - ventas, créditos, inventario, gastos, compras, préstamos, configuración, reportes.';
             } else {
                 info.innerHTML = '🛒 <strong>Vendedor:</strong> Crear ventas, ver créditos/abonar, ver clientes, ver inventario. <br>❌ Sin acceso a: gastos, compras, préstamos, consignaciones, precios, configuración.';
             }
@@ -6866,7 +6866,7 @@
             loadSyncQueueDisplay();
             alert(syncConfig.activa
                 ? `✅ Sync configurada.\nURL: ${url.substring(0,60)}…\nFrecuencia: ${frecuencia > 0 ? 'cada '+frecuencia+' min' : 'manual'}`
-                : '⚠️ URL vacía — sync desactivada.');
+                : '⚠️ URL vacía - sync desactivada.');
         }
 
         // ---- Timer automático ----
@@ -6964,7 +6964,7 @@
                     saveSyncConfig();
 
                     logEntry.recibidos = recibidos;
-                    logEntry.msg       = `✅ OK — ${pendientes.length} enviados, ${recibidos} recibidos`;
+                    logEntry.msg       = `✅ OK - ${pendientes.length} enviados, ${recibidos} recibidos`;
                     if (progressMsg) progressMsg.textContent = logEntry.msg;
                     actualizarUltimaSync();
                     // B9: notificar sync completada (solo si hubo actividad real)
@@ -7077,7 +7077,7 @@
                 const d = new Date(syncConfig.ultimaSync);
                 el.textContent = d.toLocaleString('es-ES', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
             } else {
-                el.textContent = '—';
+                el.textContent = '-';
             }
         }
 
@@ -7099,7 +7099,7 @@
             if (elErr) elErr.textContent = errores;
 
             if (syncQueue.length === 0) {
-                container.innerHTML = '<div style="color:#999; text-align:center; padding:16px; font-size:13px;">Cola vacía — todo sincronizado ✅</div>';
+                container.innerHTML = '<div style="color:#999; text-align:center; padding:16px; font-size:13px;">Cola vacía - todo sincronizado ✅</div>';
                 return;
             }
 
@@ -7285,7 +7285,7 @@
                 });
             }
 
-            registrarNotifLog(titulo + ' — ' + cuerpo);
+            registrarNotifLog(titulo + ' - ' + cuerpo);
         }
 
         function registrarNotifLog(msg) {
@@ -7332,7 +7332,7 @@
         function notifCreditoProximo(cliente, diasRestantes, montoUSD) {
             if (!notifConfig.creditoProx) return;
             notificar('💰 Crédito próximo a vencer',
-                `${cliente} — $${montoUSD.toFixed(2)} vence en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`,
+                `${cliente} - $${montoUSD.toFixed(2)} vence en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`,
                 'credito-prox-' + cliente, 'credits');
         }
 
@@ -7340,27 +7340,27 @@
         function notifCreditoVencido(cliente, diasVencido, montoUSD) {
             if (!notifConfig.creditoVenc) return;
             notificar('🚨 Crédito VENCIDO',
-                `${cliente} — $${montoUSD.toFixed(2)} (${diasVencido} día${diasVencido > 1 ? 's' : ''} vencido)`,
+                `${cliente} - $${montoUSD.toFixed(2)} (${diasVencido} día${diasVencido > 1 ? 's' : ''} vencido)`,
                 'credito-venc-' + cliente, 'credits', true);
         }
 
         // 6. Stock bajo
         function notifStockBajo(productoNombre, stockActual, stockMin) {
             if (!notifConfig.stockBajo) return;
-            notificar('📦 Stock bajo', `${productoNombre} — ${stockActual} unidades (mín: ${stockMin})`, 'stock-bajo-' + productoNombre, 'inventory');
+            notificar('📦 Stock bajo', `${productoNombre} - ${stockActual} unidades (mín: ${stockMin})`, 'stock-bajo-' + productoNombre, 'inventory');
         }
 
         // 7. Producto agotado
         function notifAgotado(productoNombre) {
             if (!notifConfig.agotado) return;
-            notificar('🚫 Producto AGOTADO', `${productoNombre} — Stock en 0`, 'agotado-' + productoNombre, 'inventory', true);
+            notificar('🚫 Producto AGOTADO', `${productoNombre} - Stock en 0`, 'agotado-' + productoNombre, 'inventory', true);
         }
 
         // 8. Cuota de préstamo próxima
         function notifCuotaProxima(prestamista, nroCuota, cuotaUSD, diasRestantes) {
             if (!notifConfig.cuota) return;
             notificar('⏰ Cuota próxima a vencer',
-                `${prestamista} — Cuota #${nroCuota} ($${cuotaUSD.toFixed(2)}) en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`,
+                `${prestamista} - Cuota #${nroCuota} ($${cuotaUSD.toFixed(2)}) en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}`,
                 'cuota-' + prestamista + '-' + nroCuota, 'prestamos');
         }
 
@@ -7602,7 +7602,7 @@
             }
             const ths = headers.map(h => `<th style="padding:8px 10px; background:#f5f5f5; font-size:12px; text-align:left; border-bottom:2px solid #e0e0e0;">${h}</th>`).join('');
             const trs = rows.map(r => {
-                const tds = r.map(c => `<td style="padding:7px 10px; font-size:12px; border-bottom:1px solid #f0f0f0;">${c ?? '—'}</td>`).join('');
+                const tds = r.map(c => `<td style="padding:7px 10px; font-size:12px; border-bottom:1px solid #f0f0f0;">${c ?? '-'}</td>`).join('');
                 return `<tr>${tds}</tr>`;
             }).join('');
             return `<div class="table-responsive" style="margin-top:10px;">
@@ -7614,7 +7614,7 @@
         }
 
         function repFecha(str) {
-            if (!str) return '—';
+            if (!str) return '-';
             const d = new Date(str + 'T00:00:00');
             return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
@@ -7638,7 +7638,7 @@
                 const valor   = (item.stockActual * (item.costoPromedioUSD || 0)).toFixed(2);
                 const dias    = item.ultimaVenta
                     ? diasEntre(item.ultimaVenta.split('T')[0], hoy.toISOString().split('T')[0])
-                    : '—';
+                    : '-';
                 let estadoBadge;
                 if (item.stockActual <= 0)              estadoBadge = repBadge('Agotado', 'rep-crit');
                 else if (item.stockActual <= item.stockMinimo) estadoBadge = repBadge('Stock bajo', 'rep-warn');
@@ -7715,7 +7715,7 @@
                 `$${(c.balance || c.balanceUSD || 0).toFixed(2)}`,
                 repFecha(c.fechaVencimiento),
                 c.badge,
-                c.paymentMethod || c.metodo || '—'
+                c.paymentMethod || c.metodo || '-'
             ]);
 
             const totalPendiente = filtrados.reduce((s, c) => s + (c.balance || c.balanceUSD || 0), 0);
@@ -7783,7 +7783,7 @@
                 const costo  = inventoryData.find(i => i.nombre === p.nombre)?.costoPromedioUSD;
                 const margen = costo
                     ? (((p.ingresos / (p.cant || 1)) - costo) / (p.ingresos / (p.cant || 1)) * 100).toFixed(0) + '%'
-                    : '—';
+                    : '-';
                 return [
                     p.nombre,
                     p.cant,
@@ -7856,8 +7856,8 @@
                     `$${p.montoOriginalUSD.toFixed(2)}`,
                     `$${p.totalPagadoUSD.toFixed(2)}`,
                     `$${p.saldoPendienteUSD.toFixed(2)}`,
-                    proxCuota ? `#${proxCuota.numero} · $${proxCuota.cuotaUSD.toFixed(2)}` : '—',
-                    proxCuota ? repFecha(proxCuota.vencimiento) : '—',
+                    proxCuota ? `#${proxCuota.numero} · $${proxCuota.cuotaUSD.toFixed(2)}` : '-',
+                    proxCuota ? repFecha(proxCuota.vencimiento) : '-',
                     estadoBadge
                 ];
             });
@@ -7919,10 +7919,10 @@
                 return [
                     repFecha(fechaStr),
                     `${tipoIcon[m.tipo] || '•'} ${m.tipo}`,
-                    prod?.nombre || m.productoKey || '—',
+                    prod?.nombre || m.productoKey || '-',
                     m.cantidad,
-                    `${m.stockAntes ?? '—'} → ${m.stockDespues ?? '—'}`,
-                    m.notas || '—'
+                    `${m.stockAntes ?? '-'} → ${m.stockDespues ?? '-'}`,
+                    m.notas || '-'
                 ];
             });
 
@@ -7971,7 +7971,7 @@
                 const dias      = diasEntre(c.fechaEntrega, hoy);
                 const valorPend = pendiente * c.precioUnitarioUSD;
                 let urgencia;
-                if (dias > 30)      urgencia = repBadge(`${dias}d — urgente`, 'rep-crit');
+                if (dias > 30)      urgencia = repBadge(`${dias}d - urgente`, 'rep-crit');
                 else if (dias > 14) urgencia = repBadge(`${dias}d`, 'rep-warn');
                 else                urgencia = repBadge(`${dias}d`, 'rep-ok');
 
@@ -8120,7 +8120,7 @@
                     const tipo = navigator.connection.effectiveType;
                     if (tipo === 'slow-2g' || tipo === '2g') {
                         banner.style.display = 'block';
-                        // Desactivar sync automática — usar background sync del SW
+                        // Desactivar sync automática - usar background sync del SW
                         if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
                     } else {
                         banner.style.display = 'none';
@@ -8980,10 +8980,10 @@
             const sel = document.getElementById('credito-prestamo-sel');
             if (!sel) return;
             const activos = prestamosData.filter(p => p.estado === 'activo');
-            sel.innerHTML = '<option value="">— Seleccionar préstamo activo —</option>';
+            sel.innerHTML = '<option value="">- Seleccionar préstamo activo -</option>';
             activos.forEach(p => {
                 const pendiente = (p.saldoPendienteUSD || 0).toFixed(2);
-                sel.innerHTML += `<option value="${p.id}">${p.prestamista} — $${pendiente} pendiente</option>`;
+                sel.innerHTML += `<option value="${p.id}">${p.prestamista} - $${pendiente} pendiente</option>`;
             });
             document.getElementById('credito-cuotas-panel').style.display = 'none';
             document.getElementById('credito-cuota-info').style.display = 'none';
@@ -8999,13 +8999,13 @@
             if (!p) return;
             
             const cuotasSel = document.getElementById('credito-cuota-sel');
-            cuotasSel.innerHTML = '<option value="">— Seleccionar cuota pendiente —</option>';
+            cuotasSel.innerHTML = '<option value="">- Seleccionar cuota pendiente -</option>';
             
             const pendientes = (p.amortizacion || []).filter(c => c.estado !== 'pagado');
             pendientes.forEach(c => {
                 const vencida = c.vencimiento < new Date().toISOString().split('T')[0];
                 const tag = vencida ? ' ⚠️ VENCIDA' : '';
-                cuotasSel.innerHTML += `<option value="${c.numero}">Cuota #${c.numero} — $${c.cuotaUSD.toFixed(2)} USD · vence ${c.vencimiento}${tag}</option>`;
+                cuotasSel.innerHTML += `<option value="${c.numero}">Cuota #${c.numero} - $${c.cuotaUSD.toFixed(2)} USD · vence ${c.vencimiento}${tag}</option>`;
             });
             
             cuotasPanel.style.display = 'block';
@@ -9223,7 +9223,7 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; background:white; border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:13px;">
                     <div>
                         <strong>${item.nombre}</strong>
-                        <span style="color:#666;"> — ${item.cantidad} u × $${item.costoUnitarioUSD.toFixed(2)}</span>
+                        <span style="color:#666;"> - ${item.cantidad} u × $${item.costoUnitarioUSD.toFixed(2)}</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <strong style="color:#2e7d32;">$${item.subtotalUSD.toFixed(2)}</strong>
@@ -9259,7 +9259,7 @@
                 registrarMovimiento(
                     item.productoKey, 'compra', item.cantidad,
                     stockAnt, nuevoStock,
-                    `Gasto #${expenseId} — $${item.costoUnitarioUSD.toFixed(2)}/u`
+                    `Gasto #${expenseId} - $${item.costoUnitarioUSD.toFixed(2)}/u`
                 );
             });
             saveInventory();
@@ -9316,7 +9316,7 @@
 
             if (!useAdelanto || amountUSD <= 0) return;
 
-            // Todo en USD — saldoDisponibleUSD es la unidad correcta
+            // Todo en USD - saldoDisponibleUSD es la unidad correcta
             const adelantosDisponibles = adelantosHielo.filter(a =>
                 a.status === 'Activo' && getHieloSaldoUSD(a) > 0.001
             );
@@ -9576,7 +9576,7 @@
                     customer: sale.customer,
                     date: sale.date,
                     amount: creditAmount,       // legacy BS
-                    amountUSD: creditAmountUSD, // base fija en USD — nunca cambia
+                    amountUSD: creditAmountUSD, // base fija en USD - nunca cambia
                     paid: 0,
                     paidUSD: 0,                 // total abonado en USD
                     balance: creditAmount,
@@ -9627,7 +9627,7 @@
             const todaySalesCount = todaySales.reduce((sum, sale) =>
                 sum + sale.items.reduce((s, item) => s + item.quantity, 0), 0);
 
-            // Ingresos en USD — usar totalUSD si existe, sino convertir desde BS
+            // Ingresos en USD - usar totalUSD si existe, sino convertir desde BS
             const todayIncomeUSD = todaySales.reduce((sum, sale) => {
                 if (sale.totalUSD != null) return sum + (parseFloat(sale.totalUSD) || 0);
                 return sum + convertBStoUSD(sale.total || 0);
@@ -9675,7 +9675,7 @@
                 dashInvAlert.style.display    = 'block';
                 dashInvAlert.style.background = agotados.length ? 'rgba(244,67,54,0.1)' : 'rgba(255,152,0,0.1)';
                 dashInvAlert.style.border     = `1px solid ${agotados.length ? '#f44336' : '#ff9800'}`;
-                dashInvAlert.innerHTML = `⚠️ Inventario: ${msgs.join(' | ')} — <u>Ver inventario</u>`;
+                dashInvAlert.innerHTML = `⚠️ Inventario: ${msgs.join(' | ')} - <u>Ver inventario</u>`;
             } else {
                 dashInvAlert.style.display = 'none';
             }
@@ -9715,10 +9715,10 @@
                 badge = '🌱'; desc = `Faltan $${(metaUSD - incomeUSD).toFixed(2)} para la meta`;
             } else if (raw < 50) {
                 color = '#ffb74d'; borderColor = '#ff9800'; bgCard = 'white';
-                badge = '🔥'; desc = `Buen comienzo — faltan $${(metaUSD - incomeUSD).toFixed(2)}`;
+                badge = '🔥'; desc = `Buen comienzo - faltan $${(metaUSD - incomeUSD).toFixed(2)}`;
             } else if (raw < 75) {
                 color = '#ffd54f'; borderColor = '#ffc107'; bgCard = '#fffde7';
-                badge = '⚡'; desc = `Más de la mitad — ¡sigue así!`;
+                badge = '⚡'; desc = `Más de la mitad - ¡sigue así!`;
             } else if (raw < 100) {
                 color = '#81c784'; borderColor = '#4caf50'; bgCard = '#f1f8e9';
                 badge = '🚀'; desc = `¡Casi! Faltan $${(metaUSD - incomeUSD).toFixed(2)}`;
@@ -10149,8 +10149,8 @@
                     savePrestamos();
                     
                     const descCredito = esParcial
-                        ? `Pago parcial cuota #${nroCuota} — ${p.prestamista} ($${montoPagadoUSD.toFixed(2)} de $${cuota.cuotaUSD.toFixed(2)} USD)`
-                        : `Pago cuota #${nroCuota} — ${p.prestamista}`;
+                        ? `Pago parcial cuota #${nroCuota} - ${p.prestamista} ($${montoPagadoUSD.toFixed(2)} de $${cuota.cuotaUSD.toFixed(2)} USD)`
+                        : `Pago cuota #${nroCuota} - ${p.prestamista}`;
                     
                     const expCred = {
                         id: Date.now(), date: fecha, description: descCredito,
@@ -10371,7 +10371,7 @@
                         : '';
                     extraDetail = `<div style="font-size:11px;color:#3f51b5;margin-top:3px;">Cuota #${ref.nroCuota} ${tipoBadge}${saldoInfo}</div>`;
                 } else if (expense.category === 'Personal') {
-                    extraDetail = `<div style="font-size:11px;color:#7b1fa2;margin-top:3px;">👤 Salario/Sueldo — sin IVA</div>`;
+                    extraDetail = `<div style="font-size:11px;color:#7b1fa2;margin-top:3px;">👤 Salario/Sueldo - sin IVA</div>`;
                 }
 
                 // Badge de categoría con colores por tipo
@@ -10440,7 +10440,7 @@
                 return;
             }
             
-            // Reusar la misma lógica de renderizado — temporalmente swap de expensesData
+            // Reusar la misma lógica de renderizado - temporalmente swap de expensesData
             const backup = expensesData;
             expensesData = filtered;
             loadExpensesHistory();
@@ -10528,7 +10528,7 @@
         
         // ========== B1: Funciones de Estado de Crédito ==========
         function calcularEstadoCredito(credit) {
-            // Crédito pagado: vencimiento cerrado — no mostrar alerta de días
+            // Crédito pagado: vencimiento cerrado - no mostrar alerta de días
             const statusReal = credit.status ||
                 ((credit.balanceUSD != null ? credit.balanceUSD : credit.balance) <= 0.005 ? 'Pagado' : 'Pendiente');
             if (statusReal === 'Pagado') {
@@ -10736,7 +10736,7 @@
                     alertBar.style.display = 'block';
                     alertBar.style.background = vencidos > 0 ? 'rgba(244,67,54,0.1)' : 'rgba(255,152,0,0.1)';
                     alertBar.style.border = `1px solid ${vencidos > 0 ? '#f44336' : '#ff9800'}`;
-                    alertBar.innerHTML = '⚠️ ' + msgs.join(' &nbsp;|&nbsp; ') + ' — Revisa los detalles';
+                    alertBar.innerHTML = '⚠️ ' + msgs.join(' &nbsp;|&nbsp; ') + ' - Revisa los detalles';
                 } else {
                     alertBar.style.display = 'none';
                 }
@@ -11941,7 +11941,7 @@
                     <tr>
                         <td>Productos Vendidos</td>
                         <td>${totalProducts}</td>
-                        <td>—</td>
+                        <td>-</td>
                     </tr>
                     <tr>
                         <td>Gastos Totales</td>
@@ -11950,7 +11950,7 @@
                     </tr>
                     <tr style="font-weight:700; background:#f8f9fa;">
                         <td>Balance Neto</td>
-                        <td>—</td>
+                        <td>-</td>
                         <td style="color:${netBalanceUSD >= 0 ? '#4caf50' : '#f44336'};">${fmtUSD(netBalanceUSD)} USD</td>
                     </tr>
                     <tr>
@@ -12221,7 +12221,7 @@
                         ? ` · saldo cuota: $${(ref.saldoCuota - ref.montoPagadoUSD).toFixed(2)}` : '';
                     extraDetail = `<div style="font-size:11px;color:#3f51b5;margin-top:3px;">Cuota #${ref.nroCuota} ${tipoBadge}${saldoInfo}</div>`;
                 } else if (expense.category === 'Personal') {
-                    extraDetail = `<div style="font-size:11px;color:#7b1fa2;margin-top:3px;">👤 Salario/Sueldo — sin IVA</div>`;
+                    extraDetail = `<div style="font-size:11px;color:#7b1fa2;margin-top:3px;">👤 Salario/Sueldo - sin IVA</div>`;
                 }
 
                 const badgeColors = { 'Compras':'#4caf50','Transporte':'#2196f3','Suministros':'#00bcd4','Mantenimiento':'#ff9800','Personal':'#9c27b0','Hielo':'#03a9f4','Crédito':'#3f51b5','Otros':'#607d8b' };
@@ -12285,7 +12285,7 @@
             currentOrderProducts.push({ product: '', quantity: 1 });
         }
         
-        // Obtener nombre de producto para mostrar — dinámico (waterPrices + inventario + kits)
+        // Obtener nombre de producto para mostrar - dinámico (waterPrices + inventario + kits)
         function getProductDisplayName(productKey) {
             // 1. waterPrices (productos base)
             if (waterPrices[productKey]) {
@@ -12315,7 +12315,7 @@
                 wpKeys.forEach(k => {
                     const name = getProductDisplayName(k);
                     const price = waterPrices[k].priceUSD || 0;
-                    opts += `<option value="${k}" ${sel===k?'selected':''}>${name} — $${price.toFixed(2)}</option>`;
+                    opts += `<option value="${k}" ${sel===k?'selected':''}>${name} - $${price.toFixed(2)}</option>`;
                 });
                 opts += '</optgroup>';
             }
@@ -12326,7 +12326,7 @@
                 opts += '<optgroup label="📦 Inventario">';
                 invSueltos.forEach(i => {
                     const precio = getPrecioVentaInventario ? getPrecioVentaInventario(i) : (i.costoPromedioUSD || 0);
-                    opts += `<option value="${i.productoKey}" ${sel===i.productoKey?'selected':''}>${i.nombre} (stock: ${i.stockActual}) — $${precio.toFixed(2)}</option>`;
+                    opts += `<option value="${i.productoKey}" ${sel===i.productoKey?'selected':''}>${i.nombre} (stock: ${i.stockActual}) - $${precio.toFixed(2)}</option>`;
                 });
                 opts += '</optgroup>';
             }
@@ -12337,7 +12337,7 @@
                 opts += '<optgroup label="🧩 Kits / Compuestos">';
                 kitsActivos.forEach(k => {
                     const stock = calcularStockKit(k);
-                    opts += `<option value="${k.key}" ${sel===k.key?'selected':''}>${k.nombre} (stock: ${stock}) — $${(k.precioVentaUSD||0).toFixed(2)}</option>`;
+                    opts += `<option value="${k.key}" ${sel===k.key?'selected':''}>${k.nombre} (stock: ${stock}) - $${(k.precioVentaUSD||0).toFixed(2)}</option>`;
                 });
                 opts += '</optgroup>';
             }
@@ -12506,7 +12506,7 @@
             const adelanto = {
                 id:        Date.now(),
                 cliente:   cliente,
-                monto:     montoBS,      // legacy BS — usado por calculateFiscalBreakdown
+                monto:     montoBS,      // legacy BS - usado por calculateFiscalBreakdown
                 montoUSD:  montoUSD,
                 saldo:     montoBS,
                 saldoUSD:  montoUSD,
@@ -13846,7 +13846,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             option.textContent = name;
             priceSelect.appendChild(option);
             
-            // Recargar vistas — incluyendo Pedidos y Consignaciones
+            // Recargar vistas - incluyendo Pedidos y Consignaciones
             loadProductsList();
             loadCurrentPricesTable();
             loadCurrentPrices();
@@ -14019,7 +14019,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
         let appPassword = localStorage.getItem('appPassword') || null;
         let isAuthenticated = false;
 
-        // Legacy stub — el flujo real lo maneja attemptLoginB7()
+        // Legacy stub - el flujo real lo maneja attemptLoginB7()
         function attemptLogin() { attemptLoginB7(); }
 
         function login() {
