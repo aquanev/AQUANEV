@@ -3265,13 +3265,13 @@
     </div>
     
     <!-- Modal para agregar cliente -->
-    <div id="client-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div class="modal-content" style="background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 500px;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 id="client-modal-title">Agregar Cliente</h3>
-                <span onclick="closeClientModal()" style="cursor: pointer; font-size: 20px;">&times;</span>
+    <div id="client-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:flex-start; overflow-y:auto; padding:16px 0;">
+        <div class="modal-content" style="background:white; border-radius:12px; width:90%; max-width:500px; margin:auto; display:flex; flex-direction:column; max-height:calc(100vh - 32px); padding:0;">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border-radius:12px 12px 0 0; flex-shrink:0;">
+                <h3 id="client-modal-title" style="margin:0; color:white; font-size:16px;">Agregar Cliente</h3>
+                <span onclick="closeClientModal()" style="cursor:pointer; font-size:26px; line-height:1; color:white;">&times;</span>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="padding:16px; overflow-y:auto; flex:1;">
                 <div class="form-group">
                     <label for="new-client-name">Nombre del Cliente *</label>
                     <input type="text" id="new-client-name" placeholder="Nombre del cliente" required>
@@ -3322,7 +3322,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+            <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:10px; padding:12px 16px; border-top:1px solid #e0e0e0; flex-shrink:0; background:white; border-radius:0 0 12px 12px;">
                 <button class="btn btn-secondary" onclick="closeClientModal()">Cancelar</button>
                 <button class="btn btn-primary" onclick="saveNewClient()">Guardar</button>
             </div>
@@ -4427,6 +4427,12 @@
 
         function saveInventory() {
             localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+            // Sync items modificados recientemente (últimos 30s)
+            const cutoff = Date.now() - 30000;
+            inventoryData.forEach(item => {
+                const ts = item.modificadoEn ? new Date(item.modificadoEn).getTime() : 0;
+                if (ts > cutoff) syncInventarioItem(item);
+            });
         }
         function saveMovimientos() {
             localStorage.setItem('movimientosData', JSON.stringify(movimientosData));
@@ -5130,6 +5136,7 @@
 
             comprasData.unshift(compra);
             saveCompras();
+            syncCompra(compra);
 
             limpiarFormCompra();
             loadComprasDashboard();
@@ -5659,6 +5666,7 @@
                 };
                 salesData.unshift(ventaCons);
                 localStorage.setItem('salesData', JSON.stringify(salesData));
+                syncConsignacion(ventaCons);
 
                 // ---- Si método es Crédito: crear registro en creditsData ----
                 if (metodoPago === 'Crédito') {
@@ -7383,7 +7391,7 @@
                 datos: {}
             };
 
-            const TABLAS = ['ventas','creditos','abonos','inventario','compras','consignaciones','prestamos','gastos','clientes','usuarios','config'];
+            const TABLAS = ['ventas','creditos','abonos','inventario','compras','consignaciones','prestamos','gastos','clientes','usuarios','config','tasasBCV'];
             TABLAS.forEach(t => {
                 const items = pendientes.filter(e => e.tabla === t);
                 if (items.length > 0) payload.datos[t] = items.map(e => e.datos);
@@ -7492,14 +7500,50 @@
                     loadSalesHistory && loadSalesHistory();
                 }
             }
-            // Tasas BCV: si más nueva que la local, actualizar
-            if (updates.tasaBCV && updates.tasaBCV.tasa) {
-                const nuevaTasa = parseFloat(updates.tasaBCV.tasa);
-                if (!isNaN(nuevaTasa) && nuevaTasa > 0) {
-                    priceExchangeRate = nuevaTasa;
-                    appConfig.exchangeRates.bcv = nuevaTasa;
+            // Tasas BCV: recibir del servidor y aplicar a bcvRateHistory + campos visuales
+            if (updates.tasaBCV || updates.tasasBCV) {
+                if (!updates.tasaBCV) updates.tasaBCV = updates.tasasBCV;
+                // Puede venir como objeto único o como array de tasas
+                const tasasRecibidas = Array.isArray(updates.tasaBCV) ? updates.tasaBCV : [updates.tasaBCV];
+                let cambiaron = false;
+                const today = new Date().toISOString().split('T')[0];
+
+                tasasRecibidas.forEach(item => {
+                    const nuevaTasa = parseFloat(item.tasa);
+                    const fechaTasa = item.fecha || today;
+                    if (isNaN(nuevaTasa) || nuevaTasa <= 0) return;
+
+                    // Actualizar bcvRateHistory
+                    const idx = bcvRateHistory.findIndex(r => r.date === fechaTasa);
+                    if (idx !== -1) {
+                        if (bcvRateHistory[idx].rate !== nuevaTasa) {
+                            bcvRateHistory[idx].rate = nuevaTasa;
+                            cambiaron = true;
+                        }
+                    } else {
+                        bcvRateHistory.push({ date: fechaTasa, rate: nuevaTasa });
+                        bcvRateHistory.sort((a, b) => b.date.localeCompare(a.date));
+                        cambiaron = true;
+                    }
+
+                    // Si es la tasa de hoy, propagar a appConfig y campos visuales
+                    if (fechaTasa === today && item.esHoy !== false) {
+                        priceExchangeRate               = nuevaTasa;
+                        appConfig.exchangeRates.bcv      = nuevaTasa;
+                        appConfig.exchangeRates.priceRate = nuevaTasa;
+                        count++;
+                    }
+                });
+
+                if (cambiaron) {
+                    localStorage.setItem('bcvRateHistory', JSON.stringify(bcvRateHistory));
                     localStorage.setItem('appConfig', JSON.stringify(appConfig));
-                    count++;
+                    // Actualizar todos los campos visuales
+                    syncRateFromBCV();
+                    loadManualRates && loadManualRates();
+                    loadManualExchangeRates && loadManualExchangeRates();
+                    cargarHistorialTasasBCV && cargarHistorialTasasBCV();
+                    loadCurrentPrices && loadCurrentPrices();
                 }
             }
             // Inventario: merge conservador (solo actualizar si timestamp remoto > local)
@@ -10010,7 +10054,8 @@
             
             salesData.unshift(sale);
             localStorage.setItem('salesData', JSON.stringify(salesData));
-            
+            syncVenta(sale);
+
             // Descontar de adelanto si está marcado
             const useAdelanto = document.getElementById('usar-adelanto').checked;
             if (useAdelanto) {
@@ -10098,6 +10143,7 @@
                 };
                 creditsData.unshift(credit);
                 localStorage.setItem('creditsData', JSON.stringify(creditsData));
+                syncCredito(credit);
                 loadPendingCredits();
                 loadCreditReportClients();
                 loadSalesReportClients();
@@ -10774,6 +10820,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 
                 expensesData.unshift(expense);
                 localStorage.setItem('expensesData', JSON.stringify(expensesData));
+                syncGasto(expense);
 
                 if (category === 'Compras') {
                     procesarComprasEnInventario(expense.id, expense.date);
@@ -11192,16 +11239,27 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 if (!credit.balance) credit.balance = credit.amount;
                 if (!credit.payments) credit.payments = [];
                 
-                credit.amount = parseFloat(credit.amount?.toFixed(2) || 0);
-                credit.balance = parseFloat((credit.amount - credit.paid).toFixed(2));
-                if (credit.balance < 0.01) credit.balance = 0;
-                
-                if (credit.balance <= 0 || credit.paid >= credit.amount) {
-                    credit.status = 'Pagado'; credit.balance = 0;
-                } else if (credit.paid > 0) {
-                    credit.status = 'Parcial';
+                // Usar balanceUSD como fuente primaria (savePayment lo mantiene correcto)
+                if (credit.balanceUSD != null) {
+                    if (credit.balanceUSD <= 0.005) {
+                        credit.status = 'Pagado'; credit.balanceUSD = 0; credit.balance = 0;
+                    } else if ((credit.paidUSD || 0) > 0) {
+                        credit.status = 'Parcial';
+                    } else {
+                        credit.status = 'Pendiente';
+                    }
                 } else {
-                    credit.status = 'Pendiente';
+                    // Fallback legacy BS
+                    credit.amount  = parseFloat(credit.amount?.toFixed(2) || 0);
+                    credit.balance = parseFloat((credit.amount - credit.paid).toFixed(2));
+                    if (credit.balance < 0.01) credit.balance = 0;
+                    if (credit.balance <= 0 || credit.paid >= credit.amount) {
+                        credit.status = 'Pagado'; credit.balance = 0;
+                    } else if (credit.paid > 0) {
+                        credit.status = 'Parcial';
+                    } else {
+                        credit.status = 'Pendiente';
+                    }
                 }
                 
                 // B1: estado de vencimiento
@@ -11639,6 +11697,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             };
             
             clientsData.push(client);
+            syncCliente(client);
             
             // Ordenar alfabéticamente
             clientsData.sort((a, b) => a.name.localeCompare(b.name, 'es'));
@@ -11771,6 +11830,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             localStorage.setItem('clientsData', JSON.stringify(clientsData));
             
+            syncCliente(clienteActualizado);
             closeClientModal();
             loadClientsList();
             loadCustomerSelect();
@@ -12104,6 +12164,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
 
             // Guardar
             localStorage.setItem('creditsData', JSON.stringify(creditsData));
+            syncCredito(credit);
 
             syncAbono({
                 id:            Date.now(),
@@ -14560,7 +14621,24 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 loadCurrentPricesTable && loadCurrentPricesTable();
             }
 
-            const eraHoy = fecha === today ? '\n\n✅ Tasa aplicada en toda la aplicación.' : '\n\n(Tasa histórica - no afecta la tasa actual)';
+            // Encolar para sync con otros dispositivos
+            encolarSync('tasasBCV', 'upsert', {
+                id:     'tasaBCV-' + fecha,
+                tipo:   'tasaBCV',
+                fecha:  fecha,
+                tasa:   tasa,
+                esHoy:  fecha === today,
+                origen: getCurrentUserId(),
+                ts:     new Date().toISOString()
+            });
+            // Forzar sync inmediato si está activo
+            if (syncConfig.activa && syncConfig.appsScriptUrl) {
+                setTimeout(() => ejecutarSync(), 800);
+            }
+
+            const eraHoy = fecha === today
+                ? '\n\n✅ Tasa aplicada localmente y enviada a otros dispositivos.'
+                : '\n\n(Tasa histórica guardada y enviada al servidor)';
             alert('Tasa BCV registrada\n\nFecha: ' + formatDate(fecha) + '\nTasa: ' + tasa.toFixed(2) + ' BS/USD' + eraHoy);
         }
         
