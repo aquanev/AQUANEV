@@ -721,6 +721,38 @@
             }
         }
 
+        /* Botón flotante subir al menú */
+        #btn-ir-menu {
+            position: fixed;
+            bottom: 24px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(102,126,234,0.45);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .2s, box-shadow .2s, opacity .3s;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #btn-ir-menu.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #btn-ir-menu:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102,126,234,0.6);
+        }
+        #btn-ir-menu:active { transform: scale(0.95); }
+
         /* B10: Pull-to-refresh indicator */
         #ptr-indicator {
             display: none;
@@ -923,6 +955,7 @@
 
     <!-- Aplicación Principal -->
     <div id="app-container">
+    <div id="top-anchor"></div>
     <header>
         <div class="container">
             <div class="header-content">
@@ -995,6 +1028,7 @@
             <div class="tab" data-tab="clients">Clientes</div>
             <div class="tab" data-tab="prices">Precios</div>
             <div class="tab" data-tab="reports">Reportes</div>
+            <div class="tab" data-tab="cargador">📥 Carga Masiva</div>
             <div class="tab" data-tab="config">Configuración</div>
         </div>
         
@@ -1118,10 +1152,37 @@
                 </div>
                 
                 <div class="form-group">
-                    <label>Agregar Productos a la Venta</label>
-                    <div id="products-list">
-                        <!-- Los productos se cargarán aquí -->
+                    <label>Agregar Producto</label>
+                    <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+                        <div style="flex:2; min-width:160px;">
+                            <select id="sale-product-select" onchange="onSaleProductChange()"
+                                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;
+                                       font-size:14px; background:white;">
+                                <option value="">-- Seleccionar producto --</option>
+                            </select>
+                        </div>
+                        <div style="flex:0 0 80px;">
+                            <input type="number" id="sale-product-qty" value="1" min="1" step="1"
+                                inputmode="numeric"
+                                style="width:100%; padding:10px; border:1px solid #ddd;
+                                       border-radius:8px; font-size:14px; text-align:center;"
+                                placeholder="Cant."
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();agregarProductoVenta();}">
+                        </div>
+                        <div style="flex:0 0 auto;">
+                            <button type="button" class="btn btn-primary" onclick="agregarProductoVenta()"
+                                style="padding:10px 18px; white-space:nowrap;">
+                                <i class="fas fa-plus"></i> Agregar
+                            </button>
+                        </div>
                     </div>
+                    <!-- Ficha del producto seleccionado -->
+                    <div id="sale-product-preview" style="display:none; margin-top:8px; padding:10px 14px;
+                        background:#f0f4ff; border-radius:8px; border-left:4px solid #667eea;
+                        font-size:13px; color:#333;">
+                    </div>
+                    <!-- Lista oculta para compatibilidad con loadProductsList() -->
+                    <div id="products-list" style="display:none;"></div>
                 </div>
                 
                 <div class="sale-items-container" id="sale-items">
@@ -1805,6 +1866,65 @@
                 </div>
             </div>
             <!-- ===== FIN B9 ===== -->
+
+            <!-- ===== BACKUP / RESTORE ===== -->
+            <div class="card" style="margin-top:16px; border:2px solid #27ae60;">
+                <div class="card-header" style="background:linear-gradient(135deg,#27ae60,#1a7a40);">
+                    <div class="card-title" style="color:white;">💾 Respaldo y Restauración de Datos</div>
+                </div>
+                <div style="padding:16px;">
+                    <p style="color:#555; font-size:13px; margin-bottom:16px;">
+                        El respaldo descarga <strong>todos tus datos</strong> (ventas, gastos, clientes, créditos, inventario, etc.)
+                        en un archivo JSON. Úsalo antes de actualizar la app o como copia de seguridad periódica.
+                        <br><br>
+                        <strong style="color:#1a7a40;">✅ Subir código a GitHub NO borra tus datos.</strong>
+                        Los datos viven en el navegador (localStorage), separados del código.
+                    </p>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                        <!-- DESCARGAR -->
+                        <div style="background:#f0fff4; border:2px solid #27ae60; border-radius:12px; padding:16px; text-align:center;">
+                            <div style="font-size:32px; margin-bottom:8px;">⬇️</div>
+                            <div style="font-weight:700; font-size:15px; margin-bottom:4px;">Descargar Respaldo</div>
+                            <div style="font-size:12px; color:#555; margin-bottom:12px;">
+                                Exporta todos tus datos a un archivo .json seguro
+                            </div>
+                            <div style="font-size:11px; color:#888; margin-bottom:10px;">
+                                Último respaldo: <span id="cm-ultimo-backup">—</span>
+                            </div>
+                            <button class="btn btn-primary" onclick="downloadBackup()"
+                                style="width:100%; background:#27ae60; border-color:#27ae60;">
+                                <i class="fas fa-download"></i> Descargar ahora
+                            </button>
+                        </div>
+
+                        <!-- RESTAURAR -->
+                        <div style="background:#fff8f0; border:2px solid #e67e22; border-radius:12px; padding:16px; text-align:center;">
+                            <div style="font-size:32px; margin-bottom:8px;">⬆️</div>
+                            <div style="font-weight:700; font-size:15px; margin-bottom:4px;">Restaurar Respaldo</div>
+                            <div style="font-size:12px; color:#555; margin-bottom:12px;">
+                                Carga un archivo .json para recuperar tus datos
+                            </div>
+                            <div style="font-size:11px; color:#e67e22; margin-bottom:10px; font-weight:600;">
+                                ⚠️ Reemplaza los datos actuales
+                            </div>
+                            <button class="btn btn-warning" onclick="document.getElementById('restore-file-input').click()"
+                                style="width:100%;">
+                                <i class="fas fa-upload"></i> Seleccionar archivo
+                            </button>
+                            <input type="file" id="restore-file-input" accept=".json"
+                                style="display:none" onchange="restaurarBackup(this.files[0])">
+                        </div>
+                    </div>
+
+                    <div style="background:#e8f5e9; border-radius:8px; padding:12px; font-size:12px; color:#2e7d32;">
+                        <strong>💡 Buenas prácticas:</strong>
+                        Descarga un respaldo cada semana y guárdalo en Google Drive o WhatsApp.
+                        Antes de cualquier actualización, descarga uno nuevo por seguridad.
+                    </div>
+                </div>
+            </div>
+            <!-- ===== FIN BACKUP ===== -->
         </div>
         
         <!-- Gastos Tab -->
@@ -2079,6 +2199,107 @@
             </div>
         </div>
         
+
+        <!-- Cargador Masivo Tab -->
+        <div id="cargador" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📥 Carga Masiva de Datos Históricos</div>
+                </div>
+                <p style="color:#555;font-size:14px;margin-bottom:16px;">
+                    Importa ventas, gastos, clientes y préstamos desde la plantilla Excel directamente en AQUANEV.
+                    Los datos quedan disponibles al instante — sin archivos separados.
+                </p>
+
+                <!-- Drop zone -->
+                <div id="cm-drop"
+                    ondragover="event.preventDefault();this.style.background='#e8eeff'"
+                    ondragleave="this.style.background='#f8f9ff'"
+                    ondrop="event.preventDefault();this.style.background='#f8f9ff';cmProcesarArchivo(event.dataTransfer.files[0])"
+                    onclick="document.getElementById('cm-file').click()"
+                    style="border:3px dashed #667eea;border-radius:12px;padding:36px;text-align:center;
+                           cursor:pointer;background:#f8f9ff;transition:.2s;margin-bottom:16px;">
+                    <div style="font-size:48px;margin-bottom:8px;">📂</div>
+                    <p style="font-weight:700;color:#333;margin-bottom:4px;">Arrastra aquí el archivo Excel</p>
+                    <p style="color:#888;font-size:13px;">o haz clic para seleccionar</p>
+                    <small style="color:#aaa;">Usa la plantilla: AQUANEV_Plantilla_Carga_Masiva.xlsx</small>
+                </div>
+                <input type="file" id="cm-file" accept=".xlsx,.xls" style="display:none"
+                    onchange="cmProcesarArchivo(this.files[0])">
+
+                <!-- Resumen del archivo -->
+                <div id="cm-file-info" style="display:none;background:#f0f4ff;border-radius:10px;
+                    padding:12px 16px;border-left:4px solid #667eea;margin-bottom:16px;">
+                    <strong id="cm-file-name"></strong>
+                    <div id="cm-badges" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+                </div>
+
+                <!-- Advertencia de ejemplos -->
+                <div id="cm-aviso-ejemplos" style="display:none;background:#fff3cd;border:1px solid #ffc107;
+                    border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#856404;">
+                    ⚠️ Se detectaron filas de ejemplo (PLASTICOS BICENTENARIO, TALLER LA SOLUCION).
+                    Elimínalas del Excel antes de cargar para no importar datos falsos.
+                </div>
+
+                <!-- Módulos -->
+                <div id="cm-modulos" style="display:none;">
+                    <div style="font-weight:700;margin-bottom:10px;font-size:14px;">Selecciona qué importar:</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                            border:2px solid #667eea;border-radius:10px;background:#f8f9ff;cursor:pointer;">
+                            <input type="checkbox" id="cm-chk-ventas" checked style="width:18px;height:18px;accent-color:#667eea;cursor:pointer;">
+                            <div><div style="font-weight:700;font-size:13px;">📦 Ventas</div>
+                            <div id="cm-cnt-ventas" style="font-size:12px;color:#888;">0 registros</div></div>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                            border:2px solid #e67e22;border-radius:10px;background:#fffbf0;cursor:pointer;">
+                            <input type="checkbox" id="cm-chk-gastos" checked style="width:18px;height:18px;accent-color:#e67e22;cursor:pointer;">
+                            <div><div style="font-weight:700;font-size:13px;">💸 Gastos</div>
+                            <div id="cm-cnt-gastos" style="font-size:12px;color:#888;">0 registros</div></div>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                            border:2px solid #27ae60;border-radius:10px;background:#f0fff4;cursor:pointer;">
+                            <input type="checkbox" id="cm-chk-clientes" checked style="width:18px;height:18px;accent-color:#27ae60;cursor:pointer;">
+                            <div><div style="font-weight:700;font-size:13px;">👥 Clientes</div>
+                            <div id="cm-cnt-clientes" style="font-size:12px;color:#888;">0 registros</div></div>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                            border:2px solid #1a5276;border-radius:10px;background:#eaf0ff;cursor:pointer;">
+                            <input type="checkbox" id="cm-chk-prestamos" checked style="width:18px;height:18px;accent-color:#1a5276;cursor:pointer;">
+                            <div><div style="font-weight:700;font-size:13px;">🏦 Préstamos</div>
+                            <div id="cm-cnt-prestamos" style="font-size:12px;color:#888;">0 préstamos</div></div>
+                        </label>
+                    </div>
+
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#555;
+                        padding:10px;background:#fff3e0;border-radius:8px;cursor:pointer;margin-bottom:14px;">
+                        <input type="checkbox" id="cm-sobrescribir" style="width:16px;height:16px;cursor:pointer;">
+                        <span>⚠️ Sobrescribir registros existentes con misma fecha y cliente</span>
+                    </label>
+
+                    <button class="btn btn-primary" onclick="cmIniciarCarga()"
+                        id="cm-btn-cargar" style="width:100%;padding:14px;font-size:16px;font-weight:700;">
+                        🚀 Importar a AQUANEV
+                    </button>
+                </div>
+
+                <!-- Progreso -->
+                <div id="cm-progress" style="display:none;margin-top:16px;">
+                    <div style="background:#eee;border-radius:8px;height:14px;overflow:hidden;">
+                        <div id="cm-bar" style="background:#27ae60;height:14px;border-radius:8px;transition:width .3s;width:0;"></div>
+                    </div>
+                    <div id="cm-pct" style="text-align:center;font-size:13px;color:#555;margin-top:6px;">0%</div>
+                </div>
+
+                <!-- Log -->
+                <div id="cm-log" style="display:none;background:#1a1a2e;border-radius:10px;padding:16px;
+                    max-height:220px;overflow-y:auto;font-family:monospace;font-size:12px;
+                    color:#a0d8b3;margin-top:12px;"></div>
+
+                <!-- Resultado -->
+                <div id="cm-result" style="display:none;border-radius:10px;padding:20px;margin-top:12px;text-align:center;"></div>
+            </div>
+        </div>
 
         <!-- Proveedores Tab -->
         <div id="proveedores" class="tab-content">
@@ -3329,6 +3550,91 @@
         </div>
     </div>
     
+
+    <!-- ========== MODAL EDITAR PRODUCTO ========== -->
+    <div id="edit-product-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+        background:rgba(0,0,0,0.6); z-index:1500; justify-content:center; align-items:flex-start;
+        overflow-y:auto; padding:16px 0;">
+        <div style="background:white; border-radius:12px; width:90%; max-width:480px; margin:auto;
+            display:flex; flex-direction:column; max-height:calc(100vh - 32px);">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#e67e22,#d35400); color:white; padding:14px 18px;
+                display:flex; justify-content:space-between; align-items:center;
+                border-radius:12px 12px 0 0; flex-shrink:0;">
+                <h3 id="edit-prod-title" style="margin:0; font-size:16px;">✏️ Editar Producto</h3>
+                <span onclick="cerrarEditProductoModal()" style="cursor:pointer; font-size:26px; line-height:1;">&times;</span>
+            </div>
+            <!-- Body -->
+            <div style="padding:16px; overflow-y:auto; flex:1;">
+                <input type="hidden" id="edit-prod-key-original">
+
+                <div class="form-group">
+                    <label>Clave del Producto</label>
+                    <input type="text" id="edit-prod-key"
+                        style="background:#f5f5f5; color:#888;"
+                        readonly title="La clave no se puede cambiar para no romper ventas históricas">
+                    <small style="color:#888;">La clave no se edita para no afectar datos históricos</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre del Producto *</label>
+                    <input type="text" id="edit-prod-nombre" placeholder="Ej: Filtro de Agua" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Precio en USD ($) *</label>
+                    <input type="number" id="edit-prod-precio" step="0.01" min="0"
+                        placeholder="0.00" inputmode="decimal" oninput="editProdCalcBS()">
+                </div>
+
+                <div style="background:#f0f4ff; border-radius:8px; padding:10px 14px;
+                    font-size:13px; margin-bottom:14px;">
+                    <span style="color:#555;">Equivalente en BS: </span>
+                    <strong id="edit-prod-precio-bs" style="color:#4A5FC4;">—</strong>
+                    <span style="color:#888; font-size:12px; margin-left:6px;">(tasa BCV actual)</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Ícono</label>
+                    <select id="edit-prod-icono">
+                        <option value="fa-box">📦 Caja</option>
+                        <option value="fa-tint">💧 Gota</option>
+                        <option value="fa-truck">🚚 Camión</option>
+                        <option value="fa-building">🏢 Edificio</option>
+                        <option value="fa-snowflake">❄️ Hielo / Nieve</option>
+                        <option value="fa-refresh">🔄 Recarga</option>
+                        <option value="fa-faucet">🚰 Grifo / Dispensador</option>
+                        <option value="fa-filter">🔍 Filtro</option>
+                        <option value="fa-star">⭐ Estrella</option>
+                        <option value="fa-road">🛣️ Distancia</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" id="edit-prod-iva" style="width:18px;height:18px;">
+                        <span>Este producto aplica IVA</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>Notas del cambio</label>
+                    <textarea id="edit-prod-notas" rows="2" placeholder="Ej: ajuste de precio por inflación..."></textarea>
+                </div>
+            </div>
+            <!-- Footer -->
+            <div style="padding:12px 16px; border-top:1px solid #e0e0e0; display:flex; gap:10px;
+                flex-shrink:0; background:white; border-radius:0 0 12px 12px;">
+                <button class="btn btn-secondary" onclick="cerrarEditProductoModal()" style="flex:1;">
+                    Cancelar
+                </button>
+                <button class="btn btn-warning" onclick="guardarEditProducto()" style="flex:2;">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ========== MODAL USUARIO B7 ========== -->
     <div id="user-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:1500; justify-content:center; align-items:flex-start; overflow-y:auto; padding:16px 0;">
         <div style="background:white; border-radius:12px; width:90%; max-width:460px; margin:auto; display:flex; flex-direction:column; max-height:calc(100vh - 32px);">
@@ -6097,11 +6403,11 @@
         }
 
         // ---- Agregar kit a la venta ----
-        function addKitToSale(kitKey) {
+        function addKitToSale(kitKey, forceQty) {
             const kit       = productosCompuestos.find(k => k.key === kitKey);
             if (!kit || kit.activo === false) return;
             const qtyInput  = document.getElementById(`qty-kit-${kitKey}`);
-            let quantity    = parseInt(qtyInput?.value) || 1;
+            let quantity    = forceQty !== undefined ? parseInt(forceQty) || 1 : (parseInt(qtyInput?.value) || 1);
 
             // Validar stock de cada componente
             const errores = [];
@@ -7299,6 +7605,13 @@
             syncQueue.push(entry);
             saveSyncQueue();
             actualizarSyncBadge();
+            // Disparar sync en 2s si hay conexión y no está en curso
+            if (syncConfig.activa && syncConfig.appsScriptUrl && !syncEnCurso) {
+                clearTimeout(window._syncDebounce);
+                window._syncDebounce = setTimeout(() => {
+                    if (!syncEnCurso) ejecutarSync();
+                }, 2000);
+            }
         }
 
         // ---- Badge de estado en header de sync panel ----
@@ -8681,6 +8994,10 @@
                         loadProductsList();
                     } else if (tabId === 'ecuador') {
                         loadEcuadorView();
+                    } else if (tabId === 'sales') {
+                        poblarSaleProductSelect();
+                    } else if (tabId === 'cargador') {
+                        // cargador masivo - no necesita precarga
                     } else if (tabId === 'proveedores') {
                         loadProveedoresList();
                         actualizarDatalistProveedores();
@@ -8900,6 +9217,13 @@
                 hielo: { name: 'Hielo', icon: 'fa-snowflake' }
             };
             
+            // Agregar productos personalizados guardados en waterPrices
+            Object.entries(waterPrices).forEach(([k, v]) => {
+                if (v.esPersonalizado && v.nombre && !products[k]) {
+                    products[k] = { name: v.nombre, icon: v.icono || 'fa-box' };
+                }
+            });
+
             for (const [key, product] of Object.entries(products)) {
                 const priceUSD = waterPrices[key]?.priceUSD || 0;
                 const priceBS = priceUSD * priceExchangeRate;
@@ -8958,7 +9282,7 @@
                     <td>${hasIva ? 'Sí' : 'No'}</td>
                     <td>${formatDate(lastUpdate)}</td>
                     <td>
-                        <button class="btn btn-warning btn-small" onclick="quickEditPrice('${key}')">
+                        <button class="btn btn-warning btn-small" onclick="abrirEditProductoModal('${key}')">
                             <i class="fas fa-edit"></i> Editar
                         </button>
                     </td>
@@ -9144,6 +9468,8 @@
             
             // Cargar lista de clientes en el select
             loadCustomerSelect();
+            // Actualizar selector desplegable de ventas
+            poblarSaleProductSelect();
         }
 
         function loadCustomerSelect() {
@@ -9160,15 +9486,17 @@
             }
         }
 
-        function addToSale(productKey) {
-            const quantityInput = document.getElementById(`qty-${productKey}`);
-            let quantity = parseInt(quantityInput.value) || 0;
-            
-            // Si el campo está en 0 y se presiona el botón, sumar 1
-            if (quantity === 0) {
-                quantity = 1;
+        function addToSale(productKey, forceQty) {
+            // Si viene de selector, usamos forceQty; si viene del grid legacy, leemos el input
+            let quantity;
+            if (forceQty !== undefined) {
+                quantity = parseInt(forceQty) || 1;
+            } else {
+                const quantityInput = document.getElementById(`qty-${productKey}`);
+                quantity = quantityInput ? (parseInt(quantityInput.value) || 0) : 1;
+                if (quantity === 0) quantity = 1;
             }
-            
+
             if (quantity < 1) {
                 alert('La cantidad debe ser al menos 1');
                 return;
@@ -9221,7 +9549,11 @@
                 recarga_local_empresa: 'Recarga Local Empresa',
                 dispensador: 'Dispensador de Agua'
             };
-            
+            // Incluir productos personalizados guardados en waterPrices
+            Object.entries(waterPrices).forEach(([k, v]) => {
+                if (v.esPersonalizado && v.nombre && !productNames[k]) productNames[k] = v.nombre;
+            });
+
             const priceUSD = waterPrices[productKey]?.priceUSD || 0;
             const priceBS = priceUSD * priceExchangeRate;
             const hasIva = waterPrices[productKey]?.hasIva || false;
@@ -10384,8 +10716,8 @@
                     <td>${formatDate(sale.date)}</td>
                     <td>${sale.customer}</td>
                     <td>${productsSummary}</td>
-                    <td>${sale.total.toFixed(2)} BS</td>
-                    <td>$${sale.totalUSD.toFixed(2)} USD</td>
+                    <td>${(sale.total != null ? parseFloat(sale.total).toFixed(2) : '-')} BS</td>
+                    <td>$${(sale.totalUSD != null ? parseFloat(sale.totalUSD).toFixed(2) : '-')} USD</td>
                     <td>${sale.paymentMethod}</td>
                     <td>
                         <button class="btn btn-primary btn-small" onclick="editSale('${sale.id}')" title="Editar">
@@ -10609,7 +10941,10 @@
             
             const productsSummary = sale.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
             
-            if (!confirm(`¿Eliminar esta venta?\n\nCliente: ${sale.customer}\nFecha: ${formatDate(sale.date)}\nProductos: ${productsSummary}\nTotal: ${sale.total.toFixed(2)} BS\n\n⚠️ Esta acción no se puede deshacer.`)) {
+            const totalMostrar = sale.totalUSD != null
+                ? '$' + parseFloat(sale.totalUSD).toFixed(2) + ' USD'
+                : (sale.total != null ? parseFloat(sale.total).toFixed(2) + ' BS' : '-');
+            if (!confirm(`¿Eliminar esta venta?\n\nCliente: ${sale.customer}\nFecha: ${formatDate(sale.date)}\nProductos: ${productsSummary}\nTotal: ${totalMostrar}\n\n⚠️ Esta acción no se puede deshacer.`)) {
                 return;
             }
             
@@ -11765,9 +12100,14 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 return;
             }
             
-            if (!/^[VJEGP]-\d{8,9}-\d$/.test(rif)) {
-                alert('Formato de RIF inválido. Use: J-12345678-9');
-                return;
+            // Validación flexible: acepta RIF formal, cédulas simples, N/A, S/N
+            const rifLimpio = rif.trim();
+            const rifValido = !rifLimpio ||
+                rifLimpio === 'N/A' || rifLimpio === 'S/N' ||
+                /^[VJEGPvjegp]-?\d{6,9}-?\d?$/.test(rifLimpio) ||
+                /^\d{6,9}$/.test(rifLimpio);
+            if (!rifValido) {
+                if (!confirm('El formato del RIF/Cédula no es estándar (' + rifLimpio + ').\n¿Guardar de todas formas?')) return;
             }
             
             const clientIndex = clientsData.findIndex(c => c.id === clientId);
@@ -11852,16 +12192,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
         }
 
         // ========== FUNCIONES DE ELIMINACIÓN ==========
-        function deleteSale(id) {
-            if (confirm('¿Está seguro de que desea eliminar esta venta?')) {
-                salesData = salesData.filter(sale => sale.id !== id);
-                localStorage.setItem('salesData', JSON.stringify(salesData));
-                loadSalesHistory();
-                loadDashboard();
-            loadEcuadorView();
-                loadRecentSales();
-            }
-        }
+
         
         function deleteExpense(id) {
             const expense = expensesData.find(e => e.id === id);
@@ -14490,7 +14821,10 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             waterPrices[key] = {
                 priceUSD: price,
                 lastUpdate: new Date().toISOString(),
-                hasIva: hasIva
+                hasIva: hasIva,
+                nombre: name,
+                icono: icon,
+                esPersonalizado: true
             };
             
             // Guardar en localStorage
@@ -14518,6 +14852,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             document.getElementById('new-product-price').value = '';
             document.getElementById('new-product-iva').checked = true;
 
+            poblarSaleProductSelect();
             alert(`✅ Producto "${name}" creado exitosamente y disponible en todos los módulos.`);
         }
         
@@ -14714,36 +15049,125 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
         
         // ========== SISTEMA DE RESPALDO ==========
         function downloadBackup() {
+            // Recoger TODO lo que está en localStorage relacionado con AQUANEV
+            const claves = [
+                'salesData','clientsData','expensesData','creditsData',
+                'prestamosData','comprasData','consignacionesData','inventoryData',
+                'movimientosInventario','ordersData','adelantosClientes','adelantosHielo',
+                'waterPrices','priceHistory','bcvRateHistory','appConfig',
+                'ivaPercentage','syncConfig','proveedoresData','productosCompuestos',
+                'usersB7','configB7','syncQueue','syncLog'
+            ];
+            const datos = {};
+            let totalRegistros = 0;
+            claves.forEach(k => {
+                try {
+                    const v = localStorage.getItem(k);
+                    if (v) {
+                        datos[k] = JSON.parse(v);
+                        if (Array.isArray(datos[k])) totalRegistros += datos[k].length;
+                    }
+                } catch(e) {}
+            });
+
             const backup = {
-                version: '2.0',
-                date: new Date().toISOString(),
-                data: {
-                    salesData: salesData,
-                    clientsData: clientsData,
-                    expensesData: expensesData,
-                    ordersData: ordersData,
-                    creditsData: creditsData,
-                    adelantosClientes: adelantosClientes,
-                    adelantosHielo: adelantosHielo,
-                    waterPrices: waterPrices,
-                    priceHistory: priceHistory,
-                    appConfig: appConfig,
-                    ivaPercentage: ivaPercentage
+                version: '3.1',
+                fecha: new Date().toISOString(),
+                dispositivo: navigator.userAgent.includes('Mobile') ? 'Móvil' : 'PC',
+                resumen: {
+                    ventas:       (datos.salesData      || []).length,
+                    gastos:       (datos.expensesData   || []).length,
+                    clientes:     (datos.clientsData    || []).length,
+                    creditos:     (datos.creditsData    || []).length,
+                    compras:      (datos.comprasData    || []).length,
+                    inventario:   (datos.inventoryData  || []).length,
+                    prestamos:    (datos.prestamosData  || []).length,
+                },
+                datos
+            };
+
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = `AQUANEV_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            // Actualizar fecha en UI
+            const el = document.getElementById('cm-ultimo-backup');
+            if (el) el.textContent = new Date().toLocaleString('es-VE');
+
+            alert('✅ Respaldo descargado\n\n' +
+                Object.entries(backup.resumen).map(([k,v]) => `  ${k}: ${v}`).join('\n') +
+                '\n\nGuárdalo en un lugar seguro.');
+        }
+
+        function restaurarBackup(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const backup = JSON.parse(e.target.result);
+                    if (!backup.datos && !backup.data) {
+                        alert('❌ El archivo no es un respaldo válido de AQUANEV.'); return;
+                    }
+                    const datos = backup.datos || backup.data; // compatibilidad v2 y v3
+
+                    // Contar registros a restaurar
+                    const resumen = backup.resumen || {};
+                    const totalVentas   = (datos.salesData    || datos.sales    || []).length;
+                    const totalGastos   = (datos.expensesData || datos.expenses || []).length;
+                    const totalClientes = (datos.clientsData  || datos.clients  || []).length;
+                    const msg = `📦 Respaldo del ${(backup.fecha || backup.date || '').slice(0,10)}
+
+` +
+                        `Ventas:   ${totalVentas}
+` +
+                        `Gastos:   ${totalGastos}
+` +
+                        `Clientes: ${totalClientes}
+
+` +
+                        `⚠️ Esto REEMPLAZARÁ todos los datos actuales en este dispositivo.
+¿Continuar?`;
+                    if (!confirm(msg)) return;
+
+                    // Restaurar cada clave conocida
+                    const mapa = {
+                        salesData:           datos.salesData    || datos.sales    || null,
+                        expensesData:        datos.expensesData || datos.expenses || null,
+                        clientsData:         datos.clientsData  || datos.clients  || null,
+                        creditsData:         datos.creditsData  || datos.credits  || null,
+                        prestamosData:       datos.prestamosData    || null,
+                        comprasData:         datos.comprasData       || null,
+                        consignacionesData:  datos.consignacionesData|| null,
+                        inventoryData:       datos.inventoryData     || null,
+                        movimientosInventario: datos.movimientosInventario || null,
+                        ordersData:          datos.ordersData        || null,
+                        adelantosClientes:   datos.adelantosClientes || null,
+                        adelantosHielo:      datos.adelantosHielo    || null,
+                        waterPrices:         datos.waterPrices       || null,
+                        priceHistory:        datos.priceHistory      || null,
+                        bcvRateHistory:      datos.bcvRateHistory    || null,
+                        appConfig:           datos.appConfig         || null,
+                        ivaPercentage:       datos.ivaPercentage     || null,
+                        proveedoresData:     datos.proveedoresData   || null,
+                        productosCompuestos: datos.productosCompuestos || null,
+                    };
+                    Object.entries(mapa).forEach(([k, v]) => {
+                        if (v !== null && v !== undefined) {
+                            localStorage.setItem(k, JSON.stringify(v));
+                        }
+                    });
+
+                    alert('✅ Respaldo restaurado correctamente.\nLa aplicación se recargará ahora.');
+                    setTimeout(() => location.reload(), 800);
+                } catch(err) {
+                    alert('❌ Error al restaurar: ' + err.message);
                 }
             };
-            
-            const dataStr = JSON.stringify(backup, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `AQUANEV_respaldo_v3.0_${new Date().toISOString().split('T')[0]}.json`;
-            link.click();
-            
-            URL.revokeObjectURL(url);
-            
-            alert('Respaldo descargado correctamente');
+            reader.readAsText(file);
         }
 
         // ========== MÓDULO PROVEEDORES ==========
@@ -14967,6 +15391,665 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                                     prov.docs[0] === 'Nota de Entrega' ? 'N/E-001' : 'Ref...';
             }
         }
+
+
+        // ══════════════════════════════════════════════════════════════
+        // VENTAS - Selector desplegable de productos
+        // ══════════════════════════════════════════════════════════════
+
+        function poblarSaleProductSelect() {
+            const sel = document.getElementById('sale-product-select');
+            if (!sel) return;
+            const current = sel.value;
+            sel.innerHTML = '<option value="">-- Seleccionar producto --</option>';
+
+            // Nombres base
+            const baseNames = {
+                recarga_local: 'Recarga en Local',
+                recarga_domicilio: 'Recarga a Domicilio',
+                recarga_lejana: 'Recarga a Domicilio Lejana',
+                empresas_mayor: 'Empresas Mayor 12 unidades',
+                botellon_nuevo: 'Botellón Nuevo',
+                hielo: 'Hielo',
+                recarga_local_empresa: 'Recarga Local Empresa',
+                dispensador: 'Dispensador de Agua'
+            };
+
+            // Agregar todos los productos en waterPrices
+            const grupos = [
+                { label: 'Productos base', keys: Object.keys(baseNames) },
+                { label: 'Productos personalizados', keys: [] }
+            ];
+            Object.keys(waterPrices).forEach(k => {
+                if (!baseNames[k] && waterPrices[k]?.esPersonalizado) grupos[1].keys.push(k);
+            });
+
+            grupos.forEach(grupo => {
+                if (!grupo.keys.length) return;
+                const og = document.createElement('optgroup');
+                og.label = grupo.label;
+                grupo.keys.forEach(key => {
+                    const wp   = waterPrices[key];
+                    if (!wp) return;
+                    const name = wp.nombre || baseNames[key] || key;
+                    const usd  = wp.priceUSD || 0;
+                    const bs   = usd * priceExchangeRate;
+                    const iva  = wp.hasIva ? ' +IVA' : '';
+                    const opt  = document.createElement('option');
+                    opt.value = key;
+                    opt.textContent = `${name}  -  $${usd.toFixed(2)} USD / ${bs.toFixed(2)} BS${iva}`;
+                    og.appendChild(opt);
+                });
+                sel.appendChild(og);
+            });
+
+            // Kits
+            const kitsActivos = (productosCompuestos || []).filter(k => k.activo !== false);
+            if (kitsActivos.length) {
+                const og = document.createElement('optgroup');
+                og.label = 'Kits / Compuestos';
+                kitsActivos.forEach(kit => {
+                    const bs = convertUSDtoBS(kit.precioVentaUSD);
+                    const opt = document.createElement('option');
+                    opt.value = 'kit:' + kit.key;
+                    opt.textContent = `${kit.nombre}  -  $${kit.precioVentaUSD.toFixed(2)} USD / ${bs.toFixed(2)} BS`;
+                    og.appendChild(opt);
+                });
+                sel.appendChild(og);
+            }
+
+            // Restaurar selección si seguía válida
+            if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+        }
+
+        function onSaleProductChange() {
+            const sel     = document.getElementById('sale-product-select');
+            const preview = document.getElementById('sale-product-preview');
+            const key     = sel.value;
+            if (!key) { preview.style.display = 'none'; return; }
+
+            const isKit = key.startsWith('kit:');
+            const realKey = isKit ? key.slice(4) : key;
+
+            let name, usd, bs, ivaFlag, stockInfo = '';
+            if (isKit) {
+                const kit = (productosCompuestos || []).find(k => k.key === realKey);
+                if (!kit) { preview.style.display = 'none'; return; }
+                usd     = kit.precioVentaUSD;
+                bs      = convertUSDtoBS(usd);
+                ivaFlag = kit.hasIva;
+                name    = kit.nombre;
+                const stock = calcularStockKit(kit);
+                stockInfo = `<span style="color:${stock === 0 ? '#f44336' : stock < 5 ? '#ff9800' : '#27ae60'}; margin-left:8px;">
+                    Stock: ${stock} kits</span>`;
+            } else {
+                const wp = waterPrices[realKey];
+                if (!wp) { preview.style.display = 'none'; return; }
+                const baseNames = {
+                    recarga_local:'Recarga en Local', recarga_domicilio:'Recarga a Domicilio',
+                    recarga_lejana:'Recarga a Domicilio Lejana', empresas_mayor:'Empresas Mayor 12 unidades',
+                    botellon_nuevo:'Botellón Nuevo', hielo:'Hielo',
+                    recarga_local_empresa:'Recarga Local Empresa', dispensador:'Dispensador de Agua'
+                };
+                name    = wp.nombre || baseNames[realKey] || realKey;
+                usd     = wp.priceUSD || 0;
+                bs      = usd * priceExchangeRate;
+                ivaFlag = wp.hasIva;
+            }
+
+            const docType = document.getElementById('document-type').value;
+            const ivaTexto = ivaFlag
+                ? (docType === 'Factura'
+                    ? ` <span style="background:#fff3e0;color:#e67e22;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:700;">+IVA ${ivaPercentage}%</span>`
+                    : ` <span style="background:#eee;color:#888;padding:2px 7px;border-radius:10px;font-size:11px;">sin IVA (Nota)</span>`)
+                : '';
+
+            preview.style.display = 'block';
+            preview.innerHTML = `
+                <strong style="font-size:14px;">${name}</strong>${ivaTexto}${stockInfo}<br>
+                <span style="color:#4A5FC4; font-weight:700;">$${usd.toFixed(2)} USD</span>
+                <span style="color:#555; margin:0 6px;">·</span>
+                <span style="color:#333;">${bs.toFixed(2)} BS</span>
+                <span style="color:#888; font-size:12px; margin-left:8px;">por unidad</span>
+            `;
+        }
+
+        function agregarProductoVenta() {
+            const sel = document.getElementById('sale-product-select');
+            const key = sel.value;
+            if (!key) { alert('Selecciona un producto'); return; }
+
+            const qty = parseInt(document.getElementById('sale-product-qty').value) || 1;
+            if (qty < 1) { alert('La cantidad debe ser al menos 1'); return; }
+
+            if (key.startsWith('kit:')) {
+                // Delegar a la función de kits existente
+                const realKey = key.slice(4);
+                document.getElementById('sale-product-qty').value = qty;
+                addKitToSale(realKey);
+            } else {
+                addToSale(key, qty);
+            }
+
+            // Resetear
+            sel.value = '';
+            document.getElementById('sale-product-qty').value = 1;
+            document.getElementById('sale-product-preview').style.display = 'none';
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // PRECIOS - Modal editar producto completo
+        // ══════════════════════════════════════════════════════════════
+
+        function abrirEditProductoModal(productKey) {
+            const wp = waterPrices[productKey];
+            if (!wp) { alert('Producto no encontrado'); return; }
+
+            const baseNames = {
+                recarga_local:'Recarga en Local', recarga_domicilio:'Recarga a Domicilio',
+                recarga_lejana:'Recarga a Domicilio Lejana', empresas_mayor:'Empresas Mayor 12 unidades',
+                botellon_nuevo:'Botellón Nuevo', hielo:'Hielo',
+                recarga_local_empresa:'Recarga Local Empresa', dispensador:'Dispensador de Agua'
+            };
+            const nombre = wp.nombre || baseNames[productKey] || productKey;
+
+            document.getElementById('edit-prod-title').textContent    = '✏️ Editar: ' + nombre;
+            document.getElementById('edit-prod-key-original').value   = productKey;
+            document.getElementById('edit-prod-key').value            = productKey;
+            document.getElementById('edit-prod-nombre').value         = nombre;
+            document.getElementById('edit-prod-precio').value         = wp.priceUSD || '';
+            document.getElementById('edit-prod-iva').checked          = wp.hasIva || false;
+            document.getElementById('edit-prod-notas').value          = '';
+
+            const iconoSel = document.getElementById('edit-prod-icono');
+            const icono    = wp.icono || 'fa-box';
+            [...iconoSel.options].forEach(o => { o.selected = o.value === icono; });
+
+            editProdCalcBS();
+
+            const modal = document.getElementById('edit-product-modal');
+            modal.style.display = 'flex';
+        }
+
+        function cerrarEditProductoModal() {
+            document.getElementById('edit-product-modal').style.display = 'none';
+        }
+
+        function editProdCalcBS() {
+            const usd = parseFloat(document.getElementById('edit-prod-precio').value) || 0;
+            const bs  = usd * priceExchangeRate;
+            const el  = document.getElementById('edit-prod-precio-bs');
+            if (el) el.textContent = bs.toFixed(2) + ' BS';
+        }
+
+        function guardarEditProducto() {
+            const key    = document.getElementById('edit-prod-key-original').value;
+            const nombre = document.getElementById('edit-prod-nombre').value.trim();
+            const precio = parseFloat(document.getElementById('edit-prod-precio').value);
+            const iva    = document.getElementById('edit-prod-iva').checked;
+            const icono  = document.getElementById('edit-prod-icono').value;
+            const notas  = document.getElementById('edit-prod-notas').value.trim();
+
+            if (!nombre) { alert('El nombre es obligatorio'); return; }
+            if (!precio || isNaN(precio) || precio < 0) { alert('Ingresa un precio válido'); return; }
+
+            const oldPrecio = waterPrices[key]?.priceUSD || 0;
+
+            // Guardar historial de cambio de precio
+            if (oldPrecio !== precio) {
+                priceHistory.unshift({
+                    date: new Date().toISOString(),
+                    productKey: key,
+                    productName: nombre,
+                    oldPriceUSD: oldPrecio,
+                    newPriceUSD: precio,
+                    oldHasIva: waterPrices[key]?.hasIva || false,
+                    newHasIva: iva,
+                    exchangeRate: priceExchangeRate,
+                    notes: notas || 'Edición completa'
+                });
+                localStorage.setItem('priceHistory', JSON.stringify(priceHistory));
+            }
+
+            // Actualizar producto - preservar esPersonalizado si ya lo era
+            waterPrices[key] = {
+                ...(waterPrices[key] || {}),
+                priceUSD: precio,
+                hasIva: iva,
+                nombre: nombre,
+                icono: icono,
+                esPersonalizado: waterPrices[key]?.esPersonalizado || false,
+                lastUpdate: new Date().toISOString()
+            };
+            localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
+
+            cerrarEditProductoModal();
+            loadCurrentPrices();
+            loadCurrentPricesTable();
+            loadProductsList();
+            poblarSaleProductSelect();
+            loadPriceHistory();
+
+            alert('✅ Producto actualizado:\n' + nombre + '\n$' + precio.toFixed(2) + ' USD  |  IVA: ' + (iva ? 'SÍ' : 'NO'));
+        }
+
+
+        // ══════════════════════════════════════════════════════════════════
+        // CARGADOR MASIVO - lógica JS integrada en AQUANEV
+        // Escribe directamente en salesData, expensesData, etc. del contexto
+        // ══════════════════════════════════════════════════════════════════
+
+        let cmDatosExcel = { ventas:[], gastos:[], clientes:[], prestamos:[], pagos:[] };
+
+        function cmProcesarArchivo(file) {
+            if (!file) return;
+            if (!window.XLSX) {
+                // Cargar XLSX dinámicamente si no está cargado
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                s.onload = () => cmLeerExcel(file);
+                document.head.appendChild(s);
+                return;
+            }
+            cmLeerExcel(file);
+        }
+
+        function cmLeerExcel(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
+                    cmDatosExcel = { ventas:[], gastos:[], clientes:[], prestamos:[], pagos:[] };
+
+                    wb.SheetNames.forEach(name => {
+                        const ws   = wb.Sheets[name];
+                        const rows = XLSX.utils.sheet_to_json(ws, { defval:'', header:1 });
+
+                        if (name.includes('Ventas')) {
+                            for (let i = 3; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r[0] && !r[1]) continue;
+                                const fecha = cmParseFecha(r[0]);
+                                if (!fecha) continue;
+                                cmDatosExcel.ventas.push({
+                                    fecha, cliente: cmLimpiar(r[1]),
+                                    descripcion: cmLimpiar(r[2]) || 'Venta',
+                                    cantidad: parseFloat(r[3]) || 1,
+                                    totalUSD: parseFloat(String(r[4]).replace(',','.')) || 0,
+                                    cobradoUSD: parseFloat(String(r[5]).replace(',','.')) || 0,
+                                    metodoPago: cmLimpiar(r[6]) || 'Efectivo',
+                                    notas: cmLimpiar(r[7])
+                                });
+                            }
+                        }
+                        if (name.includes('Gastos')) {
+                            for (let i = 3; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r[0] && !r[1]) continue;
+                                const fecha = cmParseFecha(r[0]);
+                                if (!fecha) continue;
+                                cmDatosExcel.gastos.push({
+                                    fecha, descripcion: cmLimpiar(r[1]) || 'Gasto',
+                                    empresa: cmLimpiar(r[2]) || '',
+                                    categoria: cmLimpiar(r[3]) || 'Operativo',
+                                    montoUSD: parseFloat(String(r[4]).replace(',','.')) || 0,
+                                    metodoPago: cmLimpiar(r[5]) || 'Efectivo',
+                                    notas: cmLimpiar(r[6])
+                                });
+                            }
+                        }
+                        if (name.includes('Clientes')) {
+                            for (let i = 3; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r[0]) continue;
+                                cmDatosExcel.clientes.push({
+                                    nombre: cmLimpiar(r[0]), rif: cmLimpiar(r[1]) || 'N/A',
+                                    telefono: cmLimpiar(r[2]) || '', direccion: cmLimpiar(r[3]) || '',
+                                    tipo: cmLimpiar(r[4]) || 'natural',
+                                    permiteCredito: cmSiNo(r[5]), diasCredito: parseInt(r[6]) || 30,
+                                    retieneIva: cmSiNo(r[7]), retieneIslr: cmSiNo(r[8])
+                                });
+                            }
+                        }
+                        if (name.includes('Prestamos')) {
+                            for (let i = 3; i < Math.min(8, rows.length); i++) {
+                                const r = rows[i];
+                                if (!r[0]) continue;
+                                const monto = parseFloat(String(r[3]).replace(',','.')) || 0;
+                                if (monto <= 0) continue;
+                                cmDatosExcel.prestamos.push({
+                                    prestamista: cmLimpiar(r[0]), tipo: cmLimpiar(r[1]) || 'Bancario',
+                                    contrato: cmLimpiar(r[2]) || '', montoOriginalUSD: monto,
+                                    tasaInteres: parseFloat(r[4]) || 0, plazoMeses: parseInt(r[5]) || 12,
+                                    fechaDesembolso: cmParseFecha(r[6]) || new Date().toISOString().slice(0,10),
+                                    fechaPrimeraCuota: cmParseFecha(r[7]) || new Date().toISOString().slice(0,10),
+                                    observaciones: cmLimpiar(r[9]) || ''
+                                });
+                            }
+                            for (let i = 9; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r[0]) continue;
+                                const fecha = cmParseFecha(r[2]);
+                                if (!fecha) continue;
+                                cmDatosExcel.pagos.push({
+                                    prestamista: cmLimpiar(r[0]), nCuota: parseInt(r[1]) || 1,
+                                    fecha, monto: parseFloat(String(r[3]).replace(',','.')) || 0,
+                                    metodoPago: cmLimpiar(r[4]) || 'Efectivo',
+                                    notas: cmLimpiar(r[5]) || ''
+                                });
+                            }
+                        }
+                    });
+
+                    // Mostrar resumen
+                    document.getElementById('cm-file-name').textContent = '📄 ' + file.name;
+                    const badges = [
+                        ['📦 Ventas', cmDatosExcel.ventas.length, '#667eea'],
+                        ['💸 Gastos', cmDatosExcel.gastos.length, '#e67e22'],
+                        ['👥 Clientes', cmDatosExcel.clientes.length, '#27ae60'],
+                        ['🏦 Préstamos', cmDatosExcel.prestamos.length, '#1a5276'],
+                    ];
+                    document.getElementById('cm-badges').innerHTML = badges.map(([label, n, color]) =>
+                        `<span style="background:${color}20;color:${color};border-radius:12px;
+                            padding:3px 10px;font-size:12px;font-weight:700;">${label}: ${n}</span>`
+                    ).join('');
+                    document.getElementById('cm-cnt-ventas').textContent    = cmDatosExcel.ventas.length    + ' registros';
+                    document.getElementById('cm-cnt-gastos').textContent    = cmDatosExcel.gastos.length    + ' registros';
+                    document.getElementById('cm-cnt-clientes').textContent  = cmDatosExcel.clientes.length  + ' registros';
+                    document.getElementById('cm-cnt-prestamos').textContent = cmDatosExcel.prestamos.length + ' préstamos · ' + cmDatosExcel.pagos.length + ' pagos';
+                    document.getElementById('cm-file-info').style.display   = 'block';
+                    document.getElementById('cm-modulos').style.display     = 'block';
+                    document.getElementById('cm-result').style.display      = 'none';
+                    document.getElementById('cm-log').style.display         = 'none';
+                    document.getElementById('cm-progress').style.display    = 'none';
+
+                    // Advertir si hay filas de ejemplo
+                    const tieneEjemplos = cmDatosExcel.ventas.some(v =>
+                        v.cliente === 'PLASTICOS BICENTENARIO' || v.cliente === 'TALLER LA SOLUCION');
+                    document.getElementById('cm-aviso-ejemplos').style.display = tieneEjemplos ? 'block' : 'none';
+
+                } catch(err) {
+                    alert('Error leyendo el archivo: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function cmIniciarCarga() {
+            const btn = document.getElementById('cm-btn-cargar');
+            const logEl = document.getElementById('cm-log');
+            const prog  = document.getElementById('cm-progress');
+            const res   = document.getElementById('cm-result');
+
+            btn.disabled = true;
+            logEl.innerHTML = '';
+            logEl.style.display = 'block';
+            prog.style.display  = 'block';
+            res.style.display   = 'none';
+
+            const sobrescribir = document.getElementById('cm-sobrescribir').checked;
+            const stats = { ventas:0, gastos:0, clientes:0, prestamos:0, pagos:0, errores:0 };
+            const total = (document.getElementById('cm-chk-ventas').checked ? cmDatosExcel.ventas.length : 0)
+                        + (document.getElementById('cm-chk-gastos').checked ? cmDatosExcel.gastos.length : 0)
+                        + (document.getElementById('cm-chk-clientes').checked ? cmDatosExcel.clientes.length : 0)
+                        + (document.getElementById('cm-chk-prestamos').checked ? cmDatosExcel.prestamos.length : 0);
+            let procesados = 0;
+
+            const cmLog = (msg, tipo) => {
+                const d = document.createElement('div');
+                d.className = tipo === 'err' ? 'err' : tipo === 'ok' ? 'ok' : 'inf';
+                d.style.color = tipo === 'err' ? '#ff6b6b' : tipo === 'ok' ? '#6bff9e' : '#6bb5ff';
+                d.textContent = msg;
+                logEl.appendChild(d);
+                logEl.scrollTop = logEl.scrollHeight;
+            };
+            const cmUpd = (n) => {
+                procesados += n;
+                const pct = Math.min(100, Math.round(procesados / Math.max(total,1) * 100));
+                document.getElementById('cm-bar').style.width = pct + '%';
+                document.getElementById('cm-pct').textContent = pct + '% - ' + procesados + ' de ' + total;
+            };
+            const tick = () => new Promise(r => setTimeout(r, 0));
+
+            // ── CLIENTES ──────────────────────────────────────────────────
+            if (document.getElementById('cm-chk-clientes').checked && cmDatosExcel.clientes.length) {
+                cmLog('👥 Importando clientes...', 'inf');
+                for (const c of cmDatosExcel.clientes) {
+                    try {
+                        if (!c.nombre) { stats.errores++; continue; }
+                        const idx = clientsData.findIndex(x => x.name.toLowerCase() === c.nombre.toLowerCase());
+                        const obj = {
+                            id: idx >= 0 ? clientsData[idx].id : Date.now().toString() + Math.random().toString(36).slice(2,6),
+                            name: c.nombre, rif: c.rif, contact: c.telefono, address: c.direccion,
+                            retieneIva: c.retieneIva, retieneIslr: c.retieneIslr,
+                            tipoCliente: c.tipo, permiteCredito: c.permiteCredito,
+                            diasCredito: c.diasCredito, diasAlertaAntes: 3,
+                            createdAt: new Date().toISOString()
+                        };
+                        if (idx >= 0) { if (sobrescribir) clientsData[idx] = obj; }
+                        else clientsData.push(obj);
+                        stats.clientes++;
+                        cmUpd(1);
+                    } catch(e) { stats.errores++; cmLog('Error cliente: ' + e.message, 'err'); }
+                }
+                clientsData.sort((a,b) => a.name.localeCompare(b.name,'es'));
+                localStorage.setItem('clientsData', JSON.stringify(clientsData));
+                cmLog('Clientes: ' + stats.clientes + ' procesados', 'ok');
+                await tick();
+            }
+
+            // ── VENTAS ───────────────────────────────────────────────────
+            if (document.getElementById('cm-chk-ventas').checked && cmDatosExcel.ventas.length) {
+                cmLog('📦 Importando ventas...', 'inf');
+                for (const v of cmDatosExcel.ventas) {
+                    try {
+                        if (!v.fecha || !v.cliente) { stats.errores++; continue; }
+                        if (!clientsData.find(c => c.name.toLowerCase() === v.cliente.toLowerCase())) {
+                            clientsData.push({ id: Date.now().toString()+Math.random().toString(36).slice(2,6),
+                                name:v.cliente, rif:'N/A', contact:'', address:'',
+                                retieneIva:false, retieneIslr:false, tipoCliente:'natural',
+                                permiteCredito:false, diasCredito:30, diasAlertaAntes:3,
+                                createdAt:new Date().toISOString() });
+                            localStorage.setItem('clientsData', JSON.stringify(clientsData));
+                        }
+                        const bcvRate = getBCVRateForDate(v.fecha) || appConfig.exchangeRates.bcv || 1;
+                        const totalBS = v.totalUSD * bcvRate;
+                        const pendiente = Math.max(0, v.totalUSD - v.cobradoUSD);
+                        const metodoPago = pendiente > 0 ? 'Crédito' : (v.metodoPago || 'Efectivo');
+
+                        const sale = {
+                            id: Date.now() + Math.floor(Math.random()*99999),
+                            date: v.fecha, customer: v.cliente, customerRif: 'N/A',
+                            items: [{ id:1, name: v.descripcion || 'Producto',
+                                quantity: v.cantidad || 1,
+                                priceBS: totalBS / (v.cantidad || 1), hasIva: false }],
+                            subtotal: totalBS, iva: 0, total: totalBS, totalUSD: v.totalUSD,
+                            paymentMethod: metodoPago, documentType: 'Nota de entrega',
+                            retencionIva: 0, retencionIslr: 0, totalNeto: totalBS,
+                            notes: v.notas || '', importado: true
+                        };
+                        if (sobrescribir) {
+                            const idx = salesData.findIndex(x => x.date===v.fecha && x.customer===v.cliente);
+                            if (idx >= 0) salesData.splice(idx, 1);
+                        }
+                        salesData.unshift(sale);
+
+                        // Crear crédito si hay saldo pendiente
+                        if (pendiente > 0.01) {
+                            const credit = {
+                                id: sale.id, customer: v.cliente, date: v.fecha,
+                                amount: totalBS, amountUSD: v.totalUSD,
+                                paid: v.cobradoUSD * bcvRate, paidUSD: v.cobradoUSD,
+                                balance: pendiente * bcvRate, balanceUSD: pendiente,
+                                status: pendiente >= v.totalUSD ? 'Pendiente' : 'Parcial',
+                                payments: [], importado: true
+                            };
+                            creditsData.unshift(credit);
+                        }
+                        stats.ventas++;
+                        cmUpd(1);
+                        await tick();
+                    } catch(e) { stats.errores++; cmLog('Error venta: ' + e.message, 'err'); }
+                }
+                salesData.sort((a,b) => b.date.localeCompare(a.date));
+                localStorage.setItem('salesData', JSON.stringify(salesData));
+                if (stats.ventas > 0) localStorage.setItem('creditsData', JSON.stringify(creditsData));
+                cmLog('Ventas: ' + stats.ventas + ' importadas', 'ok');
+                await tick();
+            }
+
+            // ── GASTOS ───────────────────────────────────────────────────
+            if (document.getElementById('cm-chk-gastos').checked && cmDatosExcel.gastos.length) {
+                cmLog('💸 Importando gastos...', 'inf');
+                for (const g of cmDatosExcel.gastos) {
+                    try {
+                        if (!g.fecha) { stats.errores++; continue; }
+                        if (sobrescribir) {
+                            const idx = expensesData.findIndex(x => x.date===g.fecha && x.description===g.descripcion);
+                            if (idx >= 0) expensesData.splice(idx, 1);
+                        }
+                        expensesData.unshift({
+                            id: Date.now() + Math.floor(Math.random()*99999),
+                            date: g.fecha, description: g.descripcion || 'Gasto',
+                            invoiceNumber: '', documentType: 'Recibo',
+                            amount: g.montoUSD, amountUSD: g.montoUSD, iva: 0,
+                            category: g.categoria || 'Operativo',
+                            paymentMethod: g.metodoPago || 'Efectivo',
+                            empresa: g.empresa || '', notas: g.notas || '', importado: true
+                        });
+                        stats.gastos++;
+                        cmUpd(1);
+                        await tick();
+                    } catch(e) { stats.errores++; cmLog('Error gasto: ' + e.message, 'err'); }
+                }
+                expensesData.sort((a,b) => b.date.localeCompare(a.date));
+                localStorage.setItem('expensesData', JSON.stringify(expensesData));
+                cmLog('Gastos: ' + stats.gastos + ' importados', 'ok');
+                await tick();
+            }
+
+            // ── PRÉSTAMOS ────────────────────────────────────────────────
+            if (document.getElementById('cm-chk-prestamos').checked && cmDatosExcel.prestamos.length) {
+                cmLog('Importando préstamos...', 'inf');
+                for (const p of cmDatosExcel.prestamos) {
+                    try {
+                        if (!p.prestamista || p.montoOriginalUSD <= 0) { stats.errores++; continue; }
+                        const id = 'prest-' + Date.now() + Math.random().toString(36).slice(2,6);
+                        const tasa = p.tasaInteres / 100 / 12;
+                        const plazo = p.plazoMeses;
+                        const cuota = tasa > 0
+                            ? p.montoOriginalUSD * tasa * Math.pow(1+tasa,plazo) / (Math.pow(1+tasa,plazo)-1)
+                            : p.montoOriginalUSD / plazo;
+                        const amort = Array.from({length: plazo}, (_, i) => ({
+                            numero: i+1, cuotaUSD: parseFloat(cuota.toFixed(2)),
+                            estado: 'pendiente', montoPagadoUSD: 0,
+                            saldoPendienteUSD: parseFloat(cuota.toFixed(2)), pagos: []
+                        }));
+                        const pagosDelPrest = cmDatosExcel.pagos.filter(pg =>
+                            pg.prestamista.toLowerCase() === p.prestamista.toLowerCase());
+                        let totalPagado = 0;
+                        pagosDelPrest.forEach(pg => {
+                            const idx = pg.nCuota - 1;
+                            if (amort[idx]) {
+                                amort[idx].estado = 'pagado';
+                                amort[idx].fechaPago = pg.fecha;
+                                amort[idx].montoPagadoUSD = pg.monto;
+                                amort[idx].saldoPendienteUSD = 0;
+                                totalPagado += pg.monto;
+                                stats.pagos++;
+                            }
+                        });
+                        prestamosData.unshift({
+                            id, prestamista: p.prestamista, tipo: p.tipo, contrato: p.contrato,
+                            montoOriginalUSD: p.montoOriginalUSD, tasaInteres: p.tasaInteres,
+                            plazoMeses: plazo, cuotaMensualUSD: parseFloat(cuota.toFixed(2)),
+                            fechaDesembolso: p.fechaDesembolso, fechaPrimeraCuota: p.fechaPrimeraCuota,
+                            estado: totalPagado >= p.montoOriginalUSD ? 'finalizado' : 'activo',
+                            cuotasPagadas: pagosDelPrest.length, totalPagadoUSD: totalPagado,
+                            saldoPendienteUSD: Math.max(0, p.montoOriginalUSD - totalPagado),
+                            observaciones: p.observaciones, amortizacion: amort,
+                            creadoEn: new Date().toISOString(), importado: true
+                        });
+                        stats.prestamos++;
+                        cmUpd(1 + pagosDelPrest.length);
+                    } catch(e) { stats.errores++; cmLog('Error préstamo: ' + e.message, 'err'); }
+                }
+                localStorage.setItem('prestamosData', JSON.stringify(prestamosData));
+                cmLog('Préstamos: ' + stats.prestamos + ' | Pagos: ' + stats.pagos, 'ok');
+                await tick();
+            }
+
+            // Actualizar vistas
+            document.getElementById('cm-bar').style.width = '100%';
+            document.getElementById('cm-pct').textContent = '100% - Completado';
+            loadDashboard && loadDashboard();
+            loadSalesHistory && loadSalesHistory();
+            loadExpensesHistory && loadExpensesHistory();
+            loadClientsList && loadClientsList();
+            loadCustomerSelect && loadCustomerSelect();
+            loadPendingCredits && loadPendingCredits();
+            loadPrestamosList && loadPrestamosList();
+
+            const totalImportado = stats.ventas + stats.gastos + stats.clientes + stats.prestamos;
+            res.style.display = 'block';
+            res.style.background = stats.errores === 0 || totalImportado > 0 ? '#d5f5e3' : '#fadbd8';
+            res.style.border = '2px solid ' + (stats.errores === 0 || totalImportado > 0 ? '#27ae60' : '#e74c3c');
+            res.style.borderRadius = '10px';
+            res.innerHTML = `
+                <div style="font-size:24px;margin-bottom:8px;">${totalImportado > 0 ? '✅' : '⚠️'}</div>
+                <h3 style="color:${totalImportado > 0 ? '#1a7a40' : '#922b21'};margin-bottom:12px;">
+                    ${totalImportado > 0 ? 'Importación completada' : 'Sin datos importados'}
+                </h3>
+                <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
+                    <tr><td style="padding:4px 8px;">📦 Ventas</td><td style="padding:4px 8px;font-weight:700;">${stats.ventas}</td></tr>
+                    <tr><td style="padding:4px 8px;">💸 Gastos</td><td style="padding:4px 8px;font-weight:700;">${stats.gastos}</td></tr>
+                    <tr><td style="padding:4px 8px;">👥 Clientes</td><td style="padding:4px 8px;font-weight:700;">${stats.clientes}</td></tr>
+                    <tr><td style="padding:4px 8px;">🏦 Préstamos</td><td style="padding:4px 8px;font-weight:700;">${stats.prestamos} (${stats.pagos} pagos)</td></tr>
+                    ${stats.errores ? `<tr><td style="padding:4px 8px;color:#e74c3c;">⚠️ Errores</td><td style="padding:4px 8px;font-weight:700;color:#e74c3c;">${stats.errores}</td></tr>` : ''}
+                </table>
+                <p style="margin-top:12px;font-size:13px;color:#555;">Los datos ya están visibles en todos los módulos de AQUANEV.</p>
+            `;
+            btn.disabled = false;
+            btn.textContent = '🔄 Importar nuevamente';
+        }
+
+        // ── Botón flotante "Subir al menú" ─────────────────────────────
+        function irAlMenu() {
+            document.getElementById('top-anchor').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        (function initBtnMenu() {
+            const btn = document.getElementById('btn-ir-menu');
+            if (!btn) return;
+            // Mostrar cuando el usuario scrollea más de 300px
+            window.addEventListener('scroll', () => {
+                btn.classList.toggle('visible', window.scrollY > 300);
+            }, { passive: true });
+        })();
+
+        // Helpers del cargador masivo
+        function cmLimpiar(v) { return v ? String(v).trim() : ''; }
+        function cmSiNo(v)    { return String(v).toUpperCase().trim() === 'SI'; }
+        function cmParseFecha(v) {
+            if (!v) return null;
+            if (v instanceof Date) return v.toISOString().slice(0,10);
+            const s = String(v).trim();
+            const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (m1) return `${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+            const n = parseFloat(s);
+            if (!isNaN(n) && n > 40000) {
+                return new Date((n - 25569) * 86400 * 1000).toISOString().slice(0,10);
+            }
+            return null;
+        }
+
+
     </script>
+    <!-- Botón flotante: subir al menú -->
+    <button id="btn-ir-menu" onclick="irAlMenu()" title="Subir al menú">
+        ▲
+    </button>
+
 </body>
 </html>
