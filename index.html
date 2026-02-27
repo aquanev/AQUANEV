@@ -14549,8 +14549,19 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             
             // Recargar tabla
             cargarHistorialTasasBCV();
-            
-            alert('✅ Tasa BCV registrada exitosamente\n\nFecha: ' + formatDate(fecha) + '\nTasa: ' + tasa.toFixed(2) + ' BS/USD\n\n(Fecha guardada: ' + fecha + ')');
+
+            // Si la tasa registrada es de HOY, sincronizar todos los campos automáticamente
+            const today = new Date().toISOString().split('T')[0];
+            if (fecha === today) {
+                syncRateFromBCV();         // actualiza appConfig + priceExchangeRate
+                loadManualRates();         // actualiza campos en Configuración y Precios
+                loadManualExchangeRates(); // actualiza el header (bcv-rate visual)
+                loadCurrentPrices();       // recalcula precios con la nueva tasa
+                loadCurrentPricesTable && loadCurrentPricesTable();
+            }
+
+            const eraHoy = fecha === today ? '\n\n✅ Tasa aplicada en toda la aplicación.' : '\n\n(Tasa histórica - no afecta la tasa actual)';
+            alert('Tasa BCV registrada\n\nFecha: ' + formatDate(fecha) + '\nTasa: ' + tasa.toFixed(2) + ' BS/USD' + eraHoy);
         }
         
         function cargarHistorialTasasBCV() {
