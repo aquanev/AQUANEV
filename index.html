@@ -7878,6 +7878,20 @@
                     loadInventoryList && loadInventoryList();
                 }
             }
+            // Refrescar UI en todos los módulos si llegaron datos nuevos
+            if (count > 0) {
+                setTimeout(() => {
+                    loadDashboard       && loadDashboard();
+                    loadSalesHistory    && loadSalesHistory();
+                    loadExpensesHistory && loadExpensesHistory();
+                    loadPendingCredits  && loadPendingCredits();
+                    loadClientsList     && loadClientsList();
+                    loadCustomerSelect  && loadCustomerSelect();
+                    poblarSaleProductSelect && poblarSaleProductSelect();
+                    actualizarSyncBadge && actualizarSyncBadge();
+                    console.log('[Sync] UI refrescada con', count, 'registros nuevos');
+                }, 300);
+            }
             return count;
         }
 
@@ -9530,7 +9544,9 @@
             }
             
             updateSaleDisplay();
-            quantityInput.value = 0; // Reset to 0 after adding
+            // Reset input del grid legacy si existe
+            const _qInput = document.getElementById(`qty-${productKey}`);
+            if (_qInput) _qInput.value = 0;
         }
 
         function removeFromSale(index) {
@@ -9549,9 +9565,10 @@
                 recarga_local_empresa: 'Recarga Local Empresa',
                 dispensador: 'Dispensador de Agua'
             };
-            // Incluir productos personalizados guardados en waterPrices
+            // Incluir TODOS los productos en waterPrices que no sean base
             Object.entries(waterPrices).forEach(([k, v]) => {
-                if (v.esPersonalizado && v.nombre && !productNames[k]) productNames[k] = v.nombre;
+                if (!productNames[k] && v.nombre) productNames[k] = v.nombre;
+                else if (!productNames[k]) productNames[k] = k; // fallback a la clave
             });
 
             const priceUSD = waterPrices[productKey]?.priceUSD || 0;
@@ -11553,6 +11570,12 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const filtroEstado = document.getElementById('credit-filter-estado')?.value || 'todos';
             
             // Ordenar: Vencidos primero, luego por vencer, luego vigentes, luego pagados
+            // Normalizar status (compatibilidad ingles/espanol e importados)
+            creditsData.forEach(cr => {
+                if (!cr.status || cr.status === 'paid'    || cr.status === 'Paid')    cr.status = 'Pagado';
+                if (cr.status === 'pending' || cr.status === 'Pending')               cr.status = 'Pendiente';
+                if (cr.status === 'partial' || cr.status === 'Partial')               cr.status = 'Parcial';
+            });
             const estadoOrder = { vencido: 0, por_vencer: 1, vigente: 2, sin_vencimiento: 3 };
             const sortedCredits = [...creditsData].sort((a, b) => {
                 if (a.status === 'Pagado' && b.status !== 'Pagado') return 1;
@@ -11877,41 +11900,43 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
         
         function filterClients() {
             const searchTerm = document.getElementById('client-search').value.toLowerCase();
+            if (!searchTerm) { loadClientsList(); return; }
             const tbody = document.getElementById('clients-list');
             tbody.innerHTML = '';
-            
-            const filteredClients = clientsData.filter(client => 
-                client.name.toLowerCase().includes(searchTerm)
+            const filteredClients = clientsData.filter(client =>
+                client.name.toLowerCase().includes(searchTerm) ||
+                (client.rif || '').toLowerCase().includes(searchTerm) ||
+                (client.contact || '').toLowerCase().includes(searchTerm)
             );
-            
             if (filteredClients.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align: center; color: #6c757d;">
-                            No se encontraron clientes
-                        </td>
-                    </tr>
-                `;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#6c757d;padding:20px;">
+                    No se encontraron clientes para "${searchTerm}"</td></tr>`;
                 return;
             }
-            
             filteredClients.forEach(client => {
-                const clientSales = salesData.filter(sale => sale.customer === client.name);
-                const totalPurchasesUSD = clientSales.reduce((sum, sale) =>
-                    sum + (sale.totalUSD ?? convertBStoUSD(sale.total ?? 0)), 0);
-                
-                // Obtener última compra
-                const lastPurchase = clientSales.length > 0 ? 
-                    clientSales[0].date : 'Nunca';
-                
+                const clientSales       = salesData.filter(s => s.customer === client.name);
+                const totalPurchasesUSD = clientSales.reduce((sum, s) =>
+                    sum + (s.totalUSD ?? convertBStoUSD(s.total ?? 0)), 0);
+                const lastPurchase      = clientSales.length > 0 ? clientSales[0].date : 'Nunca';
+                const retencionesText   = [
+                    client.retieneIva  ? 'Ret. IVA'  : '',
+                    client.retieneIslr ? 'Ret. ISLR' : ''
+                ].filter(Boolean).join(', ') || 'Ninguna';
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${client.name}</td>
+                    <td><strong>${client.name}</strong><br><small>${client.rif || 'Sin RIF'}</small></td>
                     <td>${client.contact || 'N/A'}</td>
+                    <td>${client.permiteCredito
+                        ? `<span style="color:#4caf50;font-weight:600;">&#10003; ${client.diasCredito||30} dias</span>`
+                        : '<span style="color:#999;">&#10007; No</span>'}</td>
+                    <td><small>${retencionesText}</small></td>
                     <td>${formatDate(lastPurchase)}</td>
-                    <td>${fmtUSD(totalPurchasesUSD)}</td>
+                    <td><strong>${fmtUSD(totalPurchasesUSD)}</strong></td>
                     <td>
-                        <button class="btn btn-danger" onclick="deleteClient('${client.id}')">
+                        <button class="btn btn-small btn-primary" onclick="editClient('${client.id}')" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-small btn-danger" onclick="deleteClient('${client.id}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -12195,7 +12220,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
 
         
         function deleteExpense(id) {
-            const expense = expensesData.find(e => e.id === id);
+            const expense = expensesData.find(e => e.id == id);
             if (!expense) return;
 
             let confirmMsg = '¿Eliminar este gasto?';
@@ -12262,7 +12287,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 }
             }
 
-            expensesData = expensesData.filter(e => e.id !== id);
+            expensesData = expensesData.filter(e => e.id != id);
             localStorage.setItem('expensesData', JSON.stringify(expensesData));
             loadExpensesHistory();
             loadDashboard();
@@ -15112,7 +15137,8 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     if (!backup.datos && !backup.data) {
                         alert('❌ El archivo no es un respaldo válido de AQUANEV.'); return;
                     }
-                    const datos = backup.datos || backup.data; // compatibilidad v2 y v3
+                    // Compatibilidad: v3.1 usa backup.datos, v3.0 usa backup.data, muy viejos usan raíz
+                    const datos = backup.datos || backup.data || backup || {};
 
                     // Contar registros a restaurar
                     const resumen = backup.resumen || {};
@@ -15135,10 +15161,10 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
 
                     // Restaurar cada clave conocida
                     const mapa = {
-                        salesData:           datos.salesData    || datos.sales    || null,
-                        expensesData:        datos.expensesData || datos.expenses || null,
-                        clientsData:         datos.clientsData  || datos.clients  || null,
-                        creditsData:         datos.creditsData  || datos.credits  || null,
+                        salesData:           datos.salesData    || datos.sales    || datos.ventas   || null,
+                        expensesData:        datos.expensesData || datos.expenses || datos.gastos   || null,
+                        clientsData:         datos.clientsData  || datos.clients  || datos.clientes || null,
+                        creditsData:         datos.creditsData  || datos.credits  || datos.creditos || null,
                         prestamosData:       datos.prestamosData    || null,
                         comprasData:         datos.comprasData       || null,
                         consignacionesData:  datos.consignacionesData|| null,
@@ -15155,13 +15181,29 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                         proveedoresData:     datos.proveedoresData   || null,
                         productosCompuestos: datos.productosCompuestos || null,
                     };
+                    // Guardar todos los campos mapeados
+                    let savedCount = 0;
                     Object.entries(mapa).forEach(([k, v]) => {
                         if (v !== null && v !== undefined) {
                             localStorage.setItem(k, JSON.stringify(v));
+                            savedCount++;
                         }
                     });
 
-                    alert('✅ Respaldo restaurado correctamente.\nLa aplicación se recargará ahora.');
+                    // Auto-detectar cualquier clave adicional con arrays
+                    // (cubre backups con nombres no estándar)
+                    const clavesConocidas = new Set(Object.keys(mapa));
+                    Object.entries(datos).forEach(([k, v]) => {
+                        if (!clavesConocidas.has(k) && (Array.isArray(v) || typeof v === 'object') && v !== null) {
+                            // Solo guardar si parece dato de AQUANEV (no metadata)
+                            if (!['version','fecha','date','dispositivo','resumen'].includes(k)) {
+                                localStorage.setItem(k, JSON.stringify(v));
+                                savedCount++;
+                            }
+                        }
+                    });
+
+                    alert('✅ Respaldo restaurado correctamente.\n' + savedCount + ' módulos recuperados.\nLa aplicación se recargará ahora.');
                     setTimeout(() => location.reload(), 800);
                 } catch(err) {
                     alert('❌ Error al restaurar: ' + err.message);
@@ -15418,10 +15460,12 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             // Agregar todos los productos en waterPrices
             const grupos = [
                 { label: 'Productos base', keys: Object.keys(baseNames) },
-                { label: 'Productos personalizados', keys: [] }
+                { label: 'Productos adicionales', keys: [] }
             ];
+            // Incluir TODOS los productos en waterPrices que no sean base,
+            // independientemente de si tienen la bandera esPersonalizado
             Object.keys(waterPrices).forEach(k => {
-                if (!baseNames[k] && waterPrices[k]?.esPersonalizado) grupos[1].keys.push(k);
+                if (!baseNames[k]) grupos[1].keys.push(k);
             });
 
             grupos.forEach(grupo => {
