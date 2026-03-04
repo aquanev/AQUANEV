@@ -2378,6 +2378,42 @@
                             <div><div style="font-weight:700;font-size:13px;">🏦 Préstamos</div>
                             <div id="cm-cnt-prestamos" style="font-size:12px;color:#888;">0 préstamos</div></div>
                         </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                            border:2px solid #BF360C;border-radius:10px;background:#FFF3EE;cursor:pointer;">
+                            <input type="checkbox" id="cm-chk-proveedores" checked style="width:18px;height:18px;accent-color:#BF360C;cursor:pointer;">
+                            <div><div style="font-weight:700;font-size:13px;">🏭 Proveedores</div>
+                            <div id="cm-cnt-proveedores" style="font-size:12px;color:#888;">0 registros</div></div>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                            border:2px solid #6A1B9A;border-radius:10px;background:#F9F0FF;cursor:pointer;">
+                            <input type="checkbox" id="cm-chk-creditos" checked style="width:18px;height:18px;accent-color:#6A1B9A;cursor:pointer;">
+                            <div><div style="font-weight:700;font-size:13px;">💳 Créditos</div>
+                            <div id="cm-cnt-creditos" style="font-size:12px;color:#888;">0 registros</div></div>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                            border:2px solid #004D40;border-radius:10px;background:#E0F2F1;cursor:pointer;">
+                            <input type="checkbox" id="cm-chk-compras" checked style="width:18px;height:18px;accent-color:#004D40;cursor:pointer;">
+                            <div><div style="font-weight:700;font-size:13px;">🛒 Compras</div>
+                            <div id="cm-cnt-compras" style="font-size:12px;color:#888;">0 registros</div></div>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                            border:2px solid #4A148C;border-radius:10px;background:#F5F0FF;cursor:pointer;">
+                            <input type="checkbox" id="cm-chk-consignaciones" checked style="width:18px;height:18px;accent-color:#4A148C;cursor:pointer;">
+                            <div><div style="font-weight:700;font-size:13px;">📦 Consignaciones</div>
+                            <div id="cm-cnt-consignaciones" style="font-size:12px;color:#888;">0 registros</div></div>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                            border:2px solid #1A237E;border-radius:10px;background:#ECEEFF;cursor:pointer;">
+                            <input type="checkbox" id="cm-chk-precios" checked style="width:18px;height:18px;accent-color:#1A237E;cursor:pointer;">
+                            <div><div style="font-weight:700;font-size:13px;">💲 Precios</div>
+                            <div id="cm-cnt-precios" style="font-size:12px;color:#888;">0 productos</div></div>
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
+                            border:2px solid #1565C0;border-radius:10px;background:#E3F2FD;cursor:pointer;">
+                            <input type="checkbox" id="cm-chk-bcv" checked style="width:18px;height:18px;accent-color:#1565C0;cursor:pointer;">
+                            <div><div style="font-weight:700;font-size:13px;">📈 Tasas BCV</div>
+                            <div id="cm-cnt-bcv" style="font-size:12px;color:#888;">0 registros</div></div>
+                        </label>
                     </div>
 
                     <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#555;
@@ -16332,7 +16368,8 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             reader.onload = e => {
                 try {
                     const wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
-                    cmDatosExcel = { ventas:[], gastos:[], clientes:[], prestamos:[], pagos:[] };
+                    cmDatosExcel = { ventas:[], gastos:[], clientes:[], prestamos:[], pagos:[],
+                                     proveedores:[], creditos:[], compras:[], consignaciones:[], precios:[], bcv:[] };
 
                     wb.SheetNames.forEach(name => {
                         const ws   = wb.Sheets[name];
@@ -16412,6 +16449,99 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                                 });
                             }
                         }
+                        // ── MÓDULOS EXTENDIDOS CM ──────────────────────────
+                        if (name.includes('Proveedores')) {
+                            for (let i = 3; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r[0]) continue;
+                                const tipoStr = cmLimpiar(r[6]) || 'gastos';
+                                const tipos = tipoStr === 'ambos' ? ['gastos','compras']
+                                            : tipoStr === 'compras' ? ['compras'] : ['gastos'];
+                                cmDatosExcel.proveedores.push({
+                                    nombre: cmLimpiar(r[0]), rif: cmLimpiar(r[1]) || '',
+                                    telefono: cmLimpiar(r[2]) || '', email: cmLimpiar(r[3]) || '',
+                                    direccion: cmLimpiar(r[4]) || '', contacto: cmLimpiar(r[5]) || '',
+                                    tipos, notas: cmLimpiar(r[7]) || '',
+                                    docs: ['Recibo'], diasCredito: 0, moneda: 'USD', activo: true
+                                });
+                            }
+                        }
+                        if (name.includes('Crédit') || name.includes('Credit')) {
+                            for (let i = 3; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r[0] || !r[1]) continue;
+                                const fecha = cmParseFecha(r[0]);
+                                if (!fecha) continue;
+                                cmDatosExcel.creditos.push({
+                                    fecha, cliente: cmLimpiar(r[1]),
+                                    descripcion: cmLimpiar(r[2]) || 'Crédito',
+                                    montoUSD: parseFloat(String(r[3]).replace(',','.')) || 0,
+                                    cobradoUSD: parseFloat(String(r[4]).replace(',','.')) || 0,
+                                    saldoUSD: parseFloat(String(r[5]).replace(',','.')) || 0,
+                                    fechaVencimiento: cmParseFecha(r[6]) || '',
+                                    estado: cmLimpiar(r[7]) || 'Pendiente',
+                                    notas: cmLimpiar(r[8]) || ''
+                                });
+                            }
+                        }
+                        if (name.includes('Compras')) {
+                            for (let i = 3; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r[0] || !r[2]) continue;
+                                const fecha = cmParseFecha(r[0]);
+                                if (!fecha) continue;
+                                cmDatosExcel.compras.push({
+                                    fecha, proveedor: cmLimpiar(r[1]) || 'Sin proveedor',
+                                    producto: cmLimpiar(r[2]),
+                                    clave: cmLimpiar(r[3]) || cmLimpiar(r[2]).toLowerCase().replace(/\s+/g,'_'),
+                                    cantidad: parseFloat(r[4]) || 1,
+                                    costoUnit: parseFloat(String(r[5]).replace(',','.')) || 0,
+                                    totalUSD: parseFloat(String(r[6]).replace(',','.')) || 0,
+                                    factura: cmLimpiar(r[7]) || '', notas: cmLimpiar(r[8]) || ''
+                                });
+                            }
+                        }
+                        if (name.includes('Consignacion')) {
+                            for (let i = 3; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r[0] || !r[1]) continue;
+                                const fecha = cmParseFecha(r[0]);
+                                if (!fecha) continue;
+                                cmDatosExcel.consignaciones.push({
+                                    fecha, cliente: cmLimpiar(r[1]),
+                                    producto: cmLimpiar(r[2]) || 'Botellón 20L',
+                                    cantidad: parseFloat(r[3]) || 1,
+                                    precioUSD: parseFloat(String(r[4]).replace(',','.')) || 0,
+                                    totalUSD: parseFloat(String(r[5]).replace(',','.')) || 0,
+                                    fechaVencimiento: cmParseFecha(r[6]) || '',
+                                    estado: cmLimpiar(r[7]) || 'entregado',
+                                    notas: cmLimpiar(r[8]) || ''
+                                });
+                            }
+                        }
+                        if (name.includes('Precio')) {
+                            for (let i = 3; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r[0] || !r[1]) continue;
+                                cmDatosExcel.precios.push({
+                                    clave: cmLimpiar(r[0]),
+                                    nombre: cmLimpiar(r[1]),
+                                    precioUSD: parseFloat(String(r[2]).replace(',','.')) || 0,
+                                    hasIva: cmSiNo(r[3]),
+                                    descripcion: cmLimpiar(r[4]) || ''
+                                });
+                            }
+                        }
+                        if (name.includes('BCV') || name.includes('Tasa') || name.includes('tasa')) {
+                            for (let i = 3; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!r[0] || !r[1]) continue;
+                                const fecha = cmParseFecha(r[0]);
+                                const tasa = parseFloat(String(r[1]).replace(',','.'));
+                                if (!fecha || !tasa || tasa <= 0) continue;
+                                cmDatosExcel.bcv.push({ fecha, tasa });
+                            }
+                        }
                     });
 
                     // Mostrar resumen
@@ -16421,15 +16551,27 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                         ['💸 Gastos', cmDatosExcel.gastos.length, '#e67e22'],
                         ['👥 Clientes', cmDatosExcel.clientes.length, '#27ae60'],
                         ['🏦 Préstamos', cmDatosExcel.prestamos.length, '#1a5276'],
+                        ['🏭 Proveedores', cmDatosExcel.proveedores.length, '#BF360C'],
+                        ['💳 Créditos', cmDatosExcel.creditos.length, '#6A1B9A'],
+                        ['🛒 Compras', cmDatosExcel.compras.length, '#004D40'],
+                        ['📦 Consignaciones', cmDatosExcel.consignaciones.length, '#4A148C'],
+                        ['💲 Precios', cmDatosExcel.precios.length, '#1A237E'],
+                        ['📈 Tasas BCV', cmDatosExcel.bcv.length, '#1565C0'],
                     ];
                     document.getElementById('cm-badges').innerHTML = badges.map(([label, n, color]) =>
                         `<span style="background:${color}20;color:${color};border-radius:12px;
                             padding:3px 10px;font-size:12px;font-weight:700;">${label}: ${n}</span>`
                     ).join('');
-                    document.getElementById('cm-cnt-ventas').textContent    = cmDatosExcel.ventas.length    + ' registros';
-                    document.getElementById('cm-cnt-gastos').textContent    = cmDatosExcel.gastos.length    + ' registros';
-                    document.getElementById('cm-cnt-clientes').textContent  = cmDatosExcel.clientes.length  + ' registros';
-                    document.getElementById('cm-cnt-prestamos').textContent = cmDatosExcel.prestamos.length + ' préstamos · ' + cmDatosExcel.pagos.length + ' pagos';
+                    document.getElementById('cm-cnt-ventas').textContent         = cmDatosExcel.ventas.length         + ' registros';
+                    document.getElementById('cm-cnt-gastos').textContent         = cmDatosExcel.gastos.length         + ' registros';
+                    document.getElementById('cm-cnt-clientes').textContent       = cmDatosExcel.clientes.length       + ' registros';
+                    document.getElementById('cm-cnt-prestamos').textContent      = cmDatosExcel.prestamos.length      + ' préstamos · ' + cmDatosExcel.pagos.length + ' pagos';
+                    document.getElementById('cm-cnt-proveedores').textContent    = cmDatosExcel.proveedores.length    + ' registros';
+                    document.getElementById('cm-cnt-creditos').textContent       = cmDatosExcel.creditos.length       + ' registros';
+                    document.getElementById('cm-cnt-compras').textContent        = cmDatosExcel.compras.length        + ' registros';
+                    document.getElementById('cm-cnt-consignaciones').textContent = cmDatosExcel.consignaciones.length + ' registros';
+                    document.getElementById('cm-cnt-precios').textContent        = cmDatosExcel.precios.length        + ' productos';
+                    document.getElementById('cm-cnt-bcv').textContent            = cmDatosExcel.bcv.length            + ' registros';
                     document.getElementById('cm-file-info').style.display   = 'block';
                     document.getElementById('cm-modulos').style.display     = 'block';
                     document.getElementById('cm-result').style.display      = 'none';
@@ -16461,11 +16603,18 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             res.style.display   = 'none';
 
             const sobrescribir = document.getElementById('cm-sobrescribir').checked;
-            const stats = { ventas:0, gastos:0, clientes:0, prestamos:0, pagos:0, errores:0 };
-            const total = (document.getElementById('cm-chk-ventas').checked ? cmDatosExcel.ventas.length : 0)
-                        + (document.getElementById('cm-chk-gastos').checked ? cmDatosExcel.gastos.length : 0)
-                        + (document.getElementById('cm-chk-clientes').checked ? cmDatosExcel.clientes.length : 0)
-                        + (document.getElementById('cm-chk-prestamos').checked ? cmDatosExcel.prestamos.length : 0);
+            const stats = { ventas:0, gastos:0, clientes:0, prestamos:0, pagos:0,
+                            proveedores:0, creditos:0, compras:0, consignaciones:0, precios:0, bcv:0, errores:0 };
+            const total = (document.getElementById('cm-chk-ventas').checked         ? cmDatosExcel.ventas.length         : 0)
+                        + (document.getElementById('cm-chk-gastos').checked         ? cmDatosExcel.gastos.length         : 0)
+                        + (document.getElementById('cm-chk-clientes').checked       ? cmDatosExcel.clientes.length       : 0)
+                        + (document.getElementById('cm-chk-prestamos').checked      ? cmDatosExcel.prestamos.length      : 0)
+                        + (document.getElementById('cm-chk-proveedores').checked    ? cmDatosExcel.proveedores.length    : 0)
+                        + (document.getElementById('cm-chk-creditos').checked       ? cmDatosExcel.creditos.length       : 0)
+                        + (document.getElementById('cm-chk-compras').checked        ? cmDatosExcel.compras.length        : 0)
+                        + (document.getElementById('cm-chk-consignaciones').checked ? cmDatosExcel.consignaciones.length : 0)
+                        + (document.getElementById('cm-chk-precios').checked        ? cmDatosExcel.precios.length        : 0)
+                        + (document.getElementById('cm-chk-bcv').checked            ? cmDatosExcel.bcv.length            : 0);
             let procesados = 0;
 
             const cmLog = (msg, tipo) => {
@@ -16652,6 +16801,193 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 await tick();
             }
 
+            // ── PROVEEDORES ──────────────────────────────────────────────
+            if (document.getElementById('cm-chk-proveedores').checked && cmDatosExcel.proveedores.length) {
+                cmLog('🏭 Importando proveedores...', 'inf');
+                for (const p of cmDatosExcel.proveedores) {
+                    try {
+                        if (!p.nombre) { stats.errores++; continue; }
+                        const idx = proveedoresData.findIndex(x => x.nombre.toLowerCase() === p.nombre.toLowerCase());
+                        const obj = {
+                            id: idx >= 0 ? proveedoresData[idx].id : 'prov-' + Date.now() + Math.random().toString(36).slice(2,5),
+                            nombre: p.nombre, rif: p.rif, telefono: p.telefono,
+                            email: p.email, direccion: p.direccion, contacto: p.contacto,
+                            notas: p.notas, tipos: p.tipos, docs: p.docs,
+                            diasCredito: p.diasCredito, moneda: p.moneda, activo: true,
+                            creadoEn: new Date().toISOString()
+                        };
+                        if (idx >= 0) { if (sobrescribir) proveedoresData[idx] = obj; }
+                        else proveedoresData.push(obj);
+                        stats.proveedores++;
+                        cmUpd(1);
+                    } catch(e) { stats.errores++; cmLog('Error proveedor: ' + e.message, 'err'); }
+                }
+                proveedoresData.sort((a,b) => a.nombre.localeCompare(b.nombre,'es'));
+                guardarEnStorage('proveedoresData', proveedoresData);
+                cmLog('Proveedores: ' + stats.proveedores + ' procesados', 'ok');
+                await tick();
+            }
+
+            // ── CRÉDITOS ─────────────────────────────────────────────────
+            if (document.getElementById('cm-chk-creditos').checked && cmDatosExcel.creditos.length) {
+                cmLog('💳 Importando créditos...', 'inf');
+                for (const c of cmDatosExcel.creditos) {
+                    try {
+                        if (!c.fecha || !c.cliente) { stats.errores++; continue; }
+                        if (sobrescribir) {
+                            const idx = creditsData.findIndex(x => x.date === c.fecha && x.customer === c.cliente);
+                            if (idx >= 0) creditsData.splice(idx, 1);
+                        }
+                        const bcvRate = getBCVRateForDate(c.fecha) || appConfig.exchangeRates.bcv || 1;
+                        creditsData.unshift({
+                            id: Date.now() + Math.floor(Math.random()*99999),
+                            customer: c.cliente, date: c.fecha,
+                            amount: c.montoUSD * bcvRate, amountUSD: c.montoUSD,
+                            paid: c.cobradoUSD * bcvRate, paidUSD: c.cobradoUSD,
+                            balance: c.saldoUSD * bcvRate, balanceUSD: c.saldoUSD,
+                            status: c.estado || 'Pendiente',
+                            fechaVencimiento: c.fechaVencimiento || '',
+                            payments: [], notes: c.notas || '', importado: true
+                        });
+                        stats.creditos++;
+                        cmUpd(1);
+                    } catch(e) { stats.errores++; cmLog('Error crédito: ' + e.message, 'err'); }
+                }
+                creditsData.sort((a,b) => b.date.localeCompare(a.date));
+                guardarEnStorage('creditsData', creditsData);
+                cmLog('Créditos: ' + stats.creditos + ' importados', 'ok');
+                await tick();
+            }
+
+            // ── COMPRAS / INVENTARIO ─────────────────────────────────────
+            if (document.getElementById('cm-chk-compras').checked && cmDatosExcel.compras.length) {
+                cmLog('🛒 Importando compras...', 'inf');
+                for (const c of cmDatosExcel.compras) {
+                    try {
+                        if (!c.fecha || !c.producto) { stats.errores++; continue; }
+                        if (sobrescribir) {
+                            const idx = comprasData.findIndex(x => x.fecha === c.fecha && x.proveedor === c.proveedor);
+                            if (idx >= 0) comprasData.splice(idx, 1);
+                        }
+                        const bcvRate = getBCVRateForDate(c.fecha) || appConfig.exchangeRates.bcv || 1;
+                        const compra = {
+                            id: Date.now() + Math.floor(Math.random()*99999),
+                            fecha: c.fecha, proveedor: c.proveedor,
+                            factura: c.factura, observaciones: c.notas,
+                            items: [{
+                                productoKey: c.clave,
+                                nombre: c.producto,
+                                cantidad: c.cantidad,
+                                costoUnitarioUSD: c.costoUnit,
+                                costoTotalUSD: c.totalUSD
+                            }],
+                            subtotalUSD: c.totalUSD, totalUSD: c.totalUSD,
+                            metodoPago: 'Efectivo', estadoPago: 'pagado',
+                            creadoEn: new Date().toISOString(), importado: true
+                        };
+                        comprasData.unshift(compra);
+                        // Actualizar inventario si existe el producto
+                        const invIdx = inventoryData.findIndex(i => i.productoKey === c.clave);
+                        if (invIdx >= 0) {
+                            const inv = inventoryData[invIdx];
+                            const stockAnt = inv.stockActual || 0;
+                            const costoAnt = (inv.costoPromedioUSD || 0) * stockAnt;
+                            const nuevoStock = stockAnt + c.cantidad;
+                            inv.costoPromedioUSD = nuevoStock > 0 ? (costoAnt + c.totalUSD) / nuevoStock : c.costoUnit;
+                            inv.stockActual = nuevoStock;
+                            inv.totalCompras = (inv.totalCompras || 0) + c.cantidad;
+                            inv.ultimaCompra = c.fecha;
+                            inv.modificadoEn = new Date().toISOString();
+                        }
+                        stats.compras++;
+                        cmUpd(1);
+                    } catch(e) { stats.errores++; cmLog('Error compra: ' + e.message, 'err'); }
+                }
+                comprasData.sort((a,b) => b.fecha.localeCompare(a.fecha));
+                guardarEnStorage('comprasData', comprasData);
+                guardarEnStorage('inventoryData', inventoryData);
+                cmLog('Compras: ' + stats.compras + ' importadas', 'ok');
+                await tick();
+            }
+
+            // ── CONSIGNACIONES ───────────────────────────────────────────
+            if (document.getElementById('cm-chk-consignaciones').checked && cmDatosExcel.consignaciones.length) {
+                cmLog('📦 Importando consignaciones...', 'inf');
+                for (const c of cmDatosExcel.consignaciones) {
+                    try {
+                        if (!c.fecha || !c.cliente) { stats.errores++; continue; }
+                        if (sobrescribir) {
+                            const idx = consignacionesData.findIndex(x => x.fechaEntrega === c.fecha && x.cliente === c.cliente);
+                            if (idx >= 0) consignacionesData.splice(idx, 1);
+                        }
+                        consignacionesData.unshift({
+                            id: Date.now().toString() + Math.random().toString(36).slice(2,6),
+                            cliente: c.cliente, fechaEntrega: c.fecha,
+                            productoKey: null, productoNombre: c.producto,
+                            cantidadEntregada: c.cantidad,
+                            precioUnitarioUSD: c.precioUSD,
+                            totalUSD: c.totalUSD,
+                            estado: c.estado === 'Activa' ? 'entregado' : c.estado === 'Liquidada' ? 'cobrado' : 'entregado',
+                            fechaProceso: null, cantidadDevuelta: 0, cantidadCobrada: 0,
+                            montoCobradoUSD: 0, observaciones: c.notas,
+                            fechaVencimiento: c.fechaVencimiento || '',
+                            ventaGeneradaId: null, creadoEn: new Date().toISOString(), importado: true
+                        });
+                        stats.consignaciones++;
+                        cmUpd(1);
+                    } catch(e) { stats.errores++; cmLog('Error consignación: ' + e.message, 'err'); }
+                }
+                consignacionesData.sort((a,b) => b.fechaEntrega.localeCompare(a.fechaEntrega));
+                guardarEnStorage('consignacionesData', consignacionesData);
+                cmLog('Consignaciones: ' + stats.consignaciones + ' importadas', 'ok');
+                await tick();
+            }
+
+            // ── PRECIOS ──────────────────────────────────────────────────
+            if (document.getElementById('cm-chk-precios').checked && cmDatosExcel.precios.length) {
+                cmLog('💲 Importando precios...', 'inf');
+                for (const p of cmDatosExcel.precios) {
+                    try {
+                        if (!p.clave || p.precioUSD <= 0) { stats.errores++; continue; }
+                        waterPrices[p.clave] = {
+                            priceUSD: p.precioUSD,
+                            hasIva: p.hasIva,
+                            nombre: p.nombre,
+                            lastUpdate: new Date().toISOString()
+                        };
+                        stats.precios++;
+                        cmUpd(1);
+                    } catch(e) { stats.errores++; cmLog('Error precio: ' + e.message, 'err'); }
+                }
+                guardarEnStorage('waterPrices', waterPrices);
+                cmLog('Precios: ' + stats.precios + ' actualizados', 'ok');
+                await tick();
+            }
+
+            // ── TASAS BCV ────────────────────────────────────────────────
+            if (document.getElementById('cm-chk-bcv').checked && cmDatosExcel.bcv.length) {
+                cmLog('📈 Importando tasas BCV...', 'inf');
+                let bcvNuevas = 0;
+                for (const b of cmDatosExcel.bcv) {
+                    try {
+                        if (!b.fecha || !b.tasa) continue;
+                        const idx = bcvRateHistory.findIndex(r => r.date === b.fecha);
+                        if (idx >= 0) {
+                            if (sobrescribir) bcvRateHistory[idx].rate = b.tasa;
+                        } else {
+                            bcvRateHistory.push({ date: b.fecha, rate: b.tasa });
+                            bcvNuevas++;
+                        }
+                        stats.bcv++;
+                        cmUpd(1);
+                    } catch(e) { stats.errores++; }
+                }
+                bcvRateHistory.sort((a,b) => a.date.localeCompare(b.date));
+                guardarEnStorage('bcvRateHistory', bcvRateHistory);
+                cmLog('Tasas BCV: ' + stats.bcv + ' procesadas (' + bcvNuevas + ' nuevas)', 'ok');
+                await tick();
+            }
+
             // Actualizar vistas
             document.getElementById('cm-bar').style.width = '100%';
             document.getElementById('cm-pct').textContent = '100% - Completado';
@@ -16662,8 +16998,14 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             loadCustomerSelect && loadCustomerSelect();
             loadPendingCredits && loadPendingCredits();
             loadPrestamosList && loadPrestamosList();
+            loadProveedoresList && loadProveedoresList();
+            loadCurrentPrices && loadCurrentPrices();
+            loadCurrentPricesTable && loadCurrentPricesTable();
+            actualizarDatalistProveedores && actualizarDatalistProveedores();
 
-            const totalImportado = stats.ventas + stats.gastos + stats.clientes + stats.prestamos;
+            const totalImportado = stats.ventas + stats.gastos + stats.clientes + stats.prestamos
+                                 + stats.proveedores + stats.creditos + stats.compras
+                                 + stats.consignaciones + stats.precios + stats.bcv;
             res.style.display = 'block';
             res.style.background = stats.errores === 0 || totalImportado > 0 ? '#d5f5e3' : '#fadbd8';
             res.style.border = '2px solid ' + (stats.errores === 0 || totalImportado > 0 ? '#27ae60' : '#e74c3c');
@@ -16678,6 +17020,12 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     <tr><td style="padding:4px 8px;">💸 Gastos</td><td style="padding:4px 8px;font-weight:700;">${stats.gastos}</td></tr>
                     <tr><td style="padding:4px 8px;">👥 Clientes</td><td style="padding:4px 8px;font-weight:700;">${stats.clientes}</td></tr>
                     <tr><td style="padding:4px 8px;">🏦 Préstamos</td><td style="padding:4px 8px;font-weight:700;">${stats.prestamos} (${stats.pagos} pagos)</td></tr>
+                    <tr><td style="padding:4px 8px;">🏭 Proveedores</td><td style="padding:4px 8px;font-weight:700;">${stats.proveedores}</td></tr>
+                    <tr><td style="padding:4px 8px;">💳 Créditos</td><td style="padding:4px 8px;font-weight:700;">${stats.creditos}</td></tr>
+                    <tr><td style="padding:4px 8px;">🛒 Compras</td><td style="padding:4px 8px;font-weight:700;">${stats.compras}</td></tr>
+                    <tr><td style="padding:4px 8px;">📦 Consignaciones</td><td style="padding:4px 8px;font-weight:700;">${stats.consignaciones}</td></tr>
+                    <tr><td style="padding:4px 8px;">💲 Precios</td><td style="padding:4px 8px;font-weight:700;">${stats.precios}</td></tr>
+                    <tr><td style="padding:4px 8px;">📈 Tasas BCV</td><td style="padding:4px 8px;font-weight:700;">${stats.bcv}</td></tr>
                     ${stats.errores ? `<tr><td style="padding:4px 8px;color:#e74c3c;">⚠️ Errores</td><td style="padding:4px 8px;font-weight:700;color:#e74c3c;">${stats.errores}</td></tr>` : ''}
                 </table>
                 <p style="margin-top:12px;font-size:13px;color:#555;">Los datos ya están visibles en todos los módulos de AQUANEV.</p>
