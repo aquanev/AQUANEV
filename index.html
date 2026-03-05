@@ -4445,7 +4445,15 @@
                 { id:'mobile-vendor-003', nombre:'Vendedor 3',    email:'',                      rol:'vendedor', dispositivo:'mobile', pin:'3333', permisos:PERMISOS_VENDEDOR, activo:true, creadoEn:new Date().toISOString() }
             ];
         }
-        let usersData   = JSON.parse(localStorage.getItem('usersData')) || getDefaultUsers();
+        let usersData = (() => {
+            try {
+                const stored = JSON.parse(localStorage.getItem('usersData'));
+                if (Array.isArray(stored) && stored.length > 0) return stored;
+            } catch(e) {}
+            const defaults = getDefaultUsers();
+            localStorage.setItem('usersData', JSON.stringify(defaults));
+            return defaults;
+        })();
         let currentUser = null;
         let editUserId  = null;
 
@@ -7420,7 +7428,7 @@
                             <button class="btn btn-small btn-warning" onclick="abrirUserModal('${u.id}')"><i class="fas fa-edit"></i></button>
                             <button class="btn btn-small" style="background:${u.activo ? '#ff9800' : '#4caf50'}; color:white;" onclick="toggleUserActivo('${u.id}')">${u.activo ? '⏸' : '▶'}</button>
                             <button class="btn btn-small btn-danger" onclick="eliminarUsuario('${u.id}')"><i class="fas fa-trash"></i></button>
-                            ` : `<button class="btn btn-small btn-warning" onclick="abrirUserModal('${u.id}')"><i class="fas fa-edit"></i> PIN</button>`}
+                            ` : `<button class="btn btn-small btn-warning" onclick="abrirUserModal('${u.id}')"><i class="fas fa-edit"></i> Editar</button>`}
                         </div>
                     </div>
                 </div>`).join('');
