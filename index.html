@@ -5431,7 +5431,7 @@
 
             // Actualizar inventario con PEPS
             let errores = [];
-            compra.items.forEach(item => {
+            (compra.items || []).forEach(item => {
                 const idx = inventoryData.findIndex(i => i.productoKey === item.productoKey);
                 if (idx === -1) { errores.push(item.nombre); return; }
                 const inv      = inventoryData[idx];
@@ -5466,7 +5466,7 @@
 
             const msg = errores.length > 0
                 ? `✅ Compra registrada.\n⚠️ No se encontró en inventario: ${errores.join(', ')}`
-                : `✅ Compra registrada. Inventario actualizado (${compra.items.length} producto${compra.items.length > 1 ? 's' : ''}).`;
+                : `✅ Compra registrada. Inventario actualizado (${(compra.items||[]).length} producto${(compra.items||[]).length > 1 ? 's' : ''}).`;
             alert(msg);
         }
 
@@ -5645,7 +5645,7 @@
             if (!confirm(`⚠️ ¿Eliminar la compra de "${compra.proveedor}" por $${(compra.totalUSD||0).toFixed(2)}?\n\nSe REVERTIRÁ el stock actualizado en el inventario.`)) return;
 
             // Revertir inventario
-            compra.items.forEach(item => {
+            (compra.items || []).forEach(item => {
                 const idx = inventoryData.findIndex(i => i.productoKey === item.productoKey);
                 if (idx === -1) return;
                 const inv      = inventoryData[idx];
@@ -6176,7 +6176,7 @@
         function calcularStockKit(kit) {
             if (!kit.componentes || kit.componentes.length === 0) return 0;
             let minStock = Infinity;
-            kit.componentes.forEach(comp => {
+            (kit.componentes || []).forEach(comp => {
                 const inv = inventoryData.find(i => i.productoKey === comp.productoKey);
                 const stockComp = inv ? Math.floor(inv.stockActual / comp.cantidad) : 0;
                 if (stockComp < minStock) minStock = stockComp;
@@ -6424,7 +6424,7 @@
 
             // Validar stock de cada componente
             const errores = [];
-            kit.componentes.forEach(comp => {
+            (kit.componentes || []).forEach(comp => {
                 const inv       = inventoryData.find(i => i.productoKey === comp.productoKey);
                 const necesario = comp.cantidad * quantity;
                 if (!inv || inv.stockActual < necesario) {
@@ -6659,7 +6659,7 @@
         // ---- Recalcular saldos y estado tras pago ----
         function recalcularEstadoPrestamo(p) {
             // Normalizar primero: si saldoPendienteUSD <= 0 en una parcial, marcarla pagada
-            p.amortizacion.forEach(c => {
+            (p.amortizacion || []).forEach(c => {
                 if (c.estado === 'parcial' && c.saldoPendienteUSD != null && c.saldoPendienteUSD <= 0.005) {
                     c.estado            = 'pagado';
                     c.saldoPendienteUSD = 0;
@@ -6667,9 +6667,9 @@
                 }
             });
 
-            const pagadas   = p.amortizacion.filter(c => c.estado === 'pagado');
-            const parciales = p.amortizacion.filter(c => c.estado === 'parcial');
-            const pendientes = p.amortizacion.filter(c => c.estado === 'pendiente');
+            const pagadas   = (p.amortizacion || []).filter(c => c.estado === 'pagado');
+            const parciales = (p.amortizacion || []).filter(c => c.estado === 'parcial');
+            const pendientes = (p.amortizacion || []).filter(c => c.estado === 'pendiente');
 
             p.cuotasPagadas = pagadas.length;
 
@@ -6686,7 +6686,7 @@
             ).toFixed(2));
 
             // Finalizar préstamo solo cuando todas las cuotas estén pagadas
-            const todasPagadas = p.amortizacion.every(c => c.estado === 'pagado');
+            const todasPagadas = (p.amortizacion || []).every(c => c.estado === 'pagado');
             if (todasPagadas) p.estado = 'finalizado';
         }
 
@@ -6700,9 +6700,9 @@
                 `📋 ${p.prestamista} - ${p.plazoMeses} cuotas de $${p.cuotaMensualUSD.toFixed(2)}`;
 
             const hoy        = new Date().toISOString().split('T')[0];
-            const pagadas    = p.amortizacion.filter(c => c.estado === 'pagado').length;
-            const totalInt   = p.amortizacion.reduce((s, c) => s + c.interesUSD, 0);
-            const totalCap   = p.amortizacion.reduce((s, c) => s + c.capitalUSD, 0);
+            const pagadas    = (p.amortizacion || []).filter(c => c.estado === 'pagado').length;
+            const totalInt   = (p.amortizacion || []).reduce((s, c) => s + c.interesUSD, 0);
+            const totalCap   = (p.amortizacion || []).reduce((s, c) => s + c.capitalUSD, 0);
 
             // Resumen
             let resumen = `
@@ -6726,7 +6726,7 @@
                 </div>`;
 
             // Tabla
-            const filas = p.amortizacion.map(c => {
+            const filas = (p.amortizacion || []).map(c => {
                 const esParcial = c.estado === 'parcial';
                 const vencida   = (c.estado === 'pendiente' || esParcial) && c.vencimiento < hoy;
                 const proxima   = c.estado === 'pendiente' && !vencida && c.vencimiento <= getFechaEnDias(7);
@@ -6802,7 +6802,7 @@
         function abrirPagoCuota(prestId, nroCuota) {
             const p   = prestamosData.find(x => x.id === prestId);
             if (!p)   return;
-            const cuota = p.amortizacion.find(c => c.numero === nroCuota);
+            const cuota = (p.amortizacion || []).find(c => c.numero === nroCuota);
             if (!cuota || cuota.estado === 'pagado') return;
 
             currentPrestId      = prestId;
@@ -6832,7 +6832,7 @@
         function ejecutarPagoCuota() {
             const p = prestamosData.find(x => x.id === currentPrestId);
             if (!p) return;
-            const cuota = p.amortizacion.find(c => c.numero === currentPagoNroCuota);
+            const cuota = (p.amortizacion || []).find(c => c.numero === currentPagoNroCuota);
             if (!cuota) return;
 
             const fecha    = document.getElementById('prest-pago-fecha').value;
@@ -6851,7 +6851,7 @@
             cuota.montoPagadoUSD    = cuota.cuotaUSD;
             cuota.saldoPendienteUSD = 0;
             if (!cuota.pagos) cuota.pagos = [];
-            cuota.pagos.push({ fecha, monto: saldoAntes, tipo: 'completo_desde_tabla' });
+            (cuota.pagos = cuota.pagos || []).push({ fecha, monto: saldoAntes, tipo: 'completo_desde_tabla' });
 
             recalcularEstadoPrestamo(p);
             savePrestamos();
@@ -6920,7 +6920,7 @@
             const alertas = [];
 
             prestamosData.filter(p => p.estado === 'activo').forEach(p => {
-                p.amortizacion.filter(c => c.estado === 'pendiente').forEach(c => {
+                (p.amortizacion || []).filter(c => c.estado === 'pendiente').forEach(c => {
                     if (c.vencimiento < hoy) {
                         alertas.push({ tipo: 'vencida',  prestamista: p.prestamista, nro: c.numero, monto: c.cuotaUSD, fecha: c.vencimiento, prestId: p.id });
                     } else if (c.vencimiento <= en7) {
@@ -6976,7 +6976,7 @@
                 const label     = estadoLabel[p.estado] || p.estado;
 
                 // Próxima cuota pendiente
-                const proximaCuota = p.amortizacion.find(c => c.estado === 'pendiente');
+                const proximaCuota = (p.amortizacion || []).find(c => c.estado === 'pendiente');
                 const vencidaCuota = proximaCuota && proximaCuota.vencimiento < hoy;
                 const proximaInfo  = proximaCuota
                     ? `<div style="font-size:12px; color:${vencidaCuota ? '#f44336' : '#e65100'}; margin-top:4px;">
@@ -8282,7 +8282,7 @@
             // ----- Cuotas de préstamos -----
             prestamosData.forEach(p => {
                 if (p.estado !== 'activo') return;
-                p.amortizacion.forEach(cuota => {
+                (p.amortizacion || []).forEach(cuota => {
                     if (cuota.estado === 'pagado') return;
                     const key       = 'p-' + p.id + '-' + cuota.numero;
                     if (alertasNotifHoy[key]) return;
@@ -8622,9 +8622,9 @@
             const mapa = {};
             ventas.forEach(v => {
                 const precioBase = v.totalUSD != null
-                    ? v.totalUSD / (v.items.reduce((s, i) => s + i.quantity, 0) || 1)
+                    ? v.totalUSD / ((v.items||[]).reduce((s, i) => s + i.quantity, 0) || 1)
                     : 0;
-                v.items.forEach(item => {
+                (v.items || []).forEach(item => {
                     const key = item.productKey || item.name;
                     if (!mapa[key]) mapa[key] = { nombre: item.name || key, cant: 0, ingresos: 0 };
                     mapa[key].cant     += item.quantity;
@@ -8672,7 +8672,7 @@
             const data = [['Producto','Cant. Vendida','Ingresos USD','Costo USD','Margen %','% del Total']];
             const mapa = {};
             ventas.forEach(v => {
-                v.items.forEach(item => {
+                (v.items || []).forEach(item => {
                     const key = item.productKey || item.name;
                     if (!mapa[key]) mapa[key] = { nombre: item.name || key, cant: 0, ingresos: 0 };
                     mapa[key].cant     += item.quantity;
@@ -8696,7 +8696,7 @@
             const hoy = new Date();
             const rows = prestamosData.map(p => {
                 // Próxima cuota pendiente
-                const proxCuota = p.amortizacion.find(c => c.estado === 'pendiente');
+                const proxCuota = (p.amortizacion || []).find(c => c.estado === 'pendiente');
                 const diasVence = proxCuota
                     ? Math.ceil((new Date(proxCuota.vencimiento + 'T00:00:00') - hoy) / 86400000)
                     : null;
@@ -8740,7 +8740,7 @@
             const data = [['Prestamista','Tipo','Contrato','Monto USD','Tasa %','Plazo','Cuota USD','Desembolso','Estado',
                            'Cuotas Pagadas','Total Pagado','Saldo Pendiente','Próx. Cuota Núm','Próx. Vencimiento']];
             prestamosData.forEach(p => {
-                const prox = p.amortizacion.find(c => c.estado === 'pendiente');
+                const prox = (p.amortizacion || []).find(c => c.estado === 'pendiente');
                 data.push([
                     p.prestamista, p.tipo, p.contrato,
                     p.montoOriginalUSD, p.tasaInteres, p.plazoMeses, p.cuotaMensualUSD,
@@ -10545,7 +10545,7 @@
 
             const todaySales      = salesData.filter(sale => sale.date === today);
             const todaySalesCount = todaySales.reduce((sum, sale) =>
-                sum + sale.items.reduce((s, item) => s + item.quantity, 0), 0);
+                sum + (sale.items||[]).reduce((s, item) => s + item.quantity, 0), 0);
 
             // Ingresos en USD - usar totalUSD si existe, sino convertir desde BS
             const todayIncomeUSD = todaySales.reduce((sum, sale) => {
@@ -10677,7 +10677,7 @@
             }
             
             recentSales.forEach(sale => {
-                const productsSummary = sale.items.map(item => 
+                const productsSummary = (sale.items||[]).map(item => 
                     `${item.quantity} ${item.name}`
                 ).join(', ');
                 
@@ -10741,7 +10741,7 @@
             const mostrarTodas = tbody.dataset.showAll === '1';
             const ventasVis = mostrarTodas ? filteredSales : filteredSales.slice(0, 10);
             ventasVis.forEach(sale => {
-                const productsSummary = sale.items.map(item => 
+                const productsSummary = (sale.items||[]).map(item => 
                     `${item.quantity} ${item.name}`
                 ).join(', ');
                 
@@ -10847,7 +10847,7 @@
             productosLabel.textContent = 'Productos y Cantidades';
             productosGroup.appendChild(productosLabel);
             
-            sale.items.forEach(function(item, idx) {
+            (sale.items||[]).forEach(function(item, idx) {
                 const itemDiv = document.createElement('div');
                 itemDiv.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
                 
@@ -10909,7 +10909,7 @@
             const newDate = document.getElementById('edit-sale-date').value;
             
             // Obtener nuevas cantidades
-            sale.items.forEach(function(item, idx) {
+            (sale.items||[]).forEach(function(item, idx) {
                 const qtyInput = document.getElementById('edit-qty-' + idx);
                 if (qtyInput) {
                     item.quantity = parseInt(qtyInput.value) || 1;
@@ -10919,7 +10919,7 @@
             // Recalcular totales
             let subtotalSinIva = 0;
             let ivaTotal = 0;
-            sale.items.forEach(function(item) {
+            (sale.items||[]).forEach(function(item) {
                 const lineTotal = (item.priceUSD || item.priceBS / priceExchangeRate) * item.quantity * priceExchangeRate;
                 const lineIva   = item.hasIva ? lineTotal * (ivaPercentage / 100) : 0;
                 subtotalSinIva += lineTotal;
@@ -10973,7 +10973,7 @@
             const sale = salesData.find(s => s.id == saleId);
             if (!sale) return;
             
-            const productsSummary = sale.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
+            const productsSummary = (sale.items||[]).map(i => `${i.quantity}x ${i.name}`).join(', ');
             
             const totalMostrar = sale.totalUSD != null
                 ? '$' + parseFloat(sale.totalUSD).toFixed(2) + ' USD'
@@ -11082,7 +11082,7 @@
                             cuota.estado    = 'pagado';
                             cuota.fechaPago = fecha;
                         }
-                        cuota.pagos.push({ fecha, monto: montoPagadoUSD, tipo: 'parcial' });
+                        (cuota.pagos = cuota.pagos || []).push({ fecha, monto: montoPagadoUSD, tipo: 'parcial' });
                     } else {
                         // Pago completo del saldo pendiente
                         cuota.montoPagadoUSD    = cuota.cuotaUSD;
@@ -11090,13 +11090,13 @@
                         cuota.estado            = 'pagado';
                         cuota.fechaPago         = fecha;
                         cuota.metodoPago        = 'Efectivo';
-                        cuota.pagos.push({ fecha, monto: montoPagadoUSD, tipo: 'completo' });
+                        (cuota.pagos = cuota.pagos || []).push({ fecha, monto: montoPagadoUSD, tipo: 'completo' });
                     }
 
                     // Aplicar excedente a la siguiente cuota pendiente
                     let mensajeExcedente = '';
                     if (excedente > 0) {
-                        const siguienteCuota = p.amortizacion.find(c => c.numero > nroCuota && c.estado !== 'pagado');
+                        const siguienteCuota = (p.amortizacion || []).find(c => c.numero > nroCuota && c.estado !== 'pagado');
                         if (siguienteCuota) {
                             if (!siguienteCuota.pagos) siguienteCuota.pagos = [];
                             const abonoSig = Math.min(excedente, siguienteCuota.cuotaUSD);
@@ -11109,7 +11109,7 @@
                             } else {
                                 siguienteCuota.estado = 'parcial';
                             }
-                            siguienteCuota.pagos.push({ fecha, monto: abonoSig, tipo: 'excedente_cuota_anterior' });
+                            (siguienteCuota.pagos = siguienteCuota.pagos || []).push({ fecha, monto: abonoSig, tipo: 'excedente_cuota_anterior' });
                             mensajeExcedente = `
 💡 Excedente $${abonoSig.toFixed(2)} aplicado a Cuota #${siguienteCuota.numero}.`;
                         }
@@ -12254,7 +12254,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
 
             // Revertir inventario si era Compra
             if (expense.category === 'Compras' && expense.comprasItems?.length > 0) {
-                expense.comprasItems.forEach(item => {
+                (expense.comprasItems || []).forEach(item => {
                     const idx = inventoryData.findIndex(i => i.productoKey === item.productoKey);
                     if (idx === -1) return;
                     const inv        = inventoryData[idx];
@@ -12279,7 +12279,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 const ref   = expense.creditoRef;
                 const prest = prestamosData.find(p => p.id === ref.prestId);
                 if (prest) {
-                    const cuota = prest.amortizacion.find(c => c.numero === ref.nroCuota);
+                    const cuota = (prest.amortizacion||[]).find(c => c.numero === ref.nroCuota);
                     if (cuota) {
                         const montoRevertir = parseFloat(ref.montoPagadoUSD || 0);
                         // Restar el monto pagado
@@ -12960,7 +12960,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const summaryTbody = document.getElementById('ecuador-summary');
             if (summaryTbody) {
                 const totalProducts = monthlySales.reduce((s, sale) =>
-                    s + sale.items.reduce((is, item) => is + item.quantity, 0), 0);
+                    s + (sale.items||[]).reduce((is, item) => is + item.quantity, 0), 0);
                 
                 summaryTbody.innerHTML = `
                     <tr>
@@ -13070,7 +13070,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 sum + (expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0)), 0);
             const netProfitUSD = totalSalesUSD - totalExpensesUSD;
             const totalProducts = filteredSales.reduce((sum, sale) => {
-                return sum + sale.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
+                return sum + (sale.items||[]).reduce((itemSum, item) => itemSum + item.quantity, 0);
             }, 0);
             
             const summary = document.getElementById('report-summary');
@@ -13443,7 +13443,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             // Precargar datos en formulario de ventas
             currentSaleItems = [];
             
-            order.products.forEach(item => {
+            (order.products || []).forEach(item => {
                 const productInfo = getProductInfo(item.product);
                 if (productInfo && productInfo.name) {
                     currentSaleItems.push({
@@ -13779,7 +13779,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             if (adelanto.usos && adelanto.usos.length > 0) {
                 mensaje += 'USOS DEL ADELANTO:\n\n';
-                adelanto.usos.forEach(uso => {
+                (adelanto.usos || []).forEach(uso => {
                     const usoUSD = uso.montoUSD ?? convertBStoUSD(uso.monto || 0);
                     mensaje += `${formatDate(uso.fecha)}: ${fmtUSD(usoUSD)} USD - ${uso.concepto}\n`;
                 });
@@ -13799,7 +13799,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             if (adelanto.usos && adelanto.usos.length > 0) {
                 mensaje += 'USOS DEL ADELANTO:\n\n';
-                adelanto.usos.forEach(uso => {
+                (adelanto.usos || []).forEach(uso => {
                     const usoUSD = uso.montoUSD ?? convertBStoUSD(uso.monto || 0);
                     mensaje += `${formatDate(uso.fecha)}: ${fmtUSD(usoUSD)} USD - ${uso.concepto}\n`;
                 });
@@ -13873,7 +13873,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 const retIvaUSD = sale.retencionIva  ? ivaUSD  * 0.75 : 0;
                 const retIsUSD  = sale.retencionIslr ? baseUSD * 0.02 : 0;
                 const netoUSD   = totalUSD - retIvaUSD - retIsUSD;
-                const products  = sale.items.map(item => `${item.quantity}x ${item.name}`).join('; ');
+                const products  = (sale.items||[]).map(item => `${item.quantity}x ${item.name}`).join('; ');
                 
                 exportData.push({
                     'Fecha':              sale.date,
@@ -14067,7 +14067,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 const netoUSD    = parseFloat((totalUSD - retIvaUSD - retIslrUSD).toFixed(2));
                 const adelUSD    = sale.adelantoUsado
                     ? parseFloat(convertBStoUSD(sale.adelantoUsado).toFixed(2)) : 0;
-                const products   = sale.items.map(item => `${item.quantity}x ${item.name}`).join('; ');
+                const products   = (sale.items||[]).map(item => `${item.quantity}x ${item.name}`).join('; ');
                 
                 return {
                     'Fecha':         sale.date,
@@ -14229,7 +14229,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                         'Fecha':      sale.date,
                         'Cliente':    sale.customer,
                         'RIF':        sale.customerRif || 'N/A',
-                        'Productos':  sale.items.map(i => `${i.quantity}x ${i.name}`).join('; '),
+                        'Productos':  (sale.items||[]).map(i => `${i.quantity}x ${i.name}`).join('; '),
                         'Base USD':   baseUSD,
                         'IVA USD':    ivaUSD,
                         'Total USD':  parseFloat(totalUSD.toFixed(2)),
@@ -14368,7 +14368,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const totalAmountUSD = filteredSales.reduce((sum, s) =>
                 sum + (s.totalUSD ?? convertBStoUSD(s.total ?? 0)), 0);
             const totalProducts = filteredSales.reduce((sum, s) =>
-                sum + s.items.reduce((is, item) => is + item.quantity, 0), 0);
+                sum + (s.items||[]).reduce((is, item) => is + item.quantity, 0), 0);
             
             const paidSales    = filteredSales.filter(s => s.paymentMethod !== 'Crédito');
             const creditSales  = filteredSales.filter(s => s.paymentMethod === 'Crédito');
@@ -14451,7 +14451,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             `;
             
             filteredSales.forEach(sale => {
-                const productsSummary = sale.items.map(item => `${item.quantity} ${item.name}`).join(', ');
+                const productsSummary = (sale.items||[]).map(item => `${item.quantity} ${item.name}`).join(', ');
                 const status = sale.paymentMethod === 'Crédito' ? '⚠️ Pendiente' : '✅ Pagado';
                 const statusClass = sale.paymentMethod === 'Crédito' ? 'badge-warning' : 'badge-success';
                 
@@ -14509,7 +14509,7 @@ ${'='.repeat(60)}
 `;
             
             filteredSales.forEach(sale => {
-                const productsSummary = sale.items.map(item => `${item.quantity} ${item.name}`).join(', ');
+                const productsSummary = (sale.items||[]).map(item => `${item.quantity} ${item.name}`).join(', ');
                 const status  = sale.paymentMethod === 'Crédito' ? 'PENDIENTE' : 'PAGADO';
                 const saleUSD = sale.totalUSD ?? convertBStoUSD(sale.total ?? 0);
                 
@@ -14607,7 +14607,7 @@ Saldo Pendiente: ${fmtUSD(totalPendingUSD)} USD
                 if (credit.payments) {
                     const amtUSD = getCreditAmountUSD(credit);
                     const amtBS  = credit.amount || 1;
-                    credit.payments.forEach(payment => {
+                    (credit.payments || []).forEach(payment => {
                         const method = payment.paymentMethod || 'No especificado';
                         if (!paymentMethodTotals[method]) paymentMethodTotals[method] = 0;
                         // Convertir cada abono BS → USD usando proporción del crédito
@@ -15199,6 +15199,81 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                         productosCompuestos: datos.productosCompuestos || null,
                         usersData:           datos.usersData           || null,
                     };
+
+                    // ── Saneamiento de datos antes de guardar ──────────────────
+                    // Fix 1: Eliminar préstamos vacíos/fantasma (vienen de sync con campos en mayúscula)
+                    if (Array.isArray(mapa.prestamosData)) {
+                        mapa.prestamosData = mapa.prestamosData.filter(p => {
+                            const id = p.id || p.ID || '';
+                            const prestamista = p.prestamista || p.Prestamista || '';
+                            const monto = parseFloat(p.montoUSD || p.MontoOriginalUSD || 0);
+                            return id !== '' || prestamista !== '' || monto > 0;
+                        }).map(p => {
+                            // Normalizar campos mayúscula → minúscula (registros de sync)
+                            if (!p.id && p.ID) {
+                                return {
+                                    id: p.ID, prestamista: p.Prestamista || '', tipo: p.Tipo || '',
+                                    contrato: p.Contrato || '', montoUSD: parseFloat(p.MontoOriginalUSD || 0),
+                                    tasaInteres: parseFloat(p.TasaInteres || 0), plazoMeses: parseInt(p.PlazoMeses || 0),
+                                    cuotaMensualUSD: parseFloat(p.CuotaMensualUSD || 0),
+                                    fechaDesembolso: p.FechaDesembolso || '', fechaPrimeraCuota: p.FechaPrimeraCuota || '',
+                                    estado: (p.Estado || 'activo').toLowerCase(), cuotasPagadas: parseInt(p.CuotasPagadas || 0),
+                                    totalPagadoUSD: parseFloat(p.TotalPagadoUSD || 0),
+                                    saldoPendienteUSD: parseFloat(p.SaldoPendienteUSD || 0),
+                                    observaciones: p.Observaciones || '', amortizacion: [],
+                                    creadoEn: p.Timestamp || new Date().toISOString()
+                                };
+                            }
+                            // Asegurar que amortizacion es array y cada cuota tiene pagos[]
+                            if (!Array.isArray(p.amortizacion)) p.amortizacion = [];
+                            p.amortizacion = p.amortizacion.map(c => {
+                                if (!Array.isArray(c.pagos)) c.pagos = [];
+                                return c;
+                            });
+                            return p;
+                        });
+                    }
+
+                    // Fix 2: Normalizar compras — campo Items (mayúscula/string) → items (array)
+                    if (Array.isArray(mapa.comprasData)) {
+                        mapa.comprasData = mapa.comprasData.map(c => {
+                            // Normalizar campos mayúscula → minúscula
+                            if (!c.id && c.ID) {
+                                let items = c.Items || c.items || [];
+                                if (typeof items === 'string') { try { items = JSON.parse(items); } catch(e) { items = []; } }
+                                return {
+                                    id: c.ID, fecha: c.Fecha || '', proveedor: c.Proveedor || '',
+                                    factura: c.Factura || '', items: Array.isArray(items) ? items : [],
+                                    subtotalUSD: parseFloat(c.SubtotalUSD || 0), totalUSD: parseFloat(c.TotalUSD || 0),
+                                    metodoPago: c.MetodoPago || '', estadoPago: (c.EstadoPago || 'pendiente').toLowerCase(),
+                                    usuario: c.Usuario || '', creadoEn: c.Timestamp || new Date().toISOString()
+                                };
+                            }
+                            if (!Array.isArray(c.items)) {
+                                if (typeof c.items === 'string') { try { c.items = JSON.parse(c.items); } catch(e) { c.items = []; } }
+                                else c.items = [];
+                            }
+                            return c;
+                        });
+                    }
+
+                    // Fix 3: Normalizar ventas — asegurar items[]
+                    if (Array.isArray(mapa.salesData)) {
+                        mapa.salesData = mapa.salesData.map(s => {
+                            if (!Array.isArray(s.items)) s.items = [];
+                            return s;
+                        });
+                    }
+
+                    // Fix 4: Normalizar créditos — asegurar payments[]
+                    if (Array.isArray(mapa.creditsData)) {
+                        mapa.creditsData = mapa.creditsData.map(c => {
+                            if (!Array.isArray(c.payments)) c.payments = [];
+                            return c;
+                        });
+                    }
+                    // ── Fin saneamiento ────────────────────────────────────────
+
                     // Guardar todos los campos mapeados
                     let savedCount = 0;
                     Object.entries(mapa).forEach(([k, v]) => {
