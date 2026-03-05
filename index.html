@@ -1710,6 +1710,18 @@
                     <button class="btn btn-primary" onclick="guardarConfigSync()">
                         <i class="fas fa-save"></i> Guardar Configuración Sync
                     </button>
+                    <button class="btn" onclick="cargaInicialMasiva()" id="btn-carga-masiva"
+                        style="background:#e65100; color:white; margin-left:8px;"
+                        title="Sube todos los datos históricos a Google Sheets de una sola vez">
+                        <i class="fas fa-cloud-upload-alt"></i> Carga Inicial Histórica
+                    </button>
+                    <div id="carga-masiva-progress" style="display:none; margin-top:10px; background:#fff3e0; border-radius:8px; padding:12px; font-size:13px; border-left:4px solid #e65100;">
+                        <div id="carga-masiva-msg" style="font-weight:600; margin-bottom:4px;">Iniciando carga...</div>
+                        <div style="background:#e0e0e0; border-radius:4px; height:8px; overflow:hidden; margin-top:8px;">
+                            <div id="carga-masiva-bar" style="background:#e65100; height:100%; width:0%; transition:width 0.3s;"></div>
+                        </div>
+                        <div id="carga-masiva-detail" style="color:#888; font-size:11px; margin-top:4px;"></div>
+                    </div>
 
                     <!-- Estado y estadísticas -->
                     <div id="sync-stats-panel" style="display:none; background:#f8f9fa; border-radius:8px; padding:14px; margin-top:14px;">
@@ -7371,6 +7383,15 @@
                 if (permitidas && !permitidas.includes(activeTab.getAttribute('data-tab'))) {
                     switchTab('dashboard');
                 }
+            }
+
+            // Auto-sync al iniciar sesión — descarga datos frescos del servidor
+            if (syncConfig.activa && syncConfig.appsScriptUrl) {
+                setTimeout(() => {
+                    if (!syncEnCurso) {
+                        ejecutarSync();
+                    }
+                }, 1500); // 1.5s después del login para no bloquear la UI
             }
         }
 
@@ -16311,6 +16332,124 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
         document.getElementById('mp-pin-nuevo').value   = '';
         document.getElementById('mp-pin-confirm').value = '';
         setTimeout(() => cerrarMiPerfil(), 1800);
+    }
+
+    // ========== CARGA INICIAL MASIVA A GOOGLE SHEETS ==========
+    async function cargaInicialMasiva() {
+        if (!syncConfig.activa || !syncConfig.appsScriptUrl) {
+            alert('⚠️ Configura primero el sync con Google Sheets.');
+            return;
+        }
+        if (!confirm('🚀 CARGA INICIAL HISTÓRICA\n\nEsto subirá TODOS los datos locales a Google Sheets.\n\nVentas, Gastos, Clientes, Créditos, Compras, Préstamos, Consignaciones, Inventario, Proveedores, TasasBCV.\n\n⏱ Puede tomar 2-5 minutos.\n¿Continuar?')) return;
+
+        const btn = document.getElementById('btn-carga-masiva');
+        const progress = document.getElementById('carga-masiva-progress');
+        const msg = document.getElementById('carga-masiva-msg');
+        const bar = document.getElementById('carga-masiva-bar');
+        const detail = document.getElementById('carga-masiva-detail');
+
+        btn.disabled = true;
+        progress.style.display = 'block';
+
+        // Mapa: localStorage key → nombre tabla en sync
+        const MODULOS = [
+            { key: 'salesData',          tabla: 'ventas',         nombre: 'Ventas' },
+            { key: 'expensesData',        tabla: 'gastos',         nombre: 'Gastos' },
+            { key: 'clientsData',         tabla: 'clientes',       nombre: 'Clientes' },
+            { key: 'creditsData',         tabla: 'creditos',       nombre: 'Créditos' },
+            { key: 'prestamosData',       tabla: 'prestamos',      nombre: 'Préstamos' },
+            { key: 'comprasData',         tabla: 'compras',        nombre: 'Compras' },
+            { key: 'consignacionesData',  tabla: 'consignaciones', nombre: 'Consignaciones' },
+            { key: 'inventoryData',       tabla: 'inventario',     nombre: 'Inventario' },
+            { key: 'proveedoresData',     tabla: 'proveedores',    nombre: 'Proveedores' },
+            { key: 'bcvRateHistory',      tabla: 'tasasBCV',       nombre: 'Tasas BCV' },
+        ];
+
+        const LOTE = 500; // registros por lote — evita timeout Apps Script
+        let totalEnviados = 0;
+        let totalRegistros = 0;
+        let errores = [];
+
+        // Contar total primero
+        MODULOS.forEach(m => {
+            try {
+                const d = JSON.parse(localStorage.getItem(m.key) || '[]');
+                if (Array.isArray(d)) totalRegistros += d.length;
+            } catch(e) {}
+        });
+
+        msg.textContent = `Preparando ${totalRegistros} registros...`;
+
+        for (let mi = 0; mi < MODULOS.length; mi++) {
+            const modulo = MODULOS[mi];
+            let datos = [];
+            try {
+                datos = JSON.parse(localStorage.getItem(modulo.key) || '[]');
+                if (!Array.isArray(datos)) datos = [];
+            } catch(e) { datos = []; }
+
+            if (datos.length === 0) continue;
+
+            // Dividir en lotes
+            const lotes = [];
+            for (let i = 0; i < datos.length; i += LOTE) {
+                lotes.push(datos.slice(i, i + LOTE));
+            }
+
+            for (let li = 0; li < lotes.length; li++) {
+                const lote = lotes[li];
+                const pct = Math.round((totalEnviados / Math.max(totalRegistros, 1)) * 100);
+                bar.style.width = pct + '%';
+                msg.textContent = `Subiendo ${modulo.nombre}... (lote ${li+1}/${lotes.length})`;
+                detail.textContent = `${totalEnviados} de ${totalRegistros} registros enviados`;
+
+                try {
+                    const payload = {
+                        usuario:   getCurrentUserId(),
+                        timestamp: new Date().toISOString(),
+                        modo:      'carga_inicial',
+                        datos:     {}
+                    };
+                    payload.datos[modulo.tabla] = lote;
+
+                    const resp = await fetch(syncConfig.appsScriptUrl, {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body:    JSON.stringify(payload)
+                    });
+
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    const result = await resp.json();
+                    if (!result.success) throw new Error(result.error || 'Error desconocido');
+
+                    totalEnviados += lote.length;
+
+                    // Pausa entre lotes para no saturar Apps Script
+                    if (li < lotes.length - 1) await new Promise(r => setTimeout(r, 800));
+
+                } catch(e) {
+                    errores.push(`${modulo.nombre} lote ${li+1}: ${e.message}`);
+                    detail.textContent = `⚠️ Error en ${modulo.nombre}: ${e.message}`;
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+        }
+
+        bar.style.width = '100%';
+
+        if (errores.length === 0) {
+            msg.textContent = `✅ Carga completa — ${totalEnviados} registros subidos a Google Sheets`;
+            msg.style.color = '#2e7d32';
+            detail.textContent = 'Google Sheets ahora tiene todos los datos históricos.';
+            syncConfig.ultimaSync = new Date().toISOString();
+            saveSyncConfig();
+        } else {
+            msg.textContent = `⚠️ Completado con ${errores.length} error(es) — ${totalEnviados} registros subidos`;
+            msg.style.color = '#e65100';
+            detail.textContent = errores.slice(0,3).join(' | ');
+        }
+
+        btn.disabled = false;
     }
 
     // Cerrar modal al hacer clic fuera
