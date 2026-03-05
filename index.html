@@ -1,4 +1,3 @@
-<!-- AQUANEV FASE6-BUILD-20260301 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -868,24 +867,6 @@
 </head>
 <body>
 
-    <!-- FASE 2A: Banner de sync en curso — naranja, no dismissible -->
-    <div id="sync-banner" style="
-        display:none;
-        position:fixed;
-        top:0; left:0; right:0;
-        z-index:99999;
-        background:#e65100;
-        color:#fff;
-        text-align:center;
-        padding:10px 16px;
-        font-size:14px;
-        font-weight:600;
-        letter-spacing:0.3px;
-        box-shadow:0 2px 8px rgba(0,0,0,0.3);
-    ">
-        🔄 Sincronizando con Google Sheets… No cerrar la aplicación
-    </div>
-
     <!-- Detección de compatibilidad mínima -->
     <script>
     (function(){
@@ -997,6 +978,9 @@
                     </button>
                     <button class="btn btn-danger" onclick="logoutB7()">
                         <i class="fas fa-sign-out-alt"></i> Salir
+                    </button>
+                    <button class="btn" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3);" onclick="abrirMiPerfil()">
+                        <i class="fas fa-user-cog"></i> Mi Perfil
                     </button>
                 </div>
                 <div class="user-info">
@@ -1355,7 +1339,6 @@
                                 <th>Total BS</th>
                                 <th>Total USD</th>
                                 <th>Método</th>
-                                <th title="Estado de sincronización con Google Sheets">Nube</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -1693,11 +1676,6 @@
                         <button class="btn btn-primary btn-small" onclick="ejecutarSyncManual()" id="btn-sync-manual" disabled>
                             <i class="fas fa-sync"></i> Sincronizar
                         </button>
-                        <button class="btn btn-small" id="btn-sync-completo" onclick="ejecutarSyncCompleto()"
-                            style="background:#1565c0; color:white; display:none;"
-                            title="Solo admin: fuerza envío completo de todos los módulos">
-                            <i class="fas fa-cloud-upload-alt"></i> Sync Completo
-                        </button>
                     </div>
                 </div>
                 <div style="padding:15px;">
@@ -1732,20 +1710,6 @@
                     <button class="btn btn-primary" onclick="guardarConfigSync()">
                         <i class="fas fa-save"></i> Guardar Configuración Sync
                     </button>
-
-                    <!-- FASE 1: Rol del dispositivo -->
-                    <div style="margin-top:14px; padding:12px; border-radius:8px; border:1px solid #ffcc80; background:#fff3e0;">
-                        <div style="font-weight:600; font-size:13px; margin-bottom:8px; color:#555;">📡 Rol de este dispositivo</div>
-                        <div id="sync-rol-etiqueta" style="padding:8px 12px; border-radius:6px; border:1px solid; font-size:13px; margin-bottom:10px;">
-                            📱 <strong>Modo: Vendedor (captura)</strong> — solo envía datos
-                        </div>
-                        <button class="btn btn-small" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9;" onclick="cambiarRolDispositivo()">
-                            <i class="fas fa-exchange-alt"></i> Cambiar Rol
-                        </button>
-                        <div style="font-size:11px; color:#888; margin-top:6px;">
-                            Solo el Administrador puede cambiar el rol. Admin = laptop. Vendedor = teléfonos.
-                        </div>
-                    </div>
 
                     <!-- Estado y estadísticas -->
                     <div id="sync-stats-panel" style="display:none; background:#f8f9fa; border-radius:8px; padding:14px; margin-top:14px;">
@@ -1964,76 +1928,6 @@
                 </div>
             </div>
             <!-- ===== FIN BACKUP ===== -->
-
-            <!-- ===== FASE 5: PANEL DE AUDITORÍA ===== -->
-            <div class="card" id="audit-card" style="margin-top:15px; display:none;">
-                <div class="card-header">
-                    <div class="card-title">🔍 Auditoría de Acciones</div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="btn btn-small" style="background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7;" onclick="exportarAuditCSV()">
-                            <i class="fas fa-download"></i> Exportar CSV
-                        </button>
-                        <button class="btn btn-small" style="background:#e3f2fd; color:#1565c0;" onclick="cargarPanelAudit()">
-                            <i class="fas fa-refresh"></i>
-                        </button>
-                    </div>
-                </div>
-                <div style="padding:15px;">
-                    <!-- Filtros -->
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px;">
-                        <div class="form-group" style="margin:0;">
-                            <label style="font-size:11px;">Módulo</label>
-                            <select id="audit-filtro-modulo" onchange="cargarPanelAudit()" style="font-size:12px;">
-                                <option value="">Todos</option>
-                                <option value="ventas">Ventas</option>
-                                <option value="creditos">Créditos</option>
-                                <option value="gastos">Gastos</option>
-                                <option value="clientes">Clientes</option>
-                                <option value="precios">Precios</option>
-                                <option value="bcv">Tasa BCV</option>
-                                <option value="sistema">Sistema</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin:0;">
-                            <label style="font-size:11px;">Acción</label>
-                            <select id="audit-filtro-accion" onchange="cargarPanelAudit()" style="font-size:12px;">
-                                <option value="">Todas</option>
-                                <option value="crear">Crear</option>
-                                <option value="eliminar">Eliminar</option>
-                                <option value="editar">Editar</option>
-                                <option value="pago">Pago</option>
-                                <option value="precio">Precio</option>
-                                <option value="tasa">Tasa</option>
-                                <option value="sync">Sync</option>
-                                <option value="restore">Restore</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin:0;">
-                            <label style="font-size:11px;">Fecha</label>
-                            <input type="date" id="audit-filtro-fecha" onchange="cargarPanelAudit()" style="font-size:12px;">
-                        </div>
-                    </div>
-                    <!-- Tabla -->
-                    <div style="overflow-x:auto;">
-                        <table style="width:100%; border-collapse:collapse; font-size:12px;">
-                            <thead>
-                                <tr style="background:#f5f5f5;">
-                                    <th style="padding:8px; text-align:left; border-bottom:2px solid #e0e0e0;">Fecha/Hora</th>
-                                    <th style="padding:8px; text-align:left; border-bottom:2px solid #e0e0e0;">Usuario</th>
-                                    <th style="padding:8px; text-align:left; border-bottom:2px solid #e0e0e0;">Módulo</th>
-                                    <th style="padding:8px; text-align:left; border-bottom:2px solid #e0e0e0;">Acción</th>
-                                    <th style="padding:8px; text-align:left; border-bottom:2px solid #e0e0e0;">Detalle</th>
-                                </tr>
-                            </thead>
-                            <tbody id="audit-tbody">
-                                <tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">Sin registros</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="font-size:11px; color:#999; margin-top:8px;" id="audit-count">—</div>
-                </div>
-            </div>
-            <!-- ===== FIN FASE 5 ===== -->
         </div>
         
         <!-- Gastos Tab -->
@@ -2377,42 +2271,6 @@
                             <input type="checkbox" id="cm-chk-prestamos" checked style="width:18px;height:18px;accent-color:#1a5276;cursor:pointer;">
                             <div><div style="font-weight:700;font-size:13px;">🏦 Préstamos</div>
                             <div id="cm-cnt-prestamos" style="font-size:12px;color:#888;">0 préstamos</div></div>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
-                            border:2px solid #BF360C;border-radius:10px;background:#FFF3EE;cursor:pointer;">
-                            <input type="checkbox" id="cm-chk-proveedores" checked style="width:18px;height:18px;accent-color:#BF360C;cursor:pointer;">
-                            <div><div style="font-weight:700;font-size:13px;">🏭 Proveedores</div>
-                            <div id="cm-cnt-proveedores" style="font-size:12px;color:#888;">0 registros</div></div>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
-                            border:2px solid #6A1B9A;border-radius:10px;background:#F9F0FF;cursor:pointer;">
-                            <input type="checkbox" id="cm-chk-creditos" checked style="width:18px;height:18px;accent-color:#6A1B9A;cursor:pointer;">
-                            <div><div style="font-weight:700;font-size:13px;">💳 Créditos</div>
-                            <div id="cm-cnt-creditos" style="font-size:12px;color:#888;">0 registros</div></div>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
-                            border:2px solid #004D40;border-radius:10px;background:#E0F2F1;cursor:pointer;">
-                            <input type="checkbox" id="cm-chk-compras" checked style="width:18px;height:18px;accent-color:#004D40;cursor:pointer;">
-                            <div><div style="font-weight:700;font-size:13px;">🛒 Compras</div>
-                            <div id="cm-cnt-compras" style="font-size:12px;color:#888;">0 registros</div></div>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
-                            border:2px solid #4A148C;border-radius:10px;background:#F5F0FF;cursor:pointer;">
-                            <input type="checkbox" id="cm-chk-consignaciones" checked style="width:18px;height:18px;accent-color:#4A148C;cursor:pointer;">
-                            <div><div style="font-weight:700;font-size:13px;">📦 Consignaciones</div>
-                            <div id="cm-cnt-consignaciones" style="font-size:12px;color:#888;">0 registros</div></div>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
-                            border:2px solid #1A237E;border-radius:10px;background:#ECEEFF;cursor:pointer;">
-                            <input type="checkbox" id="cm-chk-precios" checked style="width:18px;height:18px;accent-color:#1A237E;cursor:pointer;">
-                            <div><div style="font-weight:700;font-size:13px;">💲 Precios</div>
-                            <div id="cm-cnt-precios" style="font-size:12px;color:#888;">0 productos</div></div>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:10px;padding:12px;
-                            border:2px solid #1565C0;border-radius:10px;background:#E3F2FD;cursor:pointer;">
-                            <input type="checkbox" id="cm-chk-bcv" checked style="width:18px;height:18px;accent-color:#1565C0;cursor:pointer;">
-                            <div><div style="font-weight:700;font-size:13px;">📈 Tasas BCV</div>
-                            <div id="cm-cnt-bcv" style="font-size:12px;color:#888;">0 registros</div></div>
                         </label>
                     </div>
 
@@ -4469,42 +4327,18 @@
     </div>
 
     <script>
-        // ========== HELPERS DE STORAGE — DEBEN IR PRIMERO ==========
-        // FASE 6 P2 / FASE 7 fix: declarados antes de cualquier leerDeStorage()
-
-        function guardarEnStorage(clave, valor) {
-            try {
-                localStorage.setItem(clave, JSON.stringify(valor));
-                return true;
-            } catch(e) {
-                console.error('[Storage] Error guardando "' + clave + '":', e.message);
-                return false;
-            }
-        }
-
-        function leerDeStorage(clave, valorDefecto) {
-            try {
-                const raw = localStorage.getItem(clave);
-                if (raw === null) return valorDefecto;
-                return JSON.parse(raw);
-            } catch(e) {
-                console.warn('[Storage] Error leyendo "' + clave + '":', e.message);
-                return valorDefecto;
-            }
-        }
-
         // ========== DATOS Y CONFIGURACIÓN ==========
-        let salesData = leerDeStorage('salesData', []);  // FASE 7 P2
-        let expensesData = leerDeStorage('expensesData', []);  // FASE 7 P2
-        let ordersData = leerDeStorage('ordersData', []);  // FASE 7 P2
+        let salesData = JSON.parse(localStorage.getItem('salesData')) || [];
+        let expensesData = JSON.parse(localStorage.getItem('expensesData')) || [];
+        let ordersData = JSON.parse(localStorage.getItem('ordersData')) || [];
         let currentOrderProducts = [];
-        let creditsData = leerDeStorage('creditsData', []);  // FASE 7 P2
-        let clientsData = leerDeStorage('clientsData', []);  // FASE 7 P2
-        let adelantosClientes = leerDeStorage('adelantosClientes', []);  // FASE 7 P2
-        let adelantosHielo = leerDeStorage('adelantosHielo', []);  // FASE 7 P2
+        let creditsData = JSON.parse(localStorage.getItem('creditsData')) || [];
+        let clientsData = JSON.parse(localStorage.getItem('clientsData')) || [];
+        let adelantosClientes = JSON.parse(localStorage.getItem('adelantosClientes')) || [];
+        let adelantosHielo = JSON.parse(localStorage.getItem('adelantosHielo')) || [];
         
         // Configuración de contactos
-        let appConfig = leerDeStorage('appConfig', null) || {  // FASE 7 P2
+        let appConfig = JSON.parse(localStorage.getItem('appConfig')) || {
             whatsapp: {
                 number: '584241234567',
                 message: 'Hola, quiero hacer un pedido de agua'
@@ -4522,7 +4356,7 @@
         };
 
         // Configuración de productos y precios EN DÓLARES (actualizada)
-        let waterPrices = leerDeStorage('waterPrices', null) || {  // FASE 7 P2
+        let waterPrices = JSON.parse(localStorage.getItem('waterPrices')) || {
             recarga_local: { 
                 priceUSD: 0.5, 
                 lastUpdate: new Date().toISOString(),
@@ -4565,36 +4399,36 @@
             }
         };
         
-        let priceHistory = leerDeStorage('priceHistory', []);  // FASE 7 P2
+        let priceHistory = JSON.parse(localStorage.getItem('priceHistory')) || [];
         let currentSaleItems = [];
         let ivaPercentage = parseFloat(localStorage.getItem('ivaPercentage')) || 16;
         let priceExchangeRate = appConfig.exchangeRates.priceRate;
         let currentCurrencyDisplay = 'bs';
         
         // Sistema de historial de tasas BCV
-        let bcvRateHistory = leerDeStorage('bcvRateHistory', []);  // FASE 7 P2
+        let bcvRateHistory = JSON.parse(localStorage.getItem('bcvRateHistory')) || [];
 
         // ========== B2: DATOS DE INVENTARIO ==========
-        let inventoryData   = leerDeStorage('inventoryData', []);  // FASE 7 P2
-        let movimientosData = leerDeStorage('movimientosData', []);  // FASE 7 P2
+        let inventoryData   = JSON.parse(localStorage.getItem('inventoryData'))   || [];
+        let movimientosData = JSON.parse(localStorage.getItem('movimientosData')) || [];
         let currentInvEditId = null;
 
         // ========== B3: DATOS DE COMPRAS ==========
-        let comprasData = leerDeStorage('comprasData', []);  // FASE 7 P2
+        let comprasData = JSON.parse(localStorage.getItem('comprasData')) || [];
         let cItems      = [];
         let currentPagoCompraId = null;
 
         // ========== B4: DATOS DE CONSIGNACIONES ==========
-        let consignacionesData  = leerDeStorage('consignacionesData', []);  // FASE 7 P2
+        let consignacionesData  = JSON.parse(localStorage.getItem('consignacionesData')) || [];
         let currentConsId       = null;
 
         // ========== B5: DATOS DE PRODUCTOS COMPUESTOS (KITS) ==========
-        let productosCompuestos = leerDeStorage('productosCompuestos', []);  // FASE 7 P2
+        let productosCompuestos = JSON.parse(localStorage.getItem('productosCompuestos')) || [];
         let currentKitId        = null;
         let kitComponentes      = [];
 
         // ========== B6: DATOS DE PRÉSTAMOS ==========
-        let prestamosData      = leerDeStorage('prestamosData', []);  // FASE 7 P2
+        let prestamosData      = JSON.parse(localStorage.getItem('prestamosData')) || [];
         let currentPrestId     = null;
         let currentPagoNroCuota = null;
 
@@ -4611,7 +4445,7 @@
                 { id:'mobile-vendor-003', nombre:'Vendedor 3',    email:'',                      rol:'vendedor', dispositivo:'mobile', pin:'3333', permisos:PERMISOS_VENDEDOR, activo:true, creadoEn:new Date().toISOString() }
             ];
         }
-        let usersData   = leerDeStorage('usersData', null) || getDefaultUsers();  // FASE 7 P2
+        let usersData   = JSON.parse(localStorage.getItem('usersData')) || getDefaultUsers();
         let currentUser = null;
         let editUserId  = null;
 
@@ -4619,7 +4453,7 @@
         // URL del Apps Script - preconfigurada para todos los dispositivos
         const APPS_SCRIPT_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbyX7FjArSkiGabghylTRsRaNtIrReILMFzJOSVwN4hRlDTFU2rtscifoKlWJw2sdTk4hA/exec';
 
-        let syncConfig = leerDeStorage('syncConfig', null) || {  // FASE 7 P2
+        let syncConfig = JSON.parse(localStorage.getItem('syncConfig')) || {
             appsScriptUrl: APPS_SCRIPT_URL_DEFAULT,
             frecuenciaMin: 15,
             modo: 'bidireccional',
@@ -4629,55 +4463,20 @@
         if (!syncConfig.appsScriptUrl) {
             syncConfig.appsScriptUrl = APPS_SCRIPT_URL_DEFAULT;
             syncConfig.activa = true;
+            localStorage.setItem('syncConfig', JSON.stringify(syncConfig));
         }
-        // FASE 1: Inyectar rolDispositivo si no existe (default: vendedor = más restrictivo)
-        if (!syncConfig.rolDispositivo) {
-            syncConfig.rolDispositivo = 'vendedor';
-        }
-        guardarEnStorage('syncConfig', syncConfig);  // FASE 7 P3
         // ========== PROVEEDORES ==========
-        let proveedoresData = leerDeStorage('proveedoresData', []);  // FASE 7 P2
-        function saveProveedores() { guardarEnStorage('proveedoresData', proveedoresData);  }  // FASE 7 P3
+        let proveedoresData = JSON.parse(localStorage.getItem('proveedoresData')) || [];
+        function saveProveedores() { localStorage.setItem('proveedoresData', JSON.stringify(proveedoresData)); }
 
-        let syncQueue    = leerDeStorage('syncQueue', []);  // FASE 7 P2   // [{id,tabla,accion,datos,timestamp,intentos}]
-        let syncLog      = leerDeStorage('syncLog', []);  // FASE 7 P2   // [{timestamp,usuario,accion,tabla,enviados,recibidos,errores,msg}]
+        let syncQueue    = JSON.parse(localStorage.getItem('syncQueue'))    || [];   // [{id,tabla,accion,datos,timestamp,intentos}]
+        let syncLog      = JSON.parse(localStorage.getItem('syncLog'))      || [];   // [{timestamp,usuario,accion,tabla,enviados,recibidos,errores,msg}]
         let syncTimer    = null;   // setInterval handle
         let syncEnCurso  = false;
-
-        // ========== FASE 5: AUDITORÍA DE ACCIONES ==========
-        let auditLog;
-        try { auditLog = JSON.parse(localStorage.getItem('auditLog')) || []; }
-        catch(e) { auditLog = []; localStorage.removeItem('auditLog'); console.warn('[Fase5] auditLog corrupto, reseteado.'); }
-
-        /**
-         * registrarAccion(accion, modulo, detalle, datos)
-         * Registra toda acción importante en auditLog (inmutable, máx 500).
-         * También encola para subir a Google Sheets.
-         * FASE 5 — No eliminar ni modificar registros existentes.
-         */
-        function registrarAccion(accion, modulo, detalle, datos) {
-            const entry = {
-                id:        Date.now() + '-' + Math.random().toString(36).substr(2, 5),
-                timestamp: new Date().toISOString(),
-                fecha:     fechaLocalHoy(),
-                usuario:   getCurrentUserId(),
-                rol:       (syncConfig && syncConfig.rolDispositivo) || 'vendedor',
-                accion,    // 'crear'|'editar'|'eliminar'|'sync'|'precio'|'tasa'|'pago'|'restore'|'error'
-                modulo,    // 'ventas'|'creditos'|'gastos'|'clientes'|'precios'|'bcv'|'sistema'|'storage'
-                detalle,
-                datos:     datos || {}
-            };
-            if (!Array.isArray(auditLog)) auditLog = [];
-            auditLog.unshift(entry);
-            if (auditLog.length > 500) auditLog = auditLog.slice(0, 500);
-            guardarEnStorage('auditLog', auditLog);  // FASE 7 P3
-            // Encolar para subir a Sheets (no bloquea si falla)
-            try { encolarSync('auditLog', 'insert', entry); } catch(e) {}
-        }
         
         // Función para obtener tasa BCV de una fecha específica
         function getBCVRateForDate(date) {
-            const dateStr = typeof date === 'string' ? date.substring(0,10) : (date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0')); // FASE 4
+            const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
             
             // Buscar tasa exacta de esa fecha
             const rateEntry = bcvRateHistory.find(r => r.date === dateStr);
@@ -4700,7 +4499,7 @@
         
         // Función para actualizar tasa BCV
         function updateBCVRate(newRate) {
-            const today = fechaLocalHoy(); // FASE 4
+            const today = new Date().toISOString().split('T')[0];
             
             // Verificar si ya existe entrada para hoy
             const existingIndex = bcvRateHistory.findIndex(r => r.date === today);
@@ -4715,7 +4514,7 @@
             }
             
             // Guardar historial
-            guardarEnStorage('bcvRateHistory', bcvRateHistory);  // FASE 7 P3
+            localStorage.setItem('bcvRateHistory', JSON.stringify(bcvRateHistory));
             
             // Actualizar tasa actual
             priceExchangeRate = newRate;
@@ -4732,7 +4531,7 @@
         
         function checkBCVAlert() {
             const now = new Date();
-            const today = fechaLocalHoy(); // FASE 4
+            const today = now.toISOString().split('T')[0];
             const hour = now.getHours();
             const minute = now.getMinutes();
             
@@ -4754,40 +4553,6 @@
             initializeApp();
         });
 
-        // FASE 0 — Helper: fecha local correcta para Venezuela (UTC-4)
-        // toISOString() usa UTC y a partir de las 8pm VEN ya devuelve mañana.
-        // Esta función usa siempre la hora local del dispositivo.
-        function fechaLocalHoy() {
-            const d = new Date();
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return y + '-' + m + '-' + day;
-        }
-
-        // FASE 7: guardarEnStorage + leerDeStorage movidos al inicio del script
-
-        /**
-         * normalizarFecha(val) — FASE 6 P1
-         * Garantiza que cualquier valor de fecha quede como YYYY-MM-DD.
-         * Acepta: string ISO completo, Date object, string corto, null/undefined.
-         * Devuelve: string YYYY-MM-DD o '' si el valor es inválido.
-         */
-        function normalizarFecha(val) {
-            if (!val) return '';
-            if (val instanceof Date) {
-                return val.getFullYear() + '-' +
-                    String(val.getMonth() + 1).padStart(2, '0') + '-' +
-                    String(val.getDate()).padStart(2, '0');
-            }
-            const s = String(val).trim();
-            // ISO completo: YYYY-MM-DDTHH:... o YYYY-MM-DD Z offset
-            if (s.length > 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
-            // Ya tiene formato correcto
-            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-            return s; // devolver tal cual si no reconocemos el formato
-        }
-
         function initializeApp() {
             // Sanar adelantos de hielo con saldoDisponibleUSD inválido (negativo/NaN por bug anterior)
             let changed = false;
@@ -4799,7 +4564,7 @@
                 }
                 return a;
             });
-            if (changed) guardarEnStorage('adelantosHielo', adelantosHielo);  // FASE 7 P3
+            if (changed) localStorage.setItem('adelantosHielo', JSON.stringify(adelantosHielo));
 
             // Configurar fecha actual
             const now = new Date();
@@ -4816,7 +4581,7 @@
             loadManualExchangeRates();
             
             // Establecer fechas por defecto
-            const today = fechaLocalHoy(); // FASE 0: hora local, no UTC
+            const today = now.toISOString().split('T')[0];
             document.getElementById('sale-date').value = today;
             document.getElementById('expense-date').value = today;
             document.getElementById('order-date').value = today;
@@ -4828,7 +4593,7 @@
             if (adelantoHieloFecha) adelantoHieloFecha.value = today;
             
             // Fechas de exportación (primer día del mes hasta hoy)
-            const firstDayOfMonth = (() => { const d = new Date(now.getFullYear(), now.getMonth(), 1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01'; })(); // FASE 0: hora local
+            const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
             const exportFrom = document.getElementById('export-date-from');
             const exportTo = document.getElementById('export-date-to');
             if (exportFrom) exportFrom.value = firstDayOfMonth;
@@ -4868,7 +4633,7 @@
             loadMovimientosHistorial();
 
             // B3: Compras
-            const fechaHoy = fechaLocalHoy(); // FASE 0: hora local
+            const fechaHoy = new Date().toISOString().split('T')[0];
             const cFecha = document.getElementById('c-fecha');
             if (cFecha) cFecha.value = fechaHoy;
             poblarCItemProductoSelect();
@@ -4928,16 +4693,6 @@
             
             // B1: Migrar datos existentes
             migrarDatosB1();
-
-            // FASE 0: Limpiar fechas corruptas (una sola vez, idempotente)
-            limpiarFechasCorruptas();
-
-            // FASE 7 P4: Persistir waterPrices si no estaba en localStorage
-            // Garantiza que los productos base sobrevivan entre sesiones
-            if (!localStorage.getItem('waterPrices')) {
-                guardarEnStorage('waterPrices', waterPrices);
-                console.log('[Fase7] waterPrices persistido por primera vez:', Object.keys(waterPrices).length, 'productos');
-            }
         }
 
         // ========== B1: MIGRACIÓN DE DATOS ==========
@@ -4953,7 +4708,7 @@
                 if (cliente && cliente.permiteCredito && cliente.diasCredito && credit.date) {
                     const fechaBase = new Date(credit.date + 'T00:00:00');
                     fechaBase.setDate(fechaBase.getDate() + cliente.diasCredito);
-                    const nuevaFecha = fechaBase.getFullYear()+'-'+String(fechaBase.getMonth()+1).padStart(2,'0')+'-'+String(fechaBase.getDate()).padStart(2,'0'); // FASE 4
+                    const nuevaFecha = fechaBase.toISOString().split('T')[0];
                     
                     // Solo actualizar si cambió o no existía
                     if (credit.fechaVencimiento !== nuevaFecha || credit.diasCredito !== cliente.diasCredito) {
@@ -4968,91 +4723,8 @@
             });
             
             if (cambios) {
-                guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
+                localStorage.setItem('creditsData', JSON.stringify(creditsData));
             }
-        }
-
-        // ========== FASE 0: LIMPIEZA DE FECHAS CORRUPTAS ==========
-        /**
-         * limpiarFechasCorruptas()
-         * Recorre salesData, expensesData, clientsData y creditsData.
-         * Detecta fechas con formato ISO completo (YYYY-MM-DDTHH:MM:SS.SSSZ o similar)
-         * y las normaliza a YYYY-MM-DD extrayendo solo los primeros 10 caracteres.
-         * Se ejecuta una sola vez por dispositivo usando el flag 'fechasLimpiadas' en localStorage.
-         * FASE 0 — No modifica estructura de datos, solo sanea fechas existentes.
-         */
-        function limpiarFechasCorruptas() {
-            // Guard: ejecutar solo una vez
-            if (localStorage.getItem('fechasLimpiadas') === 'true') return;
-
-            let totalCorregidos = 0;
-
-            // Helper interno: normaliza una fecha si tiene hora/timezone
-            function _normalizar(val) {
-                if (!val) return val;
-                const s = String(val);
-                // Si tiene más de 10 chars y empieza con YYYY-MM-DD, truncar
-                if (s.length > 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) {
-                    return s.substring(0, 10);
-                }
-                return val;
-            }
-
-            // --- salesData: campo 'date' ---
-            let cambiados = 0;
-            salesData.forEach(sale => {
-                const limpia = _normalizar(sale.date);
-                if (limpia !== sale.date) { sale.date = limpia; cambiados++; }
-            });
-            if (cambiados > 0) {
-                guardarEnStorage('salesData', salesData);  // FASE 7 P3
-                console.log('[Fase0] salesData: ' + cambiados + ' fechas corregidas');
-            }
-            totalCorregidos += cambiados;
-
-            // --- expensesData: campo 'date' ---
-            cambiados = 0;
-            expensesData.forEach(exp => {
-                const limpia = _normalizar(exp.date);
-                if (limpia !== exp.date) { exp.date = limpia; cambiados++; }
-            });
-            if (cambiados > 0) {
-                guardarEnStorage('expensesData', expensesData);  // FASE 7 P3
-                console.log('[Fase0] expensesData: ' + cambiados + ' fechas corregidas');
-            }
-            totalCorregidos += cambiados;
-
-            // --- clientsData: campo 'lastPurchase' ---
-            cambiados = 0;
-            clientsData.forEach(client => {
-                const limpia = _normalizar(client.lastPurchase);
-                if (limpia !== client.lastPurchase) { client.lastPurchase = limpia; cambiados++; }
-            });
-            if (cambiados > 0) {
-                guardarEnStorage('clientsData', clientsData);  // FASE 7 P3
-                console.log('[Fase0] clientsData: ' + cambiados + ' fechas corregidas');
-            }
-            totalCorregidos += cambiados;
-
-            // --- creditsData: campos 'date' y 'fechaVencimiento' ---
-            cambiados = 0;
-            creditsData.forEach(credit => {
-                let c = false;
-                const lDate = _normalizar(credit.date);
-                if (lDate !== credit.date) { credit.date = lDate; c = true; }
-                const lVenc = _normalizar(credit.fechaVencimiento);
-                if (lVenc !== credit.fechaVencimiento) { credit.fechaVencimiento = lVenc; c = true; }
-                if (c) cambiados++;
-            });
-            if (cambiados > 0) {
-                guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
-                console.log('[Fase0] creditsData: ' + cambiados + ' registros con fechas corregidas');
-            }
-            totalCorregidos += cambiados;
-
-            // Marcar como ejecutado (flag permanente)
-            localStorage.setItem('fechasLimpiadas', 'true');
-            console.log('[Fase0] limpiarFechasCorruptas completado. Total registros corregidos: ' + totalCorregidos);
         }
 
         // ========== B2: MÓDULO DE INVENTARIO ==========
@@ -5065,7 +4737,7 @@
         }
 
         function saveInventory() {
-            guardarEnStorage('inventoryData', inventoryData);  // FASE 7 P3
+            localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
             // Sync items modificados recientemente (últimos 30s)
             const cutoff = Date.now() - 30000;
             inventoryData.forEach(item => {
@@ -5074,14 +4746,14 @@
             });
         }
         function saveMovimientos() {
-            guardarEnStorage('movimientosData', movimientosData);  // FASE 7 P3
+            localStorage.setItem('movimientosData', JSON.stringify(movimientosData));
         }
 
         // ---- Registrar movimiento ----
         function registrarMovimiento(productoKey, tipo, cantidad, stockAnterior, stockNuevo, referencia) {
             movimientosData.unshift({
                 id: Date.now().toString(),
-                fecha: fechaLocalHoy(), // FASE 4
+                fecha: new Date().toISOString().split('T')[0],
                 tipo: tipo, // 'compra' | 'venta' | 'ajuste'
                 productoKey: productoKey,
                 cantidad: cantidad,
@@ -5109,7 +4781,7 @@
                 }
                 inv.stockActual = Math.max(0, inv.stockActual - cant);
                 inv.totalVentas = (inv.totalVentas || 0) + cant;
-                inv.ultimaVenta = fechaLocalHoy(); // FASE 4
+                inv.ultimaVenta = new Date().toISOString().split('T')[0];
                 inv.diasSinMovimiento = 0;
                 const est = calcularEstadoInventario(inv);
                 inv.estado = est.estado;
@@ -5486,7 +5158,7 @@
             else stockNuevo = cant;
             inventoryData[idx].stockActual = stockNuevo;
             inventoryData[idx].totalAjustes = (inventoryData[idx].totalAjustes || 0) + Math.abs(stockNuevo - stockAnt);
-            inventoryData[idx].ultimoAjuste = fechaLocalHoy(); // FASE 4
+            inventoryData[idx].ultimoAjuste = new Date().toISOString().split('T')[0];
             inventoryData[idx].diasSinMovimiento = 0;
             const est = calcularEstadoInventario(inventoryData[idx]);
             inventoryData[idx].estado = est.estado;
@@ -5596,9 +5268,7 @@
         // ========== B3: MÓDULO DE COMPRAS ==========
 
         function saveCompras() {
-            guardarEnStorage('comprasData', comprasData);  // FASE 7 P3
-            // FASE 6 P3: Sincronizar la compra más reciente
-            if (comprasData.length > 0) syncCompra(comprasData[0]);
+            localStorage.setItem('comprasData', JSON.stringify(comprasData));
         }
 
         // ---- Poblar selects de productos ----
@@ -5952,7 +5622,7 @@
             compra.metodoPago  = document.getElementById('pago-nuevo-metodo').value;
             const notas        = document.getElementById('pago-notas').value.trim();
             if (notas) compra.observaciones = (compra.observaciones ? compra.observaciones + ' | ' : '') + notas;
-            compra.fechaPago   = fechaLocalHoy(); // FASE 4
+            compra.fechaPago   = new Date().toISOString().split('T')[0];
             saveCompras();
             document.getElementById('compra-pago-modal').style.display = 'none';
             loadComprasDashboard();
@@ -5998,7 +5668,7 @@
         // ========== B4: MÓDULO DE CONSIGNACIONES ==========
 
         function saveConsignaciones() {
-            guardarEnStorage('consignacionesData', consignacionesData);  // FASE 7 P3
+            localStorage.setItem('consignacionesData', JSON.stringify(consignacionesData));
         }
 
         // ---- Helpers ----
@@ -6078,7 +5748,7 @@
         function abrirNuevaConsignacion() {
             poblarConsClienteSelect();
             poblarConsProductoSelect();
-            document.getElementById('cons-fecha-entrega').value = fechaLocalHoy(); // FASE 0
+            document.getElementById('cons-fecha-entrega').value = new Date().toISOString().split('T')[0];
             document.getElementById('cons-cantidad').value      = '1';
             document.getElementById('cons-precio-unit').value   = '15.00';
             document.getElementById('cons-obs-entrega').value   = '';
@@ -6251,7 +5921,7 @@
             const metodoPago = document.getElementById('cons-proc-metodo-pago').value;
             if (cobrados > 0 && !metodoPago) { alert('Selecciona el método de pago para el cobro'); return; }
 
-            const hoy = fechaLocalHoy(); // FASE 4
+            const hoy = new Date().toISOString().split('T')[0];
 
             // Precio VIGENTE al momento del cobro (no el precio de la entrega)
             const precioVigente = getPrecioVigenteConsignacion(cons);
@@ -6306,7 +5976,7 @@
                     esConsignacion: true
                 };
                 salesData.unshift(ventaCons);
-                guardarEnStorage('salesData', salesData);  // FASE 7 P3
+                localStorage.setItem('salesData', JSON.stringify(salesData));
                 syncConsignacion(ventaCons);
 
                 // ---- Si método es Crédito: crear registro en creditsData ----
@@ -6316,7 +5986,7 @@
                     const diasAlerta   = clienteData?.diasAlertaAntes || 3;
                     const fechaBase    = new Date(hoy + 'T00:00:00');
                     fechaBase.setDate(fechaBase.getDate() + diasCredito);
-                    const fechaVencimiento = fechaBase.getFullYear()+'-'+String(fechaBase.getMonth()+1).padStart(2,'0')+'-'+String(fechaBase.getDate()).padStart(2,'0'); // FASE 4
+                    const fechaVencimiento = fechaBase.toISOString().split('T')[0];
                     const creditoCons = {
                         id:              ventaId,
                         customer:        cons.cliente,
@@ -6332,7 +6002,7 @@
                         notas:           `Crédito por consignación #${cons.id} - ${cons.productoNombre} × ${cobrados} @ $${precioVigente.toFixed(2)}`
                     };
                     creditsData.unshift(creditoCons);
-                    guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
+                    localStorage.setItem('creditsData', JSON.stringify(creditsData));
                     if (typeof loadPendingCredits === 'function') loadPendingCredits();
                 }
 
@@ -6491,7 +6161,7 @@
         // ========== B5: MÓDULO DE PRODUCTOS COMPUESTOS (KITS) ==========
 
         function saveKits() {
-            guardarEnStorage('productosCompuestos', productosCompuestos);  // FASE 7 P3
+            localStorage.setItem('productosCompuestos', JSON.stringify(productosCompuestos));
         }
 
         // ---- Calcular stock disponible de un kit ----
@@ -6670,11 +6340,6 @@
             }
 
             saveKits();
-            // FASE 3D: Sincronizar kit guardado
-            const kitGuardado = currentKitId
-                ? productosCompuestos.find(k => k.key === currentKitId)
-                : productosCompuestos[0];
-            if (kitGuardado) encolarSync('kits', 'upsert', kitGuardado);
             cerrarKitModal();
             loadKitsList();
             loadProductsList();            // Refrescar lista de ventas para mostrar nuevo kit
@@ -6789,11 +6454,7 @@
         // ========== B6: MÓDULO DE PRÉSTAMOS EMPRESARIALES ==========
 
         function savePrestamos() {
-            guardarEnStorage('prestamosData', prestamosData);  // FASE 7 P3
-            // FASE 6 P3: Sincronizar el préstamo más reciente
-            if (prestamosData.length > 0) {
-                try { syncPrestamo(prestamosData[0]); } catch(e) {}
-            }
+            localStorage.setItem('prestamosData', JSON.stringify(prestamosData));
         }
 
         function cerrarPrestModal(id) {
@@ -6826,7 +6487,7 @@
                 // Calcular fecha de vencimiento
                 const base = new Date(fechaPrimeraCuota + 'T12:00:00');
                 base.setMonth(base.getMonth() + (n - 1));
-                const vencimiento = base.getFullYear()+'-'+String(base.getMonth()+1).padStart(2,'0')+'-'+String(base.getDate()).padStart(2,'0'); // FASE 4
+                const vencimiento = base.toISOString().split('T')[0];
 
                 // Recuperar estado del pago si ya existe
                 const existing = prestamo.amortizacion?.[n - 1];
@@ -6869,14 +6530,14 @@
             if (desembolso && !document.getElementById('prest-fecha-primera').value) {
                 const d = new Date(desembolso + 'T12:00:00');
                 d.setMonth(d.getMonth() + 1);
-                document.getElementById('prest-fecha-primera').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); // FASE 0
+                document.getElementById('prest-fecha-primera').value = d.toISOString().split('T')[0];
             }
         }
 
         // ---- Abrir modal nuevo/editar préstamo ----
         function abrirPrestModal(prestId = null) {
             currentPrestId = prestId;
-            const hoy      = fechaLocalHoy(); // FASE 0
+            const hoy      = new Date().toISOString().split('T')[0];
 
             if (prestId) {
                 const p = prestamosData.find(x => x.id === prestId);
@@ -6981,11 +6642,6 @@
             }
 
             savePrestamos();
-            // FASE 6 P3: Sincronizar el préstamo específico que se guardó
-            const _prestSync = currentPrestId
-                ? prestamosData.find(x => x.id === currentPrestId)
-                : prestamosData[0];
-            if (_prestSync) syncPrestamo(_prestSync);
             cerrarPrestModal('prest-modal');
             loadPrestamosDashboard();
             loadPrestamosList();
@@ -7035,7 +6691,7 @@
             document.getElementById('prest-amort-title').textContent =
                 `📋 ${p.prestamista} - ${p.plazoMeses} cuotas de $${p.cuotaMensualUSD.toFixed(2)}`;
 
-            const hoy        = fechaLocalHoy(); // FASE 4
+            const hoy        = new Date().toISOString().split('T')[0];
             const pagadas    = p.amortizacion.filter(c => c.estado === 'pagado').length;
             const totalInt   = p.amortizacion.reduce((s, c) => s + c.interesUSD, 0);
             const totalCap   = p.amortizacion.reduce((s, c) => s + c.capitalUSD, 0);
@@ -7160,7 +6816,7 @@
                     : `<strong style="font-size:16px; color:#1565c0;">Total a pagar: $${cuota.cuotaUSD.toFixed(2)} USD</strong>`
                 }`;
 
-            document.getElementById('prest-pago-fecha').value  = fechaLocalHoy(); // FASE 4
+            document.getElementById('prest-pago-fecha').value  = new Date().toISOString().split('T')[0];
             document.getElementById('prest-pago-notas').value  = '';
             document.getElementById('prest-pago-modal').style.display = 'flex';
         }
@@ -7247,11 +6903,11 @@
         function getFechaEnDias(dias) {
             const d = new Date();
             d.setDate(d.getDate() + dias);
-            return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); // FASE 4
+            return d.toISOString().split('T')[0];
         }
 
         function verificarAlertasPrestamos() {
-            const hoy   = fechaLocalHoy(); // FASE 4
+            const hoy   = new Date().toISOString().split('T')[0];
             const en7   = getFechaEnDias(7);
             const alertas = [];
 
@@ -7286,7 +6942,7 @@
         function loadPrestamosList() {
             const filtroEstado = document.getElementById('prest-filtro-estado')?.value || 'todos';
             const filtroTipo   = document.getElementById('prest-filtro-tipo')?.value   || 'todos';
-            const hoy          = fechaLocalHoy(); // FASE 4
+            const hoy          = new Date().toISOString().split('T')[0];
 
             let lista = [...prestamosData];
             if (filtroEstado !== 'todos') lista = lista.filter(p => p.estado === filtroEstado);
@@ -7388,7 +7044,7 @@
         // ========== B7: MÓDULO MULTIUSUARIO ==========
 
         function saveUsers() {
-            guardarEnStorage('usersData', usersData);  // FASE 7 P3
+            localStorage.setItem('usersData', JSON.stringify(usersData));
         }
 
         // ---- Permisos helpers ----
@@ -7425,14 +7081,6 @@
             // Sección usuarios en config: solo admin
             const usersCard = document.getElementById('users-management-card');
             if (usersCard) usersCard.style.display = esAdmin() ? 'block' : 'none';
-
-            // FASE 5: Panel de auditoría — solo admin
-            const auditCard = document.getElementById('audit-card');
-            if (auditCard) auditCard.style.display = esAdmin() ? 'block' : 'none';
-
-            // FASE 6 P4: Botón Sync Completo — solo admin
-            const btnSyncCompleto = document.getElementById('btn-sync-completo');
-            if (btnSyncCompleto) btnSyncCompleto.style.display = esAdmin() ? 'inline-flex' : 'none';
 
             // Botón "Precios" en header: solo admin
             document.querySelectorAll('button[onclick*="showPriceManager"]').forEach(b => {
@@ -7943,7 +7591,7 @@
         // ========== B8: MÓDULO SINCRONIZACIÓN GOOGLE SHEETS ==========
 
         // ---- Persistencia ----
-        function saveSyncConfig()  { guardarEnStorage('syncConfig', syncConfig);  }  // FASE 7 P3
+        function saveSyncConfig()  { localStorage.setItem('syncConfig', JSON.stringify(syncConfig)); }
         function saveSyncQueue()   { localStorage.setItem('syncQueue',  JSON.stringify(syncQueue));  }
         function saveSyncLog()     { localStorage.setItem('syncLog',    JSON.stringify(syncLog));    }
 
@@ -8004,8 +7652,6 @@
             syncConfig.frecuenciaMin = frecuencia;
             syncConfig.modo          = modo;
             syncConfig.activa        = url.length > 0;
-            // FASE 1: preservar rolDispositivo (no sobreescribir al guardar config)
-            if (!syncConfig.rolDispositivo) syncConfig.rolDispositivo = 'vendedor';
             saveSyncConfig();
 
             // Arrancar/detener timer automático
@@ -8042,33 +7688,10 @@
         }
 
         // ---- Motor principal de sync ----
-
-        // FASE 2A: Mostrar/ocultar banner naranja y deshabilitar botones sync
-        function mostrarBannerSync() {
-            const banner = document.getElementById('sync-banner');
-            if (banner) banner.style.display = 'block';
-            // Deshabilitar todos los botones que disparan sync
-            ['btn-sync-manual'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) { el.disabled = true; el.style.opacity = '0.5'; }
-            });
-        }
-
-        function ocultarBannerSync() {
-            const banner = document.getElementById('sync-banner');
-            if (banner) banner.style.display = 'none';
-            // Re-habilitar botones sync (solo si syncConfig está activa)
-            ['btn-sync-manual'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) { el.disabled = !syncConfig.activa; el.style.opacity = ''; }
-            });
-        }
-
         async function ejecutarSync() {
             if (syncEnCurso) return;
             syncEnCurso = true;
             actualizarSyncBadge();
-            mostrarBannerSync(); // FASE 2A
 
             const progressMsg = document.getElementById('sync-progress-msg');
             if (progressMsg) progressMsg.textContent = '🔄 Enviando datos…';
@@ -8125,41 +7748,20 @@
                     syncQueue = syncQueue.filter(e => !idsEnviados.has(e.id));
                     saveSyncQueue();
 
-                    // FASE 2B: Marcar registros de salesData como sincronizados
-                    pendientes.forEach(entry => {
-                        if (entry.tabla === 'ventas' && entry.datos && entry.datos.id) {
-                            const item = salesData.find(x => x.id == entry.datos.id);
-                            if (item) {
-                                item.synced   = true;
-                                item.syncedAt = new Date().toISOString();
-                            }
-                        }
-                    });
-                    // Guardar salesData con synced actualizado
-                    const hayVentasSinc = pendientes.some(e => e.tabla === 'ventas');
-                    if (hayVentasSinc) guardarEnStorage('salesData', salesData);  // FASE 7 P3
-
-                    // FASE 1: Solo el admin procesa actualizaciones recibidas
-                    // El vendedor NUNCA aplica pull aunque Sheets tenga datos
+                    // Procesar actualizaciones recibidas
                     let recibidos = 0;
-                    const esRolAdmin = (syncConfig.rolDispositivo === 'admin');
-                    if (esRolAdmin && result.actualizaciones) {
+                    if (result.actualizaciones) {
                         recibidos = procesarActualizaciones(result.actualizaciones);
-                    } else if (!esRolAdmin && result.actualizaciones) {
-                        console.log('[Fase1] Rol vendedor: actualizaciones recibidas ignoradas (push-only)');
                     }
 
-                    // FASE 1: Solo el admin procesa conflictos
-                    if (esRolAdmin && result.conflictos && result.conflictos.length > 0) {
+                    // Procesar conflictos
+                    if (result.conflictos && result.conflictos.length > 0) {
                         procesarConflictos(result.conflictos);
                     }
 
                     syncConfig.ultimaSync = result.ultimaSync || new Date().toISOString();
                     saveSyncConfig();
 
-                    registrarAccion('sync', 'sistema', // FASE 5
-                        `Sync completado: ${pendientes.length} enviados, ${recibidos} recibidos`,
-                        { enviados: pendientes.length, recibidos });
                     logEntry.recibidos = recibidos;
                     logEntry.msg       = `✅ OK - ${pendientes.length} enviados, ${recibidos} recibidos`;
                     if (progressMsg) progressMsg.textContent = logEntry.msg;
@@ -8196,156 +7798,92 @@
 
             syncEnCurso = false;
             actualizarSyncBadge();
-            ocultarBannerSync(); // FASE 2A
             loadSyncQueueDisplay();
             loadSyncLogDisplay();
         }
 
         // ---- Procesar datos recibidos del servidor ----
-        // FASE 3C: Versión blindada — normaliza fechas, solo inserta si no existe,
-        // nunca sobreescribe registros locales, registra en console por tabla.
         function procesarActualizaciones(updates) {
-            if (!updates || typeof updates !== 'object') return 0;
-
-            // Helper: normalizar fecha ISO a YYYY-MM-DD (elimina T y timezone)
-            function _normFecha(val) {
-                if (!val) return val;
-                const s = String(val);
-                return (s.length > 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) ? s.substring(0, 10) : s;
-            }
-
-            // Helper: insertar en array solo si el ID no existe localmente
-            function _insertarSiNuevo(arr, remoto, idField) {
-                const campo = idField || 'id';
-                if (arr.find(x => String(x[campo]) === String(remoto[campo]))) return false;
-                // Marcar que vino del sync y normalizar fechas operativas
-                remoto._fromSync = true;
-                if (remoto.date)             remoto.date             = _normFecha(remoto.date);
-                if (remoto.fecha)            remoto.fecha            = _normFecha(remoto.fecha);
-                if (remoto.lastPurchase)     remoto.lastPurchase     = _normFecha(remoto.lastPurchase);
-                if (remoto.fechaVencimiento) remoto.fechaVencimiento = _normFecha(remoto.fechaVencimiento);
-                arr.unshift(remoto);
-                return true;
-            }
-
             let count = 0;
-            const resumen = {};
-
-            // --- Ventas ---
-            if (Array.isArray(updates.ventas)) {
-                let n = 0;
-                updates.ventas.forEach(v => { if (_insertarSiNuevo(salesData, v)) n++; });
-                if (n > 0) { guardarEnStorage('salesData', salesData);  }  // FASE 7 P3
-                resumen.ventas = n;
-                count += n;
-            }
-
-            // --- Gastos ---
-            if (Array.isArray(updates.gastos)) {
-                let n = 0;
-                updates.gastos.forEach(g => { if (_insertarSiNuevo(expensesData, g)) n++; });
-                if (n > 0) { guardarEnStorage('expensesData', expensesData);  }  // FASE 7 P3
-                resumen.gastos = n;
-                count += n;
-            }
-
-            // --- Clientes ---
-            if (Array.isArray(updates.clientes)) {
-                let n = 0;
-                updates.clientes.forEach(c => { if (_insertarSiNuevo(clientsData, c)) n++; });
-                if (n > 0) { guardarEnStorage('clientsData', clientsData);  }  // FASE 7 P3
-                resumen.clientes = n;
-                count += n;
-            }
-
-            // --- Créditos ---
-            if (Array.isArray(updates.creditos)) {
-                let n = 0;
-                updates.creditos.forEach(c => { if (_insertarSiNuevo(creditsData, c)) n++; });
-                if (n > 0) { guardarEnStorage('creditsData', creditsData);  }  // FASE 7 P3
-                resumen.creditos = n;
-                count += n;
-            }
-
-            // --- Compras ---
-            if (Array.isArray(updates.compras)) {
-                let n = 0;
-                updates.compras.forEach(c => { if (_insertarSiNuevo(comprasData, c)) n++; });
-                if (n > 0) { guardarEnStorage('comprasData', comprasData);  }  // FASE 7 P3
-                resumen.compras = n;
-                count += n;
-            }
-
-            // --- Préstamos ---
-            if (Array.isArray(updates.prestamos)) {
-                let n = 0;
-                updates.prestamos.forEach(p => { if (_insertarSiNuevo(prestamosData, p)) n++; });
-                if (n > 0) { guardarEnStorage('prestamosData', prestamosData);  }  // FASE 7 P3
-                resumen.prestamos = n;
-                count += n;
-            }
-
-            // --- Inventario: merge conservador (gana timestamp más reciente) ---
-            if (Array.isArray(updates.inventario)) {
-                let n = 0;
-                updates.inventario.forEach(remoto => {
-                    remoto.date = _normFecha(remoto.date);
-                    const idx = inventoryData.findIndex(x => x.productoKey === remoto.productoKey);
-                    if (idx !== -1) {
-                        const tsRemoto = new Date(remoto.modificadoEn || 0).getTime();
-                        const tsLocal  = new Date(inventoryData[idx].modificadoEn || 0).getTime();
-                        if (tsRemoto > tsLocal) { inventoryData[idx] = { ...inventoryData[idx], ...remoto }; n++; }
+            // Ventas: solo añadir las que no existan localmente (append-only)
+            if (updates.ventas && syncConfig.modo !== 'solo_subir') {
+                updates.ventas.forEach(v => {
+                    if (!salesData.find(x => x.id == v.id)) {
+                        salesData.unshift(v);
+                        count++;
                     }
                 });
-                if (n > 0) { guardarEnStorage('inventoryData', inventoryData);  }  // FASE 7 P3
-                resumen.inventario = n;
-                count += n;
+                if (count > 0) {
+                    localStorage.setItem('salesData', JSON.stringify(salesData));
+                    loadSalesHistory && loadSalesHistory();
+                }
             }
-
-            // --- Tasas BCV ---
+            // Tasas BCV: recibir del servidor y aplicar a bcvRateHistory + campos visuales
             if (updates.tasaBCV || updates.tasasBCV) {
-                const src = updates.tasaBCV || updates.tasasBCV;
-                const tasasRecibidas = Array.isArray(src) ? src : [src];
+                if (!updates.tasaBCV) updates.tasaBCV = updates.tasasBCV;
+                // Puede venir como objeto único o como array de tasas
+                const tasasRecibidas = Array.isArray(updates.tasaBCV) ? updates.tasaBCV : [updates.tasaBCV];
                 let cambiaron = false;
-                const hoy = fechaLocalHoy();
+                const today = new Date().toISOString().split('T')[0];
+
                 tasasRecibidas.forEach(item => {
                     const nuevaTasa = parseFloat(item.tasa);
-                    const fechaTasa = _normFecha(item.fecha) || hoy;
+                    const fechaTasa = item.fecha || today;
                     if (isNaN(nuevaTasa) || nuevaTasa <= 0) return;
+
+                    // Actualizar bcvRateHistory
                     const idx = bcvRateHistory.findIndex(r => r.date === fechaTasa);
                     if (idx !== -1) {
-                        if (bcvRateHistory[idx].rate !== nuevaTasa) { bcvRateHistory[idx].rate = nuevaTasa; cambiaron = true; }
+                        if (bcvRateHistory[idx].rate !== nuevaTasa) {
+                            bcvRateHistory[idx].rate = nuevaTasa;
+                            cambiaron = true;
+                        }
                     } else {
                         bcvRateHistory.push({ date: fechaTasa, rate: nuevaTasa });
                         bcvRateHistory.sort((a, b) => b.date.localeCompare(a.date));
                         cambiaron = true;
                     }
-                    if (fechaTasa === hoy && item.esHoy !== false) {
-                        priceExchangeRate = nuevaTasa;
-                        appConfig.exchangeRates.bcv = nuevaTasa;
+
+                    // Si es la tasa de hoy, propagar a appConfig y campos visuales
+                    if (fechaTasa === today && item.esHoy !== false) {
+                        priceExchangeRate               = nuevaTasa;
+                        appConfig.exchangeRates.bcv      = nuevaTasa;
                         appConfig.exchangeRates.priceRate = nuevaTasa;
                         count++;
                     }
                 });
+
                 if (cambiaron) {
-                    guardarEnStorage('bcvRateHistory', bcvRateHistory);  // FASE 7 P3
-                    guardarEnStorage('appConfig', appConfig);  // FASE 7 P3
+                    localStorage.setItem('bcvRateHistory', JSON.stringify(bcvRateHistory));
+                    localStorage.setItem('appConfig', JSON.stringify(appConfig));
+                    // Actualizar todos los campos visuales
                     syncRateFromBCV();
                     loadManualRates && loadManualRates();
+                    loadManualExchangeRates && loadManualExchangeRates();
                     cargarHistorialTasasBCV && cargarHistorialTasasBCV();
                     loadCurrentPrices && loadCurrentPrices();
                 }
             }
-
-            // Log en consola por tabla (visibilidad total)
-            const resumenStr = Object.entries(resumen)
-                .filter(([,v]) => v > 0)
-                .map(([k,v]) => k + ':' + v)
-                .join(', ');
-            if (resumenStr) console.log('[Fase3] procesarActualizaciones →', resumenStr);
-            else console.log('[Fase3] procesarActualizaciones → sin registros nuevos');
-
-            // Refrescar UI si llegaron datos
+            // Inventario: merge conservador (solo actualizar si timestamp remoto > local)
+            if (updates.inventario && syncConfig.modo !== 'solo_subir') {
+                updates.inventario.forEach(remoto => {
+                    const idx = inventoryData.findIndex(x => x.productoKey === remoto.productoKey);
+                    if (idx !== -1) {
+                        const local = inventoryData[idx];
+                        const tsRemoto = new Date(remoto.modificadoEn || 0).getTime();
+                        const tsLocal  = new Date(local.modificadoEn  || 0).getTime();
+                        if (tsRemoto > tsLocal) {
+                            inventoryData[idx] = { ...local, ...remoto };
+                            count++;
+                        }
+                    }
+                });
+                if (count > 0) {
+                    saveInventory && saveInventory();
+                    loadInventoryList && loadInventoryList();
+                }
+            }
+            // Refrescar UI en todos los módulos si llegaron datos nuevos
             if (count > 0) {
                 setTimeout(() => {
                     loadDashboard       && loadDashboard();
@@ -8356,6 +7894,7 @@
                     loadCustomerSelect  && loadCustomerSelect();
                     poblarSaleProductSelect && poblarSaleProductSelect();
                     actualizarSyncBadge && actualizarSyncBadge();
+                    console.log('[Sync] UI refrescada con', count, 'registros nuevos');
                 }, 300);
             }
             return count;
@@ -8398,7 +7937,7 @@
 
             actualizarSyncBadge();
 
-            const hoy = fechaLocalHoy(); // FASE 4
+            const hoy = new Date().toISOString().split('T')[0];
             const enviados = syncLog.filter(e => e.timestamp.startsWith(hoy))
                                     .reduce((s,e) => s + (e.enviados||0), 0);
             const errores  = syncLog.filter(e => e.timestamp.startsWith(hoy))
@@ -8471,51 +8010,8 @@
             const statsPanel = document.getElementById('sync-stats-panel');
             if (statsPanel) statsPanel.style.display = syncConfig.activa ? 'block' : 'none';
 
-            // FASE 1: Mostrar rol actual del dispositivo
-            actualizarEtiquetaRol();
-
             actualizarSyncBadge();
             actualizarUltimaSync();
-        }
-
-        // FASE 1: Actualizar etiqueta de rol visible en el panel
-        function actualizarEtiquetaRol() {
-            const el = document.getElementById('sync-rol-etiqueta');
-            if (!el) return;
-            const rol = syncConfig.rolDispositivo || 'vendedor';
-            if (rol === 'admin') {
-                el.innerHTML = '🖥️ <strong>Modo: Administrador</strong> — recibe y envía datos';
-                el.style.background = '#e8f5e9';
-                el.style.color = '#2e7d32';
-                el.style.borderColor = '#a5d6a7';
-            } else {
-                el.innerHTML = '📱 <strong>Modo: Vendedor (captura)</strong> — solo envía datos';
-                el.style.background = '#fff3e0';
-                el.style.color = '#e65100';
-                el.style.borderColor = '#ffcc80';
-            }
-        }
-
-        // FASE 1: Cambiar rol del dispositivo (solo admin puede hacerlo)
-        function cambiarRolDispositivo() {
-            if (!esAdmin()) {
-                alert('⚠️ Solo el Administrador puede cambiar el rol del dispositivo.');
-                return;
-            }
-            const rolActual = syncConfig.rolDispositivo || 'vendedor';
-            const nuevoRol  = rolActual === 'admin' ? 'vendedor' : 'admin';
-            const etiqueta  = nuevoRol === 'admin' ? 'Administrador' : 'Vendedor (captura)';
-            const confirmar = confirm(
-                '¿Cambiar rol de este dispositivo a ' + etiqueta + '?\n\n' +
-                (nuevoRol === 'admin'
-                    ? '✅ Este dispositivo podrá recibir y aplicar datos de Google Sheets.'
-                    : '⚠️ Este dispositivo solo enviará datos. No recibirá actualizaciones de Sheets.')
-            );
-            if (!confirmar) return;
-            syncConfig.rolDispositivo = nuevoRol;
-            saveSyncConfig();
-            actualizarEtiquetaRol();
-            alert('✅ Rol cambiado a: ' + etiqueta);
         }
 
         // ---- Registro de sync en operaciones existentes ----
@@ -8530,159 +8026,6 @@
         function syncInventarioItem(item)      { encolarSync('inventario',      'upsert', item); }
         function syncCliente(cliente)          { encolarSync('clientes',        'upsert', cliente); }
         function syncConfigEntry(key, value)   { encolarSync('config',          'upsert', { key, value, timestamp: new Date().toISOString() }); }
-
-        // ========== FASE 5: FUNCIONES DE AUDITORÍA ==========
-
-        function cargarPanelAudit() {
-            const tbody      = document.getElementById('audit-tbody');
-            const countEl    = document.getElementById('audit-count');
-            if (!tbody) return;
-
-            const filtroMod  = (document.getElementById('audit-filtro-modulo')?.value  || '').toLowerCase();
-            const filtroAcc  = (document.getElementById('audit-filtro-accion')?.value  || '').toLowerCase();
-            const filtroFech = document.getElementById('audit-filtro-fecha')?.value || '';
-
-            let registros = Array.isArray(auditLog) ? [...auditLog] : [];
-
-            if (filtroMod)  registros = registros.filter(r => r.modulo  === filtroMod);
-            if (filtroAcc)  registros = registros.filter(r => r.accion  === filtroAcc);
-            if (filtroFech) registros = registros.filter(r => r.fecha   === filtroFech);
-
-            const COLORES = {
-                crear:   '#e8f5e9',
-                editar:  '#e3f2fd',
-                eliminar:'#ffebee',
-                pago:    '#f3e5f5',
-                precio:  '#fff3e0',
-                tasa:    '#e0f7fa',
-                sync:    '#f5f5f5',
-                restore: '#fff8e1',
-                error:   '#ffcdd2'
-            };
-            const ICONOS = {
-                crear:'➕', editar:'✏️', eliminar:'🗑️', pago:'💰',
-                precio:'🏷️', tasa:'💱', sync:'🔄', restore:'📦', error:'❌'
-            };
-
-            if (registros.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">Sin registros para los filtros seleccionados</td></tr>';
-                if (countEl) countEl.textContent = '0 registros';
-                return;
-            }
-
-            tbody.innerHTML = registros.slice(0, 100).map(r => {
-                const bg     = COLORES[r.accion] || '#fff';
-                const icon   = ICONOS[r.accion]  || '•';
-                const hora   = r.timestamp ? new Date(r.timestamp).toLocaleTimeString('es-VE', {hour:'2-digit', minute:'2-digit'}) : '';
-                const fecha  = r.fecha ? formatDate(r.fecha) : '';
-                return `<tr style="background:${bg}; border-bottom:1px solid #f0f0f0;">
-                    <td style="padding:7px 8px; white-space:nowrap; font-family:monospace; font-size:11px;">${fecha} ${hora}</td>
-                    <td style="padding:7px 8px; font-size:11px;">${r.usuario || '—'}</td>
-                    <td style="padding:7px 8px; font-size:11px; text-transform:capitalize;">${r.modulo || '—'}</td>
-                    <td style="padding:7px 8px; white-space:nowrap;">${icon} ${r.accion || '—'}</td>
-                    <td style="padding:7px 8px; font-size:11px; color:#444;">${r.detalle || '—'}</td>
-                </tr>`;
-            }).join('');
-
-            if (countEl) countEl.textContent =
-                `${registros.length} registro${registros.length !== 1 ? 's' : ''}${registros.length > 100 ? ' (mostrando últimos 100)' : ''}`;
-        }
-
-        function exportarAuditCSV() {
-            if (!auditLog || auditLog.length === 0) {
-                alert('No hay registros de auditoría para exportar.');
-                return;
-            }
-            const header = ['Fecha','Hora','Usuario','Rol','Módulo','Acción','Detalle'];
-            const rows   = auditLog.map(r => {
-                const ts   = r.timestamp ? new Date(r.timestamp) : null;
-                const fecha = r.fecha || (ts ? r.timestamp.slice(0,10) : '');
-                const hora  = ts ? ts.toLocaleTimeString('es-VE') : '';
-                return [
-                    formatDate(fecha), hora,
-                    r.usuario || '', r.rol || '',
-                    r.modulo  || '', r.accion || '',
-                    (r.detalle || '').replace(/,/g, ';')
-                ].join(',');
-            });
-            const csv  = [header.join(','), ...rows].join('\n');
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href  = URL.createObjectURL(blob);
-            link.download = `aquanev_audit_${fechaLocalHoy()}.csv`;
-            link.click();
-        }
-
-        // ========== FASE 6 P4: SYNC COMPLETO ADMIN ==========
-
-        /**
-         * ejecutarSyncCompleto() — Solo admin.
-         * Fuerza sincronización completa: envía toda la cola pendiente
-         * y solicita todos los datos remotos.
-         * No reemplaza ejecutarSync — es una capa encima para admin.
-         */
-        async function ejecutarSyncCompleto() {
-            if (!syncConfig.rolDispositivo || syncConfig.rolDispositivo !== 'admin') {
-                alert('⚠️ Esta función solo está disponible para el dispositivo Administrador.');
-                return;
-            }
-            if (syncEnCurso) {
-                alert('⏳ Ya hay una sincronización en curso. Espera que termine.');
-                return;
-            }
-            if (!syncConfig.appsScriptUrl) {
-                alert('⚠️ No hay URL de Apps Script configurada en Sincronización.');
-                return;
-            }
-
-            const btn = document.getElementById('btn-sync-completo');
-            if (btn) { btn.disabled = true; btn.textContent = '⏳ Sincronizando…'; }
-
-            try {
-                // 1. Forzar que todos los módulos encolen sus últimos datos
-                const tablasForzar = [
-                    { tabla: 'ventas',          data: salesData },
-                    { tabla: 'gastos',          data: expensesData },
-                    { tabla: 'creditos',        data: creditsData },
-                    { tabla: 'clientes',        data: clientsData },
-                    { tabla: 'inventario',      data: inventoryData },
-                    { tabla: 'compras',         data: comprasData },
-                    { tabla: 'consignaciones',  data: consignacionesData },
-                    { tabla: 'prestamos',       data: prestamosData },
-                    { tabla: 'kits',            data: productosCompuestos },
-                    { tabla: 'proveedores',     data: proveedoresData },
-                ];
-
-                let totalEncolados = 0;
-                tablasForzar.forEach(({ tabla, data }) => {
-                    if (Array.isArray(data) && data.length > 0) {
-                        // Encolar solo los 50 más recientes para no saturar
-                        data.slice(0, 50).forEach(item => {
-                            encolarSync(tabla, 'upsert', item);
-                            totalEncolados++;
-                        });
-                    }
-                });
-
-                console.log('[SyncCompleto] Encolados:', totalEncolados, 'registros');
-
-                // 2. Ejecutar el sync normal
-                await ejecutarSync();
-
-                registrarAccion('sync', 'sistema',
-                    'Sync completo ejecutado: ' + totalEncolados + ' registros encolados',
-                    { totalEncolados });
-
-                alert('✅ Sincronización completa finalizada. ' + totalEncolados + ' registros procesados.');
-            } catch(e) {
-                console.error('[SyncCompleto] Error:', e.message);
-                alert('❌ Error en sincronización completa: ' + e.message);
-            } finally {
-                if (btn) { btn.disabled = false; btn.textContent = '🔄 Sync Completo'; }
-            }
-        }
-
-        // ========== FIN FASE 5: AUDITORÍA ==========
 
         // ========== FIN B8: MÓDULO SINCRONIZACIÓN ==========
 
@@ -8715,58 +8058,6 @@
         }
 
         // ---- Registrar Service Worker ----
-        // FASE 6 P5: Service Worker inline — no requiere archivo externo
-        // Regla NO_CACHE para script.google.com (Apps Script).
-        // Se inyecta como Blob URL para evitar dependencia del archivo service-worker.js.
-        const _SW_CODE = `
-const CACHE_NAME = 'aquanev-v1';
-const NO_CACHE_PATTERNS = [
-    'script.google.com',
-    'googleapis.com',
-    'gstatic.com'
-];
-self.addEventListener('install', e => {
-    self.skipWaiting();
-});
-self.addEventListener('activate', e => {
-    e.waitUntil(
-        caches.keys().then(keys =>
-            Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-        ).then(() => self.clients.claim())
-    );
-});
-self.addEventListener('fetch', e => {
-    const url = e.request.url;
-    // NO_CACHE: Apps Script y APIs externas siempre van a la red
-    if (NO_CACHE_PATTERNS.some(p => url.includes(p))) {
-        e.respondWith(
-            fetch(e.request).catch(() => new Response('{}', {
-                status: 503,
-                headers: { 'Content-Type': 'application/json' }
-            }))
-        );
-        return;
-    }
-    // Para archivos locales: network-first, fallback a cache
-    e.respondWith(
-        fetch(e.request)
-            .then(res => {
-                if (res && res.status === 200 && e.request.method === 'GET') {
-                    const clone = res.clone();
-                    caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-                }
-                return res;
-            })
-            .catch(() => caches.match(e.request))
-    );
-});
-self.addEventListener('message', e => {
-    if (e.data?.type === 'AQUANEV_PING') {
-        e.source?.postMessage({ type: 'AQUANEV_PONG' });
-    }
-});
-`;
-
         async function registrarServiceWorker() {
             if (!('serviceWorker' in navigator)) {
                 console.warn('[B9] Service Worker no soportado en este navegador');
@@ -8774,18 +8065,7 @@ self.addEventListener('message', e => {
                 return;
             }
             try {
-                // Intentar con archivo externo primero, si falla usar Blob inline
-                let swUrl = './service-worker.js';
-                try {
-                    const testFetch = await fetch(swUrl, { method: 'HEAD' });
-                    if (!testFetch.ok) throw new Error('not found');
-                } catch(e) {
-                    // Archivo externo no disponible — usar Blob inline (FASE 6 P5)
-                    const blob = new Blob([_SW_CODE], { type: 'application/javascript' });
-                    swUrl = URL.createObjectURL(blob);
-                    console.log('[B9] Usando Service Worker inline (Blob)');
-                }
-                swRegistration = await navigator.serviceWorker.register(swUrl, { scope: './' });
+                swRegistration = await navigator.serviceWorker.register('./service-worker.js', { scope: './' });
                 console.log('[B9] SW registrado:', swRegistration.scope);
 
                 // Escuchar mensajes del SW
@@ -8955,7 +8235,7 @@ self.addEventListener('message', e => {
         function escanearAlertas() {
             if (Notification.permission !== 'granted') return;
             const hoy = new Date();
-            const hoyStr = fechaLocalHoy(); // FASE 4
+            const hoyStr = hoy.toISOString().split('T')[0];
 
             // ----- Créditos -----
             const alertasNotifHoy = JSON.parse(sessionStorage.getItem('notifAlertas') || '{}');
@@ -9197,7 +8477,7 @@ self.addEventListener('message', e => {
         }
 
         function xlsxDescargar(wb, nombre) {
-            XLSX.writeFile(wb, nombre + '_' + fechaLocalHoy() + '.xlsx'); // FASE 4
+            XLSX.writeFile(wb, nombre + '_' + new Date().toISOString().split('T')[0] + '.xlsx');
         }
 
         // ─── Reporte 1: Estado de Inventario ───────────────────────────────
@@ -9206,7 +8486,7 @@ self.addEventListener('message', e => {
             const rows = inventoryData.map(item => {
                 const valor   = (item.stockActual * (item.costoPromedioUSD || 0)).toFixed(2);
                 const dias    = item.ultimaVenta
-                    ? diasEntre(item.ultimaVenta.split('T')[0], fechaLocalHoy()) // FASE 4
+                    ? diasEntre(item.ultimaVenta.split('T')[0], hoy.toISOString().split('T')[0])
                     : '-';
                 let estadoBadge;
                 if (item.stockActual <= 0)              estadoBadge = repBadge('Agotado', 'rep-crit');
@@ -9532,7 +8812,7 @@ self.addEventListener('message', e => {
 
         // ─── Reporte 6: Consignaciones Pendientes ──────────────────────────
         function generarRepConsignaciones() {
-            const hoy    = fechaLocalHoy(); // FASE 4
+            const hoy    = new Date().toISOString().split('T')[0];
             const abiertas = consignacionesData.filter(c => c.estado === 'entregado' || c.estado === 'mixto');
 
             const rows = abiertas.map(c => {
@@ -9572,7 +8852,7 @@ self.addEventListener('message', e => {
         }
 
         function exportRepConsignacionesXLSX() {
-            const hoy    = fechaLocalHoy(); // FASE 4
+            const hoy    = new Date().toISOString().split('T')[0];
             const wb     = XLSX.utils.book_new();
             const data   = [['Cliente','Producto','Cant. Entregada','Cant. Devuelta','Cant. Cobrada','Cant. Pendiente',
                              'Valor Pendiente USD','Precio Unit USD','Fecha Entrega','Días Abierto','Estado']];
@@ -9593,11 +8873,119 @@ self.addEventListener('message', e => {
         }
 
         // ─── Exportación ampliada: Todo en un XLSX ─────────────────────────
-        // FASE 6 P6: Wrapper duplicado removido
+        // Extiende la función existente exportAllToXLSX agregando hojas de B10
+        const _exportAllToXLSX_orig = typeof exportAllToXLSX === 'function' ? exportAllToXLSX : null;
 
+        function exportAllToXLSX() {
+            const desde = document.getElementById('export-date-from').value;
+            const hasta = document.getElementById('export-date-to').value;
+            if (!desde || !hasta) { alert('Selecciona el rango de fechas'); return; }
+
+            // Llamar al original si existe (para Ventas/Gastos/Créditos)
+            if (_exportAllToXLSX_orig) { _exportAllToXLSX_orig(); return; }
+
+            const wb = XLSX.utils.book_new();
+            const filtrar = arr => arr.filter(x => (!desde || x.date >= desde) && (!hasta || x.date <= hasta));
+
+            // Hoja Ventas
+            const ventasData = [['Fecha','Cliente','Productos','Total USD','Método']];
+            filtrar(salesData).forEach(v => ventasData.push([
+                v.date, v.customer,
+                (v.items||[]).map(i => `${i.quantity}×${i.name}`).join(', '),
+                parseFloat((v.totalUSD||0).toFixed(2)), v.paymentMethod||''
+            ]));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ventasData), 'Ventas');
+
+            // Hoja Gastos
+            const gastosData = [['Fecha','Descripción','Categoría','Monto USD']];
+            filtrar(expensesData).forEach(e => gastosData.push([
+                e.date, e.description||e.concepto||'', e.category||'',
+                parseFloat((e.amountUSD||convertBStoUSD(e.amount||0)).toFixed(2))
+            ]));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(gastosData), 'Gastos');
+
+            // Hoja Créditos
+            const creditosData = [['Cliente','Monto USD','Saldo USD','Fecha Venta','Vencimiento','Estado']];
+            creditsData.forEach(c => creditosData.push([
+                c.customer, parseFloat((c.amount||0).toFixed(2)), parseFloat((c.balance||0).toFixed(2)),
+                c.date||'', c.fechaVencimiento||'', c.status||''
+            ]));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(creditosData), 'Creditos');
+
+            // Hoja Inventario
+            const invData = [['Producto','Stock','Costo USD','Valor USD','Estado']];
+            inventoryData.forEach(i => invData.push([
+                i.nombre, i.stockActual,
+                parseFloat((i.costoPromedioUSD||0).toFixed(2)),
+                parseFloat((i.stockActual*(i.costoPromedioUSD||0)).toFixed(2)),
+                i.estado||''
+            ]));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(invData), 'Inventario');
+
+            xlsxDescargar(wb, 'AQUANEV_Completo_' + desde + '_' + hasta);
+        }
+
+        // ─── Optimización móvil: Pull-to-refresh ───────────────────────────
+        (function initPullToRefresh() {
+            let startY = 0, pulling = false;
+            const indicator = document.getElementById('ptr-indicator');
+
+            document.addEventListener('touchstart', e => {
+                if (window.scrollY === 0) {
+                    startY   = e.touches[0].clientY;
+                    pulling  = true;
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchmove', e => {
+                if (!pulling) return;
+                const dist = e.touches[0].clientY - startY;
+                if (dist > 60 && indicator) {
+                    indicator.style.display = 'block';
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchend', () => {
+                if (!pulling) return;
+                pulling = false;
+                if (indicator && indicator.style.display === 'block') {
+                    indicator.textContent = '🔄 Sincronizando…';
+                    setTimeout(() => {
+                        ejecutarSyncManual && ejecutarSyncManual();
+                        setTimeout(() => {
+                            if (indicator) { indicator.style.display = 'none'; indicator.textContent = '↓ Suelta para sincronizar'; }
+                        }, 2000);
+                    }, 300);
+                }
+            });
+        })();
+
+        // ─── Optimización móvil: detección conexión lenta ──────────────────
+        (function detectarConexionLenta() {
+            const banner = document.getElementById('slow-connection-banner');
+            function chequear() {
+                if (!banner) return;
+                if (navigator.connection) {
+                    const tipo = navigator.connection.effectiveType;
+                    if (tipo === 'slow-2g' || tipo === '2g') {
+                        banner.style.display = 'block';
+                        // Desactivar sync automática - usar background sync del SW
+                        if (syncTimer) { clearInterval(syncTimer); syncTimer = null; }
+                    } else {
+                        banner.style.display = 'none';
+                        // Reactivar sync si fue desactivada por conexión lenta
+                        if (!syncTimer && syncConfig.activa && syncConfig.frecuenciaMin > 0) iniciarTimerSync();
+                    }
+                }
+            }
+            chequear();
+            if (navigator.connection) navigator.connection.addEventListener('change', chequear);
+        })();
+
+        // ─── Inicializar fechas de reportes al hoy y -30 días ──────────────
         function initReportDates() {
-            const hoy      = fechaLocalHoy(); // FASE 0: hora local
-            const hace30   = (() => { const d = new Date(Date.now() - 30*86400000); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })(); // FASE 0
+            const hoy      = new Date().toISOString().split('T')[0];
+            const hace30   = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
             const campos   = ['rep-ventas-desde','rep-mov-desde'];
             const camposHoy= ['rep-ventas-hasta','rep-mov-hasta'];
             campos.forEach(id => { const el = document.getElementById(id); if (el) el.value = hace30; });
@@ -9669,7 +9057,7 @@ self.addEventListener('message', e => {
         function saveWhatsAppConfig() {
             appConfig.whatsapp.number = document.getElementById('whatsapp-number').value;
             appConfig.whatsapp.message = document.getElementById('whatsapp-message').value;
-            guardarEnStorage('appConfig', appConfig);  // FASE 7 P3
+            localStorage.setItem('appConfig', JSON.stringify(appConfig));
             alert('Configuración de WhatsApp guardada!');
         }
 
@@ -9677,7 +9065,7 @@ self.addEventListener('message', e => {
             appConfig.gmail.address = document.getElementById('gmail-address').value;
             appConfig.gmail.subject = document.getElementById('gmail-subject').value;
             appConfig.gmail.body = document.getElementById('gmail-body').value;
-            guardarEnStorage('appConfig', appConfig);  // FASE 7 P3
+            localStorage.setItem('appConfig', JSON.stringify(appConfig));
             alert('Configuración de Gmail guardada!');
         }
 
@@ -9697,13 +9085,13 @@ self.addEventListener('message', e => {
         // ========== GESTIÓN DE TASAS MANUALES ==========
         // ── Sincronizar tasa BCV desde bcvRateHistory (fuente única) ──────────
         function syncRateFromBCV() {
-            const today = fechaLocalHoy(); // FASE 4
+            const today = new Date().toISOString().split('T')[0];
             const tasaHoy = getBCVRateForDate(today);
             if (tasaHoy && tasaHoy > 0) {
                 appConfig.exchangeRates.bcv      = tasaHoy;
                 appConfig.exchangeRates.priceRate = tasaHoy;
                 priceExchangeRate                 = tasaHoy;
-                guardarEnStorage('appConfig', appConfig);  // FASE 7 P3
+                localStorage.setItem('appConfig', JSON.stringify(appConfig));
             }
             return tasaHoy || appConfig.exchangeRates.bcv;
         }
@@ -9722,7 +9110,7 @@ self.addEventListener('message', e => {
             ivaPercentage = parseFloat(document.getElementById('iva-percentage').value);
             syncRateFromBCV();
             
-            guardarEnStorage('appConfig', appConfig);  // FASE 7 P3
+            localStorage.setItem('appConfig', JSON.stringify(appConfig));
             localStorage.setItem('ivaPercentage', ivaPercentage.toString());
             
             loadManualExchangeRates();
@@ -9764,12 +9152,10 @@ self.addEventListener('message', e => {
         }
 
         function convertUSDtoBS(amountUSD) {
-            if (!priceExchangeRate || priceExchangeRate <= 0) return 0; // FASE 7 P1
             return amountUSD * priceExchangeRate;
         }
 
         function convertBStoUSD(amountBS) {
-            if (!priceExchangeRate || priceExchangeRate <= 0) return 0; // FASE 7 P1
             return amountBS / priceExchangeRate;
         }
 
@@ -9820,8 +9206,8 @@ self.addEventListener('message', e => {
                 hasIva: productKey === 'hielo'
             };
             
-            guardarEnStorage('waterPrices', waterPrices);  // FASE 7 P3
-            guardarEnStorage('priceHistory', priceHistory);  // FASE 7 P3
+            localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
+            localStorage.setItem('priceHistory', JSON.stringify(priceHistory));
             
             // Actualizar vistas
             loadCurrentPrices();
@@ -9966,8 +9352,8 @@ self.addEventListener('message', e => {
                     hasIva: newHasIva
                 };
                 
-                guardarEnStorage('waterPrices', waterPrices);  // FASE 7 P3
-                guardarEnStorage('priceHistory', priceHistory);  // FASE 7 P3
+                localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
+                localStorage.setItem('priceHistory', JSON.stringify(priceHistory));
                 
                 loadCurrentPrices();
                 loadProductsList();
@@ -10495,7 +9881,7 @@ self.addEventListener('message', e => {
             
             const pendientes = (p.amortizacion || []).filter(c => c.estado !== 'pagado');
             pendientes.forEach(c => {
-                const vencida    = c.vencimiento < fechaLocalHoy(); // FASE 4
+                const vencida    = c.vencimiento < new Date().toISOString().split('T')[0];
                 const tag        = vencida ? ' ⚠️ VENCIDA' : '';
                 const esParcial  = c.estado === 'parcial';
                 const saldoReal  = esParcial && c.saldoPendienteUSD != null ? c.saldoPendienteUSD : c.cuotaUSD;
@@ -10523,7 +9909,7 @@ self.addEventListener('message', e => {
             const cuota = p?.amortizacion?.find(c => c.numero === nroCuota);
             if (!cuota) return;
             
-            const hoy    = fechaLocalHoy(); // FASE 4
+            const hoy    = new Date().toISOString().split('T')[0];
             const vencida = cuota.vencimiento < hoy;
             const diasDiff = Math.round((new Date(cuota.vencimiento) - new Date(hoy)) / 86400000);
             
@@ -11020,15 +10406,9 @@ self.addEventListener('message', e => {
                 notes: notes
             };
             
-            sale.date     = normalizarFecha(sale.date);  // FASE 6 P1
-            sale.synced   = false;  // FASE 2B: pendiente de confirmación
-            sale.syncedAt = null;
             salesData.unshift(sale);
-            guardarEnStorage('salesData', salesData);  // FASE 7 P3
+            localStorage.setItem('salesData', JSON.stringify(salesData));
             syncVenta(sale);
-            registrarAccion('crear', 'ventas', // FASE 5
-                `Venta: ${customer} | $${sale.totalUSD?.toFixed(2)} USD | ${paymentMethod}`,
-                { cliente: customer, totalUSD: sale.totalUSD, metodo: paymentMethod, items: sale.items?.length });
 
             // Descontar de adelanto si está marcado
             const useAdelanto = document.getElementById('usar-adelanto').checked;
@@ -11070,7 +10450,7 @@ self.addEventListener('message', e => {
                         .filter(a => a.cliente === customer && a.status === 'Activo')
                         .reduce((sum, a) => sum + a.saldo, 0);
                     
-                    guardarEnStorage('adelantosClientes', adelantosClientes);  // FASE 7 P3
+                    localStorage.setItem('adelantosClientes', JSON.stringify(adelantosClientes));
                     loadAdelantosClientesList();
                 }
             }
@@ -11095,7 +10475,7 @@ self.addEventListener('message', e => {
                     diasAlertaAntes = clienteData.diasAlertaAntes || 3;
                     const fechaBase = new Date(sale.date + 'T00:00:00');
                     fechaBase.setDate(fechaBase.getDate() + diasCredito);
-                    fechaVencimiento = fechaBase.getFullYear()+'-'+String(fechaBase.getMonth()+1).padStart(2,'0')+'-'+String(fechaBase.getDate()).padStart(2,'0'); // FASE 4
+                    fechaVencimiento = fechaBase.toISOString().split('T')[0];
                 }
                 
                 const credit = {
@@ -11116,7 +10496,7 @@ self.addEventListener('message', e => {
                     diasAlertaAntes: diasAlertaAntes
                 };
                 creditsData.unshift(credit);
-                guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
+                localStorage.setItem('creditsData', JSON.stringify(creditsData));
                 syncCredito(credit);
                 loadPendingCredits();
                 loadCreditReportClients();
@@ -11149,7 +10529,7 @@ self.addEventListener('message', e => {
 
         // ========== DASHBOARD Y REPORTES ==========
         function loadDashboard() {
-            const today = fechaLocalHoy(); // FASE 4
+            const today = new Date().toISOString().split('T')[0];
 
             const todaySales      = salesData.filter(sale => sale.date === today);
             const todaySalesCount = todaySales.reduce((sum, sale) =>
@@ -11319,7 +10699,7 @@ self.addEventListener('message', e => {
             if (salesData.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" style="text-align: center; color: #6c757d;">
+                        <td colspan="7" style="text-align: center; color: #6c757d;">
                             No hay ventas registradas
                         </td>
                     </tr>
@@ -11338,7 +10718,7 @@ self.addEventListener('message', e => {
             if (filteredSales.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" style="text-align: center; color: #6c757d;">
+                        <td colspan="7" style="text-align: center; color: #6c757d;">
                             No hay ventas para este cliente
                         </td>
                     </tr>
@@ -11353,13 +10733,6 @@ self.addEventListener('message', e => {
                     `${item.quantity} ${item.name}`
                 ).join(', ');
                 
-                // FASE 2C: Ícono de estado de sincronización
-                const syncIcon = sale.synced === true
-                    ? '<span title="Guardado en Google Sheets" style="color:#4caf50;font-size:16px;">✅</span>'
-                    : sale.synced === false
-                        ? '<span title="Pendiente de sincronizar" style="color:#ff9800;font-size:16px;">⏳</span>'
-                        : '<span title="Sin información de sync" style="color:#bbb;font-size:14px;">—</span>';
-
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${formatDate(sale.date)}</td>
@@ -11368,7 +10741,6 @@ self.addEventListener('message', e => {
                     <td>${(sale.total != null ? parseFloat(sale.total).toFixed(2) : '-')} BS</td>
                     <td>$${(sale.totalUSD != null ? parseFloat(sale.totalUSD).toFixed(2) : '-')} USD</td>
                     <td>${sale.paymentMethod}</td>
-                    <td style="text-align:center;">${syncIcon}</td>
                     <td>
                         <button class="btn btn-primary btn-small" onclick="editSale('${sale.id}')" title="Editar">
                             <i class="fas fa-edit"></i>
@@ -11384,7 +10756,7 @@ self.addEventListener('message', e => {
             if (filteredSales.length > 10) {
                 const trBtn = document.createElement('tr');
                 const tdBtn = document.createElement('td');
-                tdBtn.colSpan = 8; // FASE 2C: 8 columnas
+                tdBtn.colSpan = 7;
                 tdBtn.style.textAlign = 'center';
                 tdBtn.style.padding = '10px';
                 const btnVer = document.createElement('button');
@@ -11559,7 +10931,7 @@ self.addEventListener('message', e => {
             }
             
             // Guardar
-            guardarEnStorage('salesData', salesData);  // FASE 7 P3
+            localStorage.setItem('salesData', JSON.stringify(salesData));
             
             // Si era crédito, actualizar el crédito
             const credit = creditsData.find(c => c.id == saleId);
@@ -11568,7 +10940,7 @@ self.addEventListener('message', e => {
                 const creditAmount = parseFloat(newAmount.toFixed(2));
                 credit.amount = creditAmount;
                 credit.balance = parseFloat((creditAmount - (credit.paid || 0)).toFixed(2));
-                guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
+                localStorage.setItem('creditsData', JSON.stringify(creditsData));
             }
             
             // Cerrar modal
@@ -11602,7 +10974,7 @@ self.addEventListener('message', e => {
             const index = salesData.findIndex(s => s.id == saleId);
             if (index > -1) {
                 salesData.splice(index, 1);
-                guardarEnStorage('salesData', salesData);  // FASE 7 P3
+                localStorage.setItem('salesData', JSON.stringify(salesData));
                 
                 // Si era crédito, eliminar el crédito también
                 const creditIndex = creditsData.findIndex(c => c.id == saleId);
@@ -11611,13 +10983,10 @@ self.addEventListener('message', e => {
                         alert('⚠️ Este crédito tiene abonos registrados. Solo se eliminará la venta, el crédito permanecerá.');
                     } else {
                         creditsData.splice(creditIndex, 1);
-                        guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
+                        localStorage.setItem('creditsData', JSON.stringify(creditsData));
                     }
                 }
                 
-                registrarAccion('eliminar', 'ventas', // FASE 5
-                    `Venta eliminada: ${sale.customer} | ${formatDate(sale.date)} | ${totalMostrar}`,
-                    { cliente: sale.customer, fecha: sale.date, total: totalMostrar });
                 loadSalesHistory();
                 loadDashboard();
                 loadPendingCredits();
@@ -11755,7 +11124,7 @@ self.addEventListener('message', e => {
                         }
                     };
                     expensesData.unshift(expCred);
-                    guardarEnStorage('expensesData', expensesData);  // FASE 7 P3
+                    localStorage.setItem('expensesData', JSON.stringify(expensesData));
 
                     const msgCred = esParcial
                         ? `✅ Abono registrado.
@@ -11769,7 +11138,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     document.getElementById('credito-cuota-info').style.display = 'none';
                     document.getElementById('credito-resumen').style.display = 'none';
                     document.querySelectorAll('input[name="credito-tipo-pago"]').forEach(r => r.checked = false);
-                    document.getElementById('expense-date').value = fechaLocalHoy(); // FASE 0
+                    document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
                     document.getElementById('expense-category').value = '';
                     if(document.getElementById('expense-supplier')) document.getElementById('expense-supplier').value = '';
                     onExpenseCategoryChange();
@@ -11806,9 +11175,8 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     comprasItems: category === 'Compras' ? JSON.parse(JSON.stringify(comprasItems)) : undefined
                 };
                 
-                expense.date = normalizarFecha(expense.date); // FASE 6 P1
                 expensesData.unshift(expense);
-                guardarEnStorage('expensesData', expensesData);  // FASE 7 P3
+                localStorage.setItem('expensesData', JSON.stringify(expensesData));
                 syncGasto(expense);
 
                 if (category === 'Compras') {
@@ -11855,7 +11223,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                         }
                         expense.adelantoUsadoUSD = montoADescontarUSD;
                         expense.adelantoUsado    = convertUSDtoBS(montoADescontarUSD); // legacy
-                        guardarEnStorage('adelantosHielo', adelantosHielo);  // FASE 7 P3
+                        localStorage.setItem('adelantosHielo', JSON.stringify(adelantosHielo));
                         loadAdelantosHieloList();
                     }
                 }
@@ -11867,7 +11235,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                         : '✅ Gasto registrado exitosamente!';
                 alert(msg);
                 this.reset();
-                document.getElementById('expense-date').value = fechaLocalHoy(); // FASE 0
+                document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
                 document.getElementById('expense-iva').value = 16;
                 document.getElementById('hielo-adelanto-panel').style.display = 'none';
                 document.getElementById('compras-inventario-panel').style.display = 'none';
@@ -11904,11 +11272,11 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 };
                 
                 ordersData.unshift(order);
-                guardarEnStorage('ordersData', ordersData);  // FASE 7 P3
+                localStorage.setItem('ordersData', JSON.stringify(ordersData));
                 
                 alert('✅ Pedido registrado exitosamente!');
                 this.reset();
-                document.getElementById('order-date').value = fechaLocalHoy(); // FASE 0
+                document.getElementById('order-date').value = new Date().toISOString().split('T')[0];
                 document.getElementById('order-status').value = 'Pendiente';
                 document.getElementById('order-products-list').innerHTML = '';
                 currentOrderProducts = [];
@@ -12361,7 +11729,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             }
             
             // Guardar estados corregidos
-            guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
+            localStorage.setItem('creditsData', JSON.stringify(creditsData));
         }
 
         // ========== GESTIÓN DE CLIENTES ==========
@@ -12693,15 +12061,13 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 createdAt: new Date().toISOString()
             };
             
-            // Normalizar fecha si ya tiene lastPurchase al crear
-            if (client.lastPurchase) client.lastPurchase = normalizarFecha(client.lastPurchase); // FASE 6 P1
             clientsData.push(client);
             syncCliente(client);
             
             // Ordenar alfabéticamente
             clientsData.sort((a, b) => a.name.localeCompare(b.name, 'es'));
             
-            guardarEnStorage('clientsData', clientsData);  // FASE 7 P3
+            localStorage.setItem('clientsData', JSON.stringify(clientsData));
             
             closeClientModal();
             loadClientsList();
@@ -12722,9 +12088,6 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             document.getElementById('new-client-dias-alerta').value = '3';
             document.getElementById('credit-fields-group').style.display = 'none';
             
-            registrarAccion('crear', 'clientes', // FASE 5
-                `Cliente creado: ${client.name} | RIF: ${client.rif || 'N/A'}`,
-                { nombre: client.name, rif: client.rif });
             alert('✅ Cliente agregado exitosamente!');
         }
         
@@ -12807,7 +12170,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     if (clienteActualizado.permiteCredito && clienteActualizado.diasCredito && credit.date) {
                         const fechaBase = new Date(credit.date + 'T00:00:00');
                         fechaBase.setDate(fechaBase.getDate() + clienteActualizado.diasCredito);
-                        credit.fechaVencimiento = fechaBase.getFullYear()+'-'+String(fechaBase.getMonth()+1).padStart(2,'0')+'-'+String(fechaBase.getDate()).padStart(2,'0'); // FASE 4
+                        credit.fechaVencimiento = fechaBase.toISOString().split('T')[0];
                         credit.diasCredito = clienteActualizado.diasCredito;
                         credit.diasAlertaAntes = clienteActualizado.diasAlertaAntes || 3;
                         creditosActualizados++;
@@ -12827,15 +12190,15 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 creditsData.forEach(credit => {
                     if (credit.customer === oldName) credit.customer = name;
                 });
-                guardarEnStorage('salesData', salesData);  // FASE 7 P3
+                localStorage.setItem('salesData', JSON.stringify(salesData));
             }
             
-            guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
+            localStorage.setItem('creditsData', JSON.stringify(creditsData));
             
             // Ordenar alfabéticamente
             clientsData.sort((a, b) => a.name.localeCompare(b.name, 'es'));
             
-            guardarEnStorage('clientsData', clientsData);  // FASE 7 P3
+            localStorage.setItem('clientsData', JSON.stringify(clientsData));
             
             syncCliente(clienteActualizado);
             closeClientModal();
@@ -12850,13 +12213,9 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
         }
         
         function deleteClient(id) {
-            const clienteDel = clientsData.find(c => c.id === id);
             if (confirm('¿Está seguro de que desea eliminar este cliente?')) {
                 clientsData = clientsData.filter(client => client.id !== id);
-                guardarEnStorage('clientsData', clientsData);  // FASE 7 P3
-                if (clienteDel) registrarAccion('eliminar', 'clientes', // FASE 5
-                    `Cliente eliminado: ${clienteDel.name} | RIF: ${clienteDel.rif || 'N/A'}`,
-                    { nombre: clienteDel.name, rif: clienteDel.rif });
+                localStorage.setItem('clientsData', JSON.stringify(clientsData));
                 loadClientsList();
                 loadCustomerSelect();
             }
@@ -12934,7 +12293,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             }
 
             expensesData = expensesData.filter(e => e.id != id);
-            guardarEnStorage('expensesData', expensesData);  // FASE 7 P3
+            localStorage.setItem('expensesData', JSON.stringify(expensesData));
             loadExpensesHistory();
             loadDashboard();
             loadEcuadorView();
@@ -12943,7 +12302,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
         function deleteOrder(id) {
             if (confirm('¿Está seguro de que desea eliminar este pedido?')) {
                 ordersData = ordersData.filter(order => order.id !== id);
-                guardarEnStorage('ordersData', ordersData);  // FASE 7 P3
+                localStorage.setItem('ordersData', JSON.stringify(ordersData));
                 loadOrdersHistory();
             }
         }
@@ -12970,7 +12329,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             if (!credit.payments) credit.payments = [];
             
             // Fecha inicial
-            const today = fechaLocalHoy(); // FASE 4
+            const today = new Date().toISOString().split('T')[0];
             document.getElementById('payment-date').value = today;
             console.log('Fecha inicial establecida:', today);
             
@@ -13165,7 +12524,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             }
 
             // Guardar
-            guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
+            localStorage.setItem('creditsData', JSON.stringify(creditsData));
             syncCredito(credit);
 
             syncAbono({
@@ -13182,9 +12541,6 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 creadoPor:     getCurrentUserId()
             });
 
-            registrarAccion('pago', 'creditos', // FASE 5
-                `Abono: ${credit.customer} | $${abonoEfectivoUSD.toFixed(2)} USD | Saldo: $${credit.balanceUSD.toFixed(2)} USD`,
-                { cliente: credit.customer, monto: abonoEfectivoUSD, saldo: credit.balanceUSD, estado: credit.status });
             closePaymentModal();
             loadPendingCredits();
             loadEcuadorView();
@@ -13209,7 +12565,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     credit.status = 'Pagado';
                     if (!credit.paid) credit.paid = credit.amount;
                     if (!credit.balance) credit.balance = 0;
-                    guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
+                    localStorage.setItem('creditsData', JSON.stringify(creditsData));
                     loadPendingCredits();
                     loadEcuadorView();
                 }
@@ -13272,7 +12628,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 });
             });
             
-            guardarEnStorage('clientsData', clientsData);  // FASE 7 P3
+            localStorage.setItem('clientsData', JSON.stringify(clientsData));
         }
         
         function loadPredefinedExpenses() {
@@ -13538,14 +12894,14 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             uniqueExpenses.forEach(expense => {
                 expensesData.push({
                     id: Date.now() + Math.random().toString(36).substr(2, 5),
-                    date: fechaLocalHoy(), // FASE 4
+                    date: new Date().toISOString().split('T')[0],
                     description: expense.description,
                     amount: expense.amount,
                     category: expense.category
                 });
             });
             
-            guardarEnStorage('expensesData', expensesData);  // FASE 7 P3
+            localStorage.setItem('expensesData', JSON.stringify(expensesData));
         }
 
         // ========== VISTA ECUADOR ==========
@@ -13665,18 +13021,18 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             switch(reportType) {
                 case 'daily':
-                    startDate = fechaLocalHoy(); // FASE 4
+                    startDate = today.toISOString().split('T')[0];
                     endDate = startDate;
                     break;
                 case 'weekly':
                     const weekAgo = new Date(today);
                     weekAgo.setDate(today.getDate() - 7);
-                    startDate = weekAgo.getFullYear()+'-'+String(weekAgo.getMonth()+1).padStart(2,'0')+'-'+String(weekAgo.getDate()).padStart(2,'0'); // FASE 4
-                    endDate = fechaLocalHoy(); // FASE 4
+                    startDate = weekAgo.toISOString().split('T')[0];
+                    endDate = today.toISOString().split('T')[0];
                     break;
                 case 'monthly':
-                    startDate = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-01'; // FASE 4
-                    endDate = fechaLocalHoy(); // FASE 4
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+                    endDate = today.toISOString().split('T')[0];
                     break;
                 case 'custom':
                     startDate = document.getElementById('start-date').value;
@@ -14110,7 +13466,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             if (newStatus === 'Cancelado') {
                 if (confirm('¿Estás seguro de cancelar este pedido? Se eliminará permanentemente.')) {
                     ordersData.splice(orderIndex, 1);
-                    guardarEnStorage('ordersData', ordersData);  // FASE 7 P3
+                    localStorage.setItem('ordersData', JSON.stringify(ordersData));
                     loadOrdersHistory();
                     alert('✅ Pedido cancelado y eliminado');
                 }
@@ -14118,7 +13474,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             }
             
             ordersData[orderIndex].status = newStatus;
-            guardarEnStorage('ordersData', ordersData);  // FASE 7 P3
+            localStorage.setItem('ordersData', JSON.stringify(ordersData));
             
             loadOrdersHistory();
             
@@ -14182,7 +13538,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             };
             
             adelantosClientes.unshift(adelanto);
-            guardarEnStorage('adelantosClientes', adelantosClientes);  // FASE 7 P3
+            localStorage.setItem('adelantosClientes', JSON.stringify(adelantosClientes));
             
             loadAdelantosClientesList();
             document.getElementById('adelanto-cliente-form').reset();
@@ -14298,7 +13654,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 }
                 
                 adelanto.usos.push({
-                    fecha: fechaLocalHoy(), // FASE 4
+                    fecha: new Date().toISOString().split('T')[0],
                     monto: montoAUsar,
                     concepto: 'Pago de venta'
                 });
@@ -14311,7 +13667,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 montoRestante -= montoAUsar;
             }
             
-            guardarEnStorage('adelantosClientes', adelantosClientes);  // FASE 7 P3
+            localStorage.setItem('adelantosClientes', JSON.stringify(adelantosClientes));
             loadAdelantosClientesList();
             
             return {
@@ -14354,9 +13710,8 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             };
             
             adelantosHielo.unshift(adelanto);
-            guardarEnStorage('adelantosHielo', adelantosHielo);  // FASE 7 P3
-            encolarSync('adelantos', 'upsert', adelanto); // FASE 3D
-
+            localStorage.setItem('adelantosHielo', JSON.stringify(adelantosHielo));
+            
             loadAdelantosHieloList();
             document.getElementById('adelanto-hielo-form').reset();
             alert(`✅ Adelanto de hielo registrado: ${fmtUSD(montoUSD)} USD`);
@@ -15177,7 +14532,7 @@ Saldo Pendiente: ${fmtUSD(totalPendingUSD)} USD
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `reporte_ventas_${selectedClient || 'todos'}_${fechaLocalHoy()}.txt`; // FASE 4
+            link.download = `reporte_ventas_${selectedClient || 'todos'}_${new Date().toISOString().split('T')[0]}.txt`;
             link.click();
             URL.revokeObjectURL(url);
             
@@ -15434,7 +14789,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `reporte_creditos_${selectedClient || 'todos'}_${fechaLocalHoy()}.txt`; // FASE 4
+            link.download = `reporte_creditos_${selectedClient || 'todos'}_${new Date().toISOString().split('T')[0]}.txt`;
             link.click();
             URL.revokeObjectURL(url);
             
@@ -15444,14 +14799,15 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
         // ========== FUNCIONES AUXILIARES ==========
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
-            // FASE 0: Normalizar antes de formatear — eliminar hora/timezone si existe
-            const s = String(dateString);
-            const clean = (s.length > 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) ? s.substring(0, 10) : s;
-            const parts = clean.split('-');
-            if (parts.length === 3 && parts[0].length === 4) {
-                return parts[2] + '/' + parts[1] + '/' + parts[0];
+            // Separar la fecha para evitar problemas de zona horaria
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                const year = parts[0];
+                const month = parts[1];
+                const day = parts[2];
+                return day + '/' + month + '/' + year;
             }
-            return clean;
+            return dateString;
         }
         
         function formatShortDate(dateString) {
@@ -15502,7 +14858,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             };
             
             // Guardar en localStorage
-            guardarEnStorage('waterPrices', waterPrices);  // FASE 7 P3
+            localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
             
             // Agregar al select de precios
             const priceSelect = document.getElementById('price-product');
@@ -15544,7 +14900,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 // Usar función de historial BCV
                 updateBCVRate(newExchangeRate);
                 appConfig.exchangeRates.priceRate = newExchangeRate;
-                guardarEnStorage('appConfig', appConfig);  // FASE 7 P3
+                localStorage.setItem('appConfig', JSON.stringify(appConfig));
             }
             
             loadCurrentPrices();
@@ -15610,7 +14966,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             console.log('Tasas ordenadas:', bcvRateHistory);
             
             // Guardar
-            guardarEnStorage('bcvRateHistory', bcvRateHistory);  // FASE 7 P3
+            localStorage.setItem('bcvRateHistory', JSON.stringify(bcvRateHistory));
             console.log('Guardado en localStorage');
             
             // Limpiar formulario
@@ -15621,7 +14977,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             cargarHistorialTasasBCV();
 
             // Si la tasa registrada es de HOY, sincronizar todos los campos automáticamente
-            const today = fechaLocalHoy(); // FASE 4
+            const today = new Date().toISOString().split('T')[0];
             if (fecha === today) {
                 syncRateFromBCV();         // actualiza appConfig + priceExchangeRate
                 loadManualRates();         // actualiza campos en Configuración y Precios
@@ -15648,9 +15004,6 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             const eraHoy = fecha === today
                 ? '\n\n✅ Tasa aplicada localmente y enviada a otros dispositivos.'
                 : '\n\n(Tasa histórica guardada y enviada al servidor)';
-            registrarAccion('tasa', 'bcv', // FASE 5
-                'Tasa BCV registrada: ' + fecha + ' | ' + tasa.toFixed(2) + ' BS/USD',
-                { fecha, tasa });
             alert('Tasa BCV registrada\n\nFecha: ' + formatDate(fecha) + '\nTasa: ' + tasa.toFixed(2) + ' BS/USD' + eraHoy);
         }
         
@@ -15704,7 +15057,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             if (confirm('¿Eliminar la tasa BCV del ' + formatDate(fecha) + '?\n\nTasa: ' + entry.rate.toFixed(2) + ' BS/USD\n\n⚠️ Esta acción no se puede deshacer.')) {
                 const index = bcvRateHistory.findIndex(r => r.date === fecha);
                 bcvRateHistory.splice(index, 1);
-                guardarEnStorage('bcvRateHistory', bcvRateHistory);  // FASE 7 P3
+                localStorage.setItem('bcvRateHistory', JSON.stringify(bcvRateHistory));
                 cargarHistorialTasasBCV();
                 alert('✅ Tasa eliminada correctamente');
             }
@@ -15733,7 +15086,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 'movimientosInventario','ordersData','adelantosClientes','adelantosHielo',
                 'waterPrices','priceHistory','bcvRateHistory','appConfig',
                 'ivaPercentage','syncConfig','proveedoresData','productosCompuestos',
-                'usersB7','configB7','syncQueue','syncLog'
+                'usersB7','configB7','syncQueue','syncLog','usersData'
             ];
             const datos = {};
             let totalRegistros = 0;
@@ -15767,7 +15120,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             const url  = URL.createObjectURL(blob);
             const a    = document.createElement('a');
             a.href     = url;
-            a.download = `AQUANEV_backup_${fechaLocalHoy()}.json`; // FASE 4
+            a.download = `AQUANEV_backup_${new Date().toISOString().slice(0,10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
 
@@ -15832,6 +15185,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                         ivaPercentage:       datos.ivaPercentage     || null,
                         proveedoresData:     datos.proveedoresData   || null,
                         productosCompuestos: datos.productosCompuestos || null,
+                        usersData:           datos.usersData           || null,
                     };
                     // Guardar todos los campos mapeados
                     let savedCount = 0;
@@ -15855,9 +15209,6 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                         }
                     });
 
-                    registrarAccion('restore', 'sistema', // FASE 5
-                        `Backup restaurado: ${(backup.fecha || '').slice(0,10)} | ${savedCount} módulos`,
-                        { fechaBackup: (backup.fecha || '').slice(0,10), modulos: savedCount });
                     alert('✅ Respaldo restaurado correctamente.\n' + savedCount + ' módulos recuperados.\nLa aplicación se recargará ahora.');
                     setTimeout(() => location.reload(), 800);
                 } catch(err) {
@@ -15948,11 +15299,6 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 proveedoresData.unshift({ id: 'prov-' + Date.now(), ...data, creadoEn: new Date().toISOString() });
             }
             saveProveedores();
-            // FASE 3D: Sincronizar proveedor guardado
-            const provGuardado = editProvId
-                ? proveedoresData.find(x => x.id === editProvId)
-                : proveedoresData[0];
-            if (provGuardado) encolarSync('proveedores', 'upsert', provGuardado);
             cerrarProvModal();
             loadProveedoresList();
             actualizarDatalistProveedores();
@@ -16312,7 +15658,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     exchangeRate: priceExchangeRate,
                     notes: notas || 'Edición completa'
                 });
-                guardarEnStorage('priceHistory', priceHistory);  // FASE 7 P3
+                localStorage.setItem('priceHistory', JSON.stringify(priceHistory));
             }
 
             // Actualizar producto - preservar esPersonalizado si ya lo era
@@ -16325,12 +15671,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 esPersonalizado: waterPrices[key]?.esPersonalizado || false,
                 lastUpdate: new Date().toISOString()
             };
-            guardarEnStorage('waterPrices', waterPrices);  // FASE 7 P3
-            // FASE 3D: Sincronizar precio actualizado
-            encolarSync('precios', 'upsert', { key, nombre, priceUSD: precio, hasIva: iva, lastUpdate: new Date().toISOString() });
-            registrarAccion('precio', 'precios', // FASE 5
-                `Precio actualizado: ${nombre} | Anterior: $${oldPrecio.toFixed(2)} → Nuevo: $${precio.toFixed(2)} USD`,
-                { producto: key, nombre, precioAnterior: oldPrecio, precioNuevo: precio, iva });
+            localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
 
             cerrarEditProductoModal();
             loadCurrentPrices();
@@ -16368,8 +15709,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             reader.onload = e => {
                 try {
                     const wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
-                    cmDatosExcel = { ventas:[], gastos:[], clientes:[], prestamos:[], pagos:[],
-                                     proveedores:[], creditos:[], compras:[], consignaciones:[], precios:[], bcv:[] };
+                    cmDatosExcel = { ventas:[], gastos:[], clientes:[], prestamos:[], pagos:[] };
 
                     wb.SheetNames.forEach(name => {
                         const ws   = wb.Sheets[name];
@@ -16431,8 +15771,8 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                                     prestamista: cmLimpiar(r[0]), tipo: cmLimpiar(r[1]) || 'Bancario',
                                     contrato: cmLimpiar(r[2]) || '', montoOriginalUSD: monto,
                                     tasaInteres: parseFloat(r[4]) || 0, plazoMeses: parseInt(r[5]) || 12,
-                                    fechaDesembolso: cmParseFecha(r[6]) || fechaLocalHoy(), // FASE 4
-                                    fechaPrimeraCuota: cmParseFecha(r[7]) || fechaLocalHoy(), // FASE 4
+                                    fechaDesembolso: cmParseFecha(r[6]) || new Date().toISOString().slice(0,10),
+                                    fechaPrimeraCuota: cmParseFecha(r[7]) || new Date().toISOString().slice(0,10),
                                     observaciones: cmLimpiar(r[9]) || ''
                                 });
                             }
@@ -16449,99 +15789,6 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                                 });
                             }
                         }
-                        // ── MÓDULOS EXTENDIDOS CM ──────────────────────────
-                        if (name.includes('Proveedores')) {
-                            for (let i = 3; i < rows.length; i++) {
-                                const r = rows[i];
-                                if (!r[0]) continue;
-                                const tipoStr = cmLimpiar(r[6]) || 'gastos';
-                                const tipos = tipoStr === 'ambos' ? ['gastos','compras']
-                                            : tipoStr === 'compras' ? ['compras'] : ['gastos'];
-                                cmDatosExcel.proveedores.push({
-                                    nombre: cmLimpiar(r[0]), rif: cmLimpiar(r[1]) || '',
-                                    telefono: cmLimpiar(r[2]) || '', email: cmLimpiar(r[3]) || '',
-                                    direccion: cmLimpiar(r[4]) || '', contacto: cmLimpiar(r[5]) || '',
-                                    tipos, notas: cmLimpiar(r[7]) || '',
-                                    docs: ['Recibo'], diasCredito: 0, moneda: 'USD', activo: true
-                                });
-                            }
-                        }
-                        if (name.includes('Crédit') || name.includes('Credit')) {
-                            for (let i = 3; i < rows.length; i++) {
-                                const r = rows[i];
-                                if (!r[0] || !r[1]) continue;
-                                const fecha = cmParseFecha(r[0]);
-                                if (!fecha) continue;
-                                cmDatosExcel.creditos.push({
-                                    fecha, cliente: cmLimpiar(r[1]),
-                                    descripcion: cmLimpiar(r[2]) || 'Crédito',
-                                    montoUSD: parseFloat(String(r[3]).replace(',','.')) || 0,
-                                    cobradoUSD: parseFloat(String(r[4]).replace(',','.')) || 0,
-                                    saldoUSD: parseFloat(String(r[5]).replace(',','.')) || 0,
-                                    fechaVencimiento: cmParseFecha(r[6]) || '',
-                                    estado: cmLimpiar(r[7]) || 'Pendiente',
-                                    notas: cmLimpiar(r[8]) || ''
-                                });
-                            }
-                        }
-                        if (name.includes('Compras')) {
-                            for (let i = 3; i < rows.length; i++) {
-                                const r = rows[i];
-                                if (!r[0] || !r[2]) continue;
-                                const fecha = cmParseFecha(r[0]);
-                                if (!fecha) continue;
-                                cmDatosExcel.compras.push({
-                                    fecha, proveedor: cmLimpiar(r[1]) || 'Sin proveedor',
-                                    producto: cmLimpiar(r[2]),
-                                    clave: cmLimpiar(r[3]) || cmLimpiar(r[2]).toLowerCase().replace(/\s+/g,'_'),
-                                    cantidad: parseFloat(r[4]) || 1,
-                                    costoUnit: parseFloat(String(r[5]).replace(',','.')) || 0,
-                                    totalUSD: parseFloat(String(r[6]).replace(',','.')) || 0,
-                                    factura: cmLimpiar(r[7]) || '', notas: cmLimpiar(r[8]) || ''
-                                });
-                            }
-                        }
-                        if (name.includes('Consignacion')) {
-                            for (let i = 3; i < rows.length; i++) {
-                                const r = rows[i];
-                                if (!r[0] || !r[1]) continue;
-                                const fecha = cmParseFecha(r[0]);
-                                if (!fecha) continue;
-                                cmDatosExcel.consignaciones.push({
-                                    fecha, cliente: cmLimpiar(r[1]),
-                                    producto: cmLimpiar(r[2]) || 'Botellón 20L',
-                                    cantidad: parseFloat(r[3]) || 1,
-                                    precioUSD: parseFloat(String(r[4]).replace(',','.')) || 0,
-                                    totalUSD: parseFloat(String(r[5]).replace(',','.')) || 0,
-                                    fechaVencimiento: cmParseFecha(r[6]) || '',
-                                    estado: cmLimpiar(r[7]) || 'entregado',
-                                    notas: cmLimpiar(r[8]) || ''
-                                });
-                            }
-                        }
-                        if (name.includes('Precio')) {
-                            for (let i = 3; i < rows.length; i++) {
-                                const r = rows[i];
-                                if (!r[0] || !r[1]) continue;
-                                cmDatosExcel.precios.push({
-                                    clave: cmLimpiar(r[0]),
-                                    nombre: cmLimpiar(r[1]),
-                                    precioUSD: parseFloat(String(r[2]).replace(',','.')) || 0,
-                                    hasIva: cmSiNo(r[3]),
-                                    descripcion: cmLimpiar(r[4]) || ''
-                                });
-                            }
-                        }
-                        if (name.includes('BCV') || name.includes('Tasa') || name.includes('tasa')) {
-                            for (let i = 3; i < rows.length; i++) {
-                                const r = rows[i];
-                                if (!r[0] || !r[1]) continue;
-                                const fecha = cmParseFecha(r[0]);
-                                const tasa = parseFloat(String(r[1]).replace(',','.'));
-                                if (!fecha || !tasa || tasa <= 0) continue;
-                                cmDatosExcel.bcv.push({ fecha, tasa });
-                            }
-                        }
                     });
 
                     // Mostrar resumen
@@ -16551,27 +15798,15 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                         ['💸 Gastos', cmDatosExcel.gastos.length, '#e67e22'],
                         ['👥 Clientes', cmDatosExcel.clientes.length, '#27ae60'],
                         ['🏦 Préstamos', cmDatosExcel.prestamos.length, '#1a5276'],
-                        ['🏭 Proveedores', cmDatosExcel.proveedores.length, '#BF360C'],
-                        ['💳 Créditos', cmDatosExcel.creditos.length, '#6A1B9A'],
-                        ['🛒 Compras', cmDatosExcel.compras.length, '#004D40'],
-                        ['📦 Consignaciones', cmDatosExcel.consignaciones.length, '#4A148C'],
-                        ['💲 Precios', cmDatosExcel.precios.length, '#1A237E'],
-                        ['📈 Tasas BCV', cmDatosExcel.bcv.length, '#1565C0'],
                     ];
                     document.getElementById('cm-badges').innerHTML = badges.map(([label, n, color]) =>
                         `<span style="background:${color}20;color:${color};border-radius:12px;
                             padding:3px 10px;font-size:12px;font-weight:700;">${label}: ${n}</span>`
                     ).join('');
-                    document.getElementById('cm-cnt-ventas').textContent         = cmDatosExcel.ventas.length         + ' registros';
-                    document.getElementById('cm-cnt-gastos').textContent         = cmDatosExcel.gastos.length         + ' registros';
-                    document.getElementById('cm-cnt-clientes').textContent       = cmDatosExcel.clientes.length       + ' registros';
-                    document.getElementById('cm-cnt-prestamos').textContent      = cmDatosExcel.prestamos.length      + ' préstamos · ' + cmDatosExcel.pagos.length + ' pagos';
-                    document.getElementById('cm-cnt-proveedores').textContent    = cmDatosExcel.proveedores.length    + ' registros';
-                    document.getElementById('cm-cnt-creditos').textContent       = cmDatosExcel.creditos.length       + ' registros';
-                    document.getElementById('cm-cnt-compras').textContent        = cmDatosExcel.compras.length        + ' registros';
-                    document.getElementById('cm-cnt-consignaciones').textContent = cmDatosExcel.consignaciones.length + ' registros';
-                    document.getElementById('cm-cnt-precios').textContent        = cmDatosExcel.precios.length        + ' productos';
-                    document.getElementById('cm-cnt-bcv').textContent            = cmDatosExcel.bcv.length            + ' registros';
+                    document.getElementById('cm-cnt-ventas').textContent    = cmDatosExcel.ventas.length    + ' registros';
+                    document.getElementById('cm-cnt-gastos').textContent    = cmDatosExcel.gastos.length    + ' registros';
+                    document.getElementById('cm-cnt-clientes').textContent  = cmDatosExcel.clientes.length  + ' registros';
+                    document.getElementById('cm-cnt-prestamos').textContent = cmDatosExcel.prestamos.length + ' préstamos · ' + cmDatosExcel.pagos.length + ' pagos';
                     document.getElementById('cm-file-info').style.display   = 'block';
                     document.getElementById('cm-modulos').style.display     = 'block';
                     document.getElementById('cm-result').style.display      = 'none';
@@ -16603,18 +15838,11 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             res.style.display   = 'none';
 
             const sobrescribir = document.getElementById('cm-sobrescribir').checked;
-            const stats = { ventas:0, gastos:0, clientes:0, prestamos:0, pagos:0,
-                            proveedores:0, creditos:0, compras:0, consignaciones:0, precios:0, bcv:0, errores:0 };
-            const total = (document.getElementById('cm-chk-ventas').checked         ? cmDatosExcel.ventas.length         : 0)
-                        + (document.getElementById('cm-chk-gastos').checked         ? cmDatosExcel.gastos.length         : 0)
-                        + (document.getElementById('cm-chk-clientes').checked       ? cmDatosExcel.clientes.length       : 0)
-                        + (document.getElementById('cm-chk-prestamos').checked      ? cmDatosExcel.prestamos.length      : 0)
-                        + (document.getElementById('cm-chk-proveedores').checked    ? cmDatosExcel.proveedores.length    : 0)
-                        + (document.getElementById('cm-chk-creditos').checked       ? cmDatosExcel.creditos.length       : 0)
-                        + (document.getElementById('cm-chk-compras').checked        ? cmDatosExcel.compras.length        : 0)
-                        + (document.getElementById('cm-chk-consignaciones').checked ? cmDatosExcel.consignaciones.length : 0)
-                        + (document.getElementById('cm-chk-precios').checked        ? cmDatosExcel.precios.length        : 0)
-                        + (document.getElementById('cm-chk-bcv').checked            ? cmDatosExcel.bcv.length            : 0);
+            const stats = { ventas:0, gastos:0, clientes:0, prestamos:0, pagos:0, errores:0 };
+            const total = (document.getElementById('cm-chk-ventas').checked ? cmDatosExcel.ventas.length : 0)
+                        + (document.getElementById('cm-chk-gastos').checked ? cmDatosExcel.gastos.length : 0)
+                        + (document.getElementById('cm-chk-clientes').checked ? cmDatosExcel.clientes.length : 0)
+                        + (document.getElementById('cm-chk-prestamos').checked ? cmDatosExcel.prestamos.length : 0);
             let procesados = 0;
 
             const cmLog = (msg, tipo) => {
@@ -16655,7 +15883,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     } catch(e) { stats.errores++; cmLog('Error cliente: ' + e.message, 'err'); }
                 }
                 clientsData.sort((a,b) => a.name.localeCompare(b.name,'es'));
-                guardarEnStorage('clientsData', clientsData);  // FASE 7 P3
+                localStorage.setItem('clientsData', JSON.stringify(clientsData));
                 cmLog('Clientes: ' + stats.clientes + ' procesados', 'ok');
                 await tick();
             }
@@ -16672,7 +15900,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                                 retieneIva:false, retieneIslr:false, tipoCliente:'natural',
                                 permiteCredito:false, diasCredito:30, diasAlertaAntes:3,
                                 createdAt:new Date().toISOString() });
-                            guardarEnStorage('clientsData', clientsData);  // FASE 7 P3
+                            localStorage.setItem('clientsData', JSON.stringify(clientsData));
                         }
                         const bcvRate = getBCVRateForDate(v.fecha) || appConfig.exchangeRates.bcv || 1;
                         const totalBS = v.totalUSD * bcvRate;
@@ -16714,8 +15942,8 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     } catch(e) { stats.errores++; cmLog('Error venta: ' + e.message, 'err'); }
                 }
                 salesData.sort((a,b) => b.date.localeCompare(a.date));
-                guardarEnStorage('salesData', salesData);  // FASE 7 P3
-                if (stats.ventas > 0) guardarEnStorage('creditsData', creditsData);  // FASE 7 P3
+                localStorage.setItem('salesData', JSON.stringify(salesData));
+                if (stats.ventas > 0) localStorage.setItem('creditsData', JSON.stringify(creditsData));
                 cmLog('Ventas: ' + stats.ventas + ' importadas', 'ok');
                 await tick();
             }
@@ -16745,7 +15973,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     } catch(e) { stats.errores++; cmLog('Error gasto: ' + e.message, 'err'); }
                 }
                 expensesData.sort((a,b) => b.date.localeCompare(a.date));
-                guardarEnStorage('expensesData', expensesData);  // FASE 7 P3
+                localStorage.setItem('expensesData', JSON.stringify(expensesData));
                 cmLog('Gastos: ' + stats.gastos + ' importados', 'ok');
                 await tick();
             }
@@ -16796,195 +16024,8 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                         cmUpd(1 + pagosDelPrest.length);
                     } catch(e) { stats.errores++; cmLog('Error préstamo: ' + e.message, 'err'); }
                 }
-                guardarEnStorage('prestamosData', prestamosData);  // FASE 7 P3
+                localStorage.setItem('prestamosData', JSON.stringify(prestamosData));
                 cmLog('Préstamos: ' + stats.prestamos + ' | Pagos: ' + stats.pagos, 'ok');
-                await tick();
-            }
-
-            // ── PROVEEDORES ──────────────────────────────────────────────
-            if (document.getElementById('cm-chk-proveedores').checked && cmDatosExcel.proveedores.length) {
-                cmLog('🏭 Importando proveedores...', 'inf');
-                for (const p of cmDatosExcel.proveedores) {
-                    try {
-                        if (!p.nombre) { stats.errores++; continue; }
-                        const idx = proveedoresData.findIndex(x => x.nombre.toLowerCase() === p.nombre.toLowerCase());
-                        const obj = {
-                            id: idx >= 0 ? proveedoresData[idx].id : 'prov-' + Date.now() + Math.random().toString(36).slice(2,5),
-                            nombre: p.nombre, rif: p.rif, telefono: p.telefono,
-                            email: p.email, direccion: p.direccion, contacto: p.contacto,
-                            notas: p.notas, tipos: p.tipos, docs: p.docs,
-                            diasCredito: p.diasCredito, moneda: p.moneda, activo: true,
-                            creadoEn: new Date().toISOString()
-                        };
-                        if (idx >= 0) { if (sobrescribir) proveedoresData[idx] = obj; }
-                        else proveedoresData.push(obj);
-                        stats.proveedores++;
-                        cmUpd(1);
-                    } catch(e) { stats.errores++; cmLog('Error proveedor: ' + e.message, 'err'); }
-                }
-                proveedoresData.sort((a,b) => a.nombre.localeCompare(b.nombre,'es'));
-                guardarEnStorage('proveedoresData', proveedoresData);
-                cmLog('Proveedores: ' + stats.proveedores + ' procesados', 'ok');
-                await tick();
-            }
-
-            // ── CRÉDITOS ─────────────────────────────────────────────────
-            if (document.getElementById('cm-chk-creditos').checked && cmDatosExcel.creditos.length) {
-                cmLog('💳 Importando créditos...', 'inf');
-                for (const c of cmDatosExcel.creditos) {
-                    try {
-                        if (!c.fecha || !c.cliente) { stats.errores++; continue; }
-                        if (sobrescribir) {
-                            const idx = creditsData.findIndex(x => x.date === c.fecha && x.customer === c.cliente);
-                            if (idx >= 0) creditsData.splice(idx, 1);
-                        }
-                        const bcvRate = getBCVRateForDate(c.fecha) || appConfig.exchangeRates.bcv || 1;
-                        creditsData.unshift({
-                            id: Date.now() + Math.floor(Math.random()*99999),
-                            customer: c.cliente, date: c.fecha,
-                            amount: c.montoUSD * bcvRate, amountUSD: c.montoUSD,
-                            paid: c.cobradoUSD * bcvRate, paidUSD: c.cobradoUSD,
-                            balance: c.saldoUSD * bcvRate, balanceUSD: c.saldoUSD,
-                            status: c.estado || 'Pendiente',
-                            fechaVencimiento: c.fechaVencimiento || '',
-                            payments: [], notes: c.notas || '', importado: true
-                        });
-                        stats.creditos++;
-                        cmUpd(1);
-                    } catch(e) { stats.errores++; cmLog('Error crédito: ' + e.message, 'err'); }
-                }
-                creditsData.sort((a,b) => b.date.localeCompare(a.date));
-                guardarEnStorage('creditsData', creditsData);
-                cmLog('Créditos: ' + stats.creditos + ' importados', 'ok');
-                await tick();
-            }
-
-            // ── COMPRAS / INVENTARIO ─────────────────────────────────────
-            if (document.getElementById('cm-chk-compras').checked && cmDatosExcel.compras.length) {
-                cmLog('🛒 Importando compras...', 'inf');
-                for (const c of cmDatosExcel.compras) {
-                    try {
-                        if (!c.fecha || !c.producto) { stats.errores++; continue; }
-                        if (sobrescribir) {
-                            const idx = comprasData.findIndex(x => x.fecha === c.fecha && x.proveedor === c.proveedor);
-                            if (idx >= 0) comprasData.splice(idx, 1);
-                        }
-                        const bcvRate = getBCVRateForDate(c.fecha) || appConfig.exchangeRates.bcv || 1;
-                        const compra = {
-                            id: Date.now() + Math.floor(Math.random()*99999),
-                            fecha: c.fecha, proveedor: c.proveedor,
-                            factura: c.factura, observaciones: c.notas,
-                            items: [{
-                                productoKey: c.clave,
-                                nombre: c.producto,
-                                cantidad: c.cantidad,
-                                costoUnitarioUSD: c.costoUnit,
-                                costoTotalUSD: c.totalUSD
-                            }],
-                            subtotalUSD: c.totalUSD, totalUSD: c.totalUSD,
-                            metodoPago: 'Efectivo', estadoPago: 'pagado',
-                            creadoEn: new Date().toISOString(), importado: true
-                        };
-                        comprasData.unshift(compra);
-                        // Actualizar inventario si existe el producto
-                        const invIdx = inventoryData.findIndex(i => i.productoKey === c.clave);
-                        if (invIdx >= 0) {
-                            const inv = inventoryData[invIdx];
-                            const stockAnt = inv.stockActual || 0;
-                            const costoAnt = (inv.costoPromedioUSD || 0) * stockAnt;
-                            const nuevoStock = stockAnt + c.cantidad;
-                            inv.costoPromedioUSD = nuevoStock > 0 ? (costoAnt + c.totalUSD) / nuevoStock : c.costoUnit;
-                            inv.stockActual = nuevoStock;
-                            inv.totalCompras = (inv.totalCompras || 0) + c.cantidad;
-                            inv.ultimaCompra = c.fecha;
-                            inv.modificadoEn = new Date().toISOString();
-                        }
-                        stats.compras++;
-                        cmUpd(1);
-                    } catch(e) { stats.errores++; cmLog('Error compra: ' + e.message, 'err'); }
-                }
-                comprasData.sort((a,b) => b.fecha.localeCompare(a.fecha));
-                guardarEnStorage('comprasData', comprasData);
-                guardarEnStorage('inventoryData', inventoryData);
-                cmLog('Compras: ' + stats.compras + ' importadas', 'ok');
-                await tick();
-            }
-
-            // ── CONSIGNACIONES ───────────────────────────────────────────
-            if (document.getElementById('cm-chk-consignaciones').checked && cmDatosExcel.consignaciones.length) {
-                cmLog('📦 Importando consignaciones...', 'inf');
-                for (const c of cmDatosExcel.consignaciones) {
-                    try {
-                        if (!c.fecha || !c.cliente) { stats.errores++; continue; }
-                        if (sobrescribir) {
-                            const idx = consignacionesData.findIndex(x => x.fechaEntrega === c.fecha && x.cliente === c.cliente);
-                            if (idx >= 0) consignacionesData.splice(idx, 1);
-                        }
-                        consignacionesData.unshift({
-                            id: Date.now().toString() + Math.random().toString(36).slice(2,6),
-                            cliente: c.cliente, fechaEntrega: c.fecha,
-                            productoKey: null, productoNombre: c.producto,
-                            cantidadEntregada: c.cantidad,
-                            precioUnitarioUSD: c.precioUSD,
-                            totalUSD: c.totalUSD,
-                            estado: c.estado === 'Activa' ? 'entregado' : c.estado === 'Liquidada' ? 'cobrado' : 'entregado',
-                            fechaProceso: null, cantidadDevuelta: 0, cantidadCobrada: 0,
-                            montoCobradoUSD: 0, observaciones: c.notas,
-                            fechaVencimiento: c.fechaVencimiento || '',
-                            ventaGeneradaId: null, creadoEn: new Date().toISOString(), importado: true
-                        });
-                        stats.consignaciones++;
-                        cmUpd(1);
-                    } catch(e) { stats.errores++; cmLog('Error consignación: ' + e.message, 'err'); }
-                }
-                consignacionesData.sort((a,b) => b.fechaEntrega.localeCompare(a.fechaEntrega));
-                guardarEnStorage('consignacionesData', consignacionesData);
-                cmLog('Consignaciones: ' + stats.consignaciones + ' importadas', 'ok');
-                await tick();
-            }
-
-            // ── PRECIOS ──────────────────────────────────────────────────
-            if (document.getElementById('cm-chk-precios').checked && cmDatosExcel.precios.length) {
-                cmLog('💲 Importando precios...', 'inf');
-                for (const p of cmDatosExcel.precios) {
-                    try {
-                        if (!p.clave || p.precioUSD <= 0) { stats.errores++; continue; }
-                        waterPrices[p.clave] = {
-                            priceUSD: p.precioUSD,
-                            hasIva: p.hasIva,
-                            nombre: p.nombre,
-                            lastUpdate: new Date().toISOString()
-                        };
-                        stats.precios++;
-                        cmUpd(1);
-                    } catch(e) { stats.errores++; cmLog('Error precio: ' + e.message, 'err'); }
-                }
-                guardarEnStorage('waterPrices', waterPrices);
-                cmLog('Precios: ' + stats.precios + ' actualizados', 'ok');
-                await tick();
-            }
-
-            // ── TASAS BCV ────────────────────────────────────────────────
-            if (document.getElementById('cm-chk-bcv').checked && cmDatosExcel.bcv.length) {
-                cmLog('📈 Importando tasas BCV...', 'inf');
-                let bcvNuevas = 0;
-                for (const b of cmDatosExcel.bcv) {
-                    try {
-                        if (!b.fecha || !b.tasa) continue;
-                        const idx = bcvRateHistory.findIndex(r => r.date === b.fecha);
-                        if (idx >= 0) {
-                            if (sobrescribir) bcvRateHistory[idx].rate = b.tasa;
-                        } else {
-                            bcvRateHistory.push({ date: b.fecha, rate: b.tasa });
-                            bcvNuevas++;
-                        }
-                        stats.bcv++;
-                        cmUpd(1);
-                    } catch(e) { stats.errores++; }
-                }
-                bcvRateHistory.sort((a,b) => a.date.localeCompare(b.date));
-                guardarEnStorage('bcvRateHistory', bcvRateHistory);
-                cmLog('Tasas BCV: ' + stats.bcv + ' procesadas (' + bcvNuevas + ' nuevas)', 'ok');
                 await tick();
             }
 
@@ -16998,14 +16039,8 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             loadCustomerSelect && loadCustomerSelect();
             loadPendingCredits && loadPendingCredits();
             loadPrestamosList && loadPrestamosList();
-            loadProveedoresList && loadProveedoresList();
-            loadCurrentPrices && loadCurrentPrices();
-            loadCurrentPricesTable && loadCurrentPricesTable();
-            actualizarDatalistProveedores && actualizarDatalistProveedores();
 
-            const totalImportado = stats.ventas + stats.gastos + stats.clientes + stats.prestamos
-                                 + stats.proveedores + stats.creditos + stats.compras
-                                 + stats.consignaciones + stats.precios + stats.bcv;
+            const totalImportado = stats.ventas + stats.gastos + stats.clientes + stats.prestamos;
             res.style.display = 'block';
             res.style.background = stats.errores === 0 || totalImportado > 0 ? '#d5f5e3' : '#fadbd8';
             res.style.border = '2px solid ' + (stats.errores === 0 || totalImportado > 0 ? '#27ae60' : '#e74c3c');
@@ -17020,12 +16055,6 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     <tr><td style="padding:4px 8px;">💸 Gastos</td><td style="padding:4px 8px;font-weight:700;">${stats.gastos}</td></tr>
                     <tr><td style="padding:4px 8px;">👥 Clientes</td><td style="padding:4px 8px;font-weight:700;">${stats.clientes}</td></tr>
                     <tr><td style="padding:4px 8px;">🏦 Préstamos</td><td style="padding:4px 8px;font-weight:700;">${stats.prestamos} (${stats.pagos} pagos)</td></tr>
-                    <tr><td style="padding:4px 8px;">🏭 Proveedores</td><td style="padding:4px 8px;font-weight:700;">${stats.proveedores}</td></tr>
-                    <tr><td style="padding:4px 8px;">💳 Créditos</td><td style="padding:4px 8px;font-weight:700;">${stats.creditos}</td></tr>
-                    <tr><td style="padding:4px 8px;">🛒 Compras</td><td style="padding:4px 8px;font-weight:700;">${stats.compras}</td></tr>
-                    <tr><td style="padding:4px 8px;">📦 Consignaciones</td><td style="padding:4px 8px;font-weight:700;">${stats.consignaciones}</td></tr>
-                    <tr><td style="padding:4px 8px;">💲 Precios</td><td style="padding:4px 8px;font-weight:700;">${stats.precios}</td></tr>
-                    <tr><td style="padding:4px 8px;">📈 Tasas BCV</td><td style="padding:4px 8px;font-weight:700;">${stats.bcv}</td></tr>
                     ${stats.errores ? `<tr><td style="padding:4px 8px;color:#e74c3c;">⚠️ Errores</td><td style="padding:4px 8px;font-weight:700;color:#e74c3c;">${stats.errores}</td></tr>` : ''}
                 </table>
                 <p style="margin-top:12px;font-size:13px;color:#555;">Los datos ya están visibles en todos los módulos de AQUANEV.</p>
@@ -17108,6 +16137,100 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
     <button id="btn-ir-menu" onclick="irAlMenu()" title="Subir al menú">
         ▲
     </button>
+
+    <!-- Modal Mi Perfil — accesible para todos los roles -->
+    <div id="mi-perfil-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:14px; padding:28px 24px; width:90%; max-width:400px; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <h3 style="margin:0; font-size:18px; color:#1565C0;"><i class="fas fa-user-cog"></i> Mi Perfil</h3>
+                <button onclick="cerrarMiPerfil()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#888;">✕</button>
+            </div>
+
+            <div id="mi-perfil-info" style="background:#f0f4ff; border-radius:8px; padding:12px; margin-bottom:18px; font-size:14px; color:#3949ab;"></div>
+
+            <div style="margin-bottom:14px;">
+                <label style="font-weight:600; font-size:13px; color:#555; display:block; margin-bottom:6px;">PIN actual</label>
+                <input type="password" id="mp-pin-actual" maxlength="8" placeholder="••••"
+                    style="width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:16px; letter-spacing:4px; box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-weight:600; font-size:13px; color:#555; display:block; margin-bottom:6px;">Nuevo PIN <small style="color:#888;">(mín. 4 dígitos)</small></label>
+                <input type="password" id="mp-pin-nuevo" maxlength="8" placeholder="••••"
+                    style="width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:16px; letter-spacing:4px; box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:18px;">
+                <label style="font-weight:600; font-size:13px; color:#555; display:block; margin-bottom:6px;">Confirmar nuevo PIN</label>
+                <input type="password" id="mp-pin-confirm" maxlength="8" placeholder="••••"
+                    style="width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:16px; letter-spacing:4px; box-sizing:border-box;">
+            </div>
+
+            <div id="mp-error" style="display:none; background:#ffebee; color:#c62828; border-radius:8px; padding:10px; font-size:13px; margin-bottom:14px;"></div>
+            <div id="mp-ok" style="display:none; background:#e8f5e9; color:#2e7d32; border-radius:8px; padding:10px; font-size:13px; margin-bottom:14px;">✅ PIN actualizado correctamente.</div>
+
+            <div style="display:flex; gap:10px;">
+                <button onclick="cerrarMiPerfil()" style="flex:1; padding:11px; border:1px solid #ddd; background:white; border-radius:8px; cursor:pointer; font-size:14px;">Cancelar</button>
+                <button onclick="guardarMiPerfil()" style="flex:1; padding:11px; background:#1565C0; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:700;">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function abrirMiPerfil() {
+        if (!currentUser) return;
+        const modal = document.getElementById('mi-perfil-modal');
+        const info  = document.getElementById('mi-perfil-info');
+        info.innerHTML = `<strong>${currentUser.nombre}</strong><br>
+            <span style="font-size:12px; color:#555;">Rol: ${currentUser.rol} &nbsp;·&nbsp; ID: ${currentUser.id}</span>`;
+        document.getElementById('mp-pin-actual').value  = '';
+        document.getElementById('mp-pin-nuevo').value   = '';
+        document.getElementById('mp-pin-confirm').value = '';
+        document.getElementById('mp-error').style.display = 'none';
+        document.getElementById('mp-ok').style.display    = 'none';
+        modal.style.display = 'flex';
+        setTimeout(() => document.getElementById('mp-pin-actual').focus(), 200);
+    }
+
+    function cerrarMiPerfil() {
+        document.getElementById('mi-perfil-modal').style.display = 'none';
+    }
+
+    function guardarMiPerfil() {
+        const errEl  = document.getElementById('mp-error');
+        const okEl   = document.getElementById('mp-ok');
+        errEl.style.display = 'none';
+        okEl.style.display  = 'none';
+
+        const pinActual  = document.getElementById('mp-pin-actual').value.trim();
+        const pinNuevo   = document.getElementById('mp-pin-nuevo').value.trim();
+        const pinConfirm = document.getElementById('mp-pin-confirm').value.trim();
+
+        const showErr = (msg) => { errEl.textContent = msg; errEl.style.display = 'block'; };
+
+        if (!pinActual)               return showErr('Ingresa tu PIN actual.');
+        if (pinActual !== currentUser.pin) return showErr('❌ PIN actual incorrecto.');
+        if (pinNuevo.length < 4)      return showErr('El nuevo PIN debe tener al menos 4 dígitos.');
+        if (pinNuevo !== pinConfirm)  return showErr('Los PINs nuevos no coinciden.');
+        if (pinNuevo === pinActual)   return showErr('El nuevo PIN debe ser diferente al actual.');
+
+        // Actualizar en usersData y localStorage
+        const idx = usersData.findIndex(u => u.id === currentUser.id);
+        if (idx === -1) return showErr('Error: usuario no encontrado.');
+        usersData[idx].pin = pinNuevo;
+        currentUser.pin    = pinNuevo;
+        localStorage.setItem('usersData', JSON.stringify(usersData));
+
+        okEl.style.display = 'block';
+        document.getElementById('mp-pin-actual').value  = '';
+        document.getElementById('mp-pin-nuevo').value   = '';
+        document.getElementById('mp-pin-confirm').value = '';
+        setTimeout(() => cerrarMiPerfil(), 1800);
+    }
+
+    // Cerrar modal al hacer clic fuera
+    document.getElementById('mi-perfil-modal').addEventListener('click', function(e) {
+        if (e.target === this) cerrarMiPerfil();
+    });
+    </script>
 
 </body>
 </html>
