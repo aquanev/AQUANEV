@@ -7396,6 +7396,7 @@
             const content = document.getElementById(tabId);
             if (tab)     tab.classList.add('active');
             if (content) content.classList.add('active');
+            if (tabId === 'config' && esAdmin()) loadUsersList();
         }
 
         // ---- Gestión de usuarios (solo admin) ----
@@ -9032,6 +9033,8 @@
                         actualizarDatalistProveedores();
                     } else if (tabId === 'compras') {
                         actualizarDatalistProveedores();
+                    } else if (tabId === 'config') {
+                        if (esAdmin()) loadUsersList();
                     }
                 });
             });
@@ -9047,6 +9050,7 @@
             if (tabName === 'sales') {
                 loadProductsList();
             }
+            if (tabName === 'config' && esAdmin()) loadUsersList();
         }
 
         function showPriceManager() {
