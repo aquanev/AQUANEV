@@ -5325,7 +5325,7 @@
             }
             const item = inventoryData.find(i => i.productoKey === sel.value);
             if (item && item.costoPromedioUSD > 0) {
-                document.getElementById('c-item-costo').value = item.costoPromedioUSD.toFixed(2);
+                document.getElementById('c-item-costo').value = (parseFloat(item.costoPromedioUSD)||0).toFixed(2);
             }
             updateCItemPreview();
         }
@@ -5385,10 +5385,10 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; border-radius:7px; padding:9px 13px; margin-bottom:6px; font-size:13px;">
                     <div>
                         <strong>${item.nombre}</strong>
-                        <span style="color:#666;"> - ${item.cantidad} u × $${item.costoUnitarioUSD.toFixed(2)}</span>
+                        <span style="color:#666;"> - ${item.cantidad} u × $${(parseFloat(item.costoUnitarioUSD)||0).toFixed(2)}</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:12px;">
-                        <strong style="color:#2e7d32;">$${item.subtotalUSD.toFixed(2)}</strong>
+                        <strong style="color:#2e7d32;">$${(parseFloat(item.subtotalUSD)||0).toFixed(2)}</strong>
                         <span onclick="eliminarCItem(${idx})" style="cursor:pointer; color:#f44336; font-size:16px; font-weight:700;">✕</span>
                     </div>
                 </div>`).join('');
@@ -5608,8 +5608,8 @@
                         <tr style="border-bottom:1px solid #eee;">
                             <td style="padding:8px;">${i.nombre}</td>
                             <td style="padding:8px; text-align:right;">${i.cantidad}</td>
-                            <td style="padding:8px; text-align:right;">$${i.costoUnitarioUSD.toFixed(2)}</td>
-                            <td style="padding:8px; text-align:right; font-weight:600; color:#2e7d32;">$${i.subtotalUSD.toFixed(2)}</td>
+                            <td style="padding:8px; text-align:right;">$${(parseFloat(i.costoUnitarioUSD)||0).toFixed(2)}</td>
+                            <td style="padding:8px; text-align:right; font-weight:600; color:#2e7d32;">$${(parseFloat(i.subtotalUSD)||0).toFixed(2)}</td>
                         </tr>`).join('')}
                         <tr style="background:#e8f5e9; font-weight:700;">
                             <td colspan="3" style="padding:10px;">TOTAL</td>
@@ -5854,7 +5854,7 @@
                     <span>👤 <strong>${cons.cliente}</strong></span>
                     <span>📅 ${formatDate(cons.fechaEntrega)}</span>
                     <span>📦 Entregados: <strong>${cons.cantidadEntregada}</strong></span>
-                    <span>💰 $${cons.precioUnitarioUSD.toFixed(2)}/u</span>
+                    <span>💰 $${(parseFloat(cons.precioUnitarioUSD)||0).toFixed(2)}/u</span>
                     <span>↩️ Ya devueltos: <strong>${cons.cantidadDevuelta}</strong></span>
                     <span>✅ Ya cobrados: <strong>${cons.cantidadCobrada}</strong></span>
                     <span style="grid-column:1/-1; font-weight:700; color:#e65100;">⚡ Pendientes: ${pendiente} unidades</span>
@@ -6128,7 +6128,7 @@
                         </div>
                         <div style="background:#f8f9fa; padding:6px 10px; border-radius:6px;">
                             <div style="color:#888; font-size:11px;">PRECIO/U</div>
-                            <div style="font-weight:600;">$${cons.precioUnitarioUSD.toFixed(2)}</div>
+                            <div style="font-weight:600;">$${(parseFloat(cons.precioUnitarioUSD)||0).toFixed(2)}</div>
                         </div>
                         ${cons.cantidadDevuelta > 0 ? `
                         <div style="background:#e3f2fd; padding:6px 10px; border-radius:6px;">
@@ -6138,12 +6138,12 @@
                         ${cons.cantidadCobrada > 0 ? `
                         <div style="background:#e8f5e9; padding:6px 10px; border-radius:6px;">
                             <div style="color:#2e7d32; font-size:11px;">COBRADOS</div>
-                            <div style="font-weight:600; color:#2e7d32;">${cons.cantidadCobrada} u · $${cons.montoCobradoUSD.toFixed(2)}</div>
+                            <div style="font-weight:600; color:#2e7d32;">${cons.cantidadCobrada} u · $${(parseFloat(cons.montoCobradoUSD)||0).toFixed(2)}</div>
                         </div>` : ''}
                         ${pendiente > 0 ? `
                         <div style="background:#fff3e0; padding:6px 10px; border-radius:6px;">
                             <div style="color:#e65100; font-size:11px;">PENDIENTE</div>
-                            <div style="font-weight:600; color:#e65100;">${pendiente} u · $${(pendiente * cons.precioUnitarioUSD).toFixed(2)}</div>
+                            <div style="font-weight:600; color:#e65100;">${pendiente} u · $${(pendiente * (parseFloat(cons.precioUnitarioUSD)||0)).toFixed(2)}</div>
                         </div>` : ''}
                     </div>
 
@@ -10089,7 +10089,7 @@
             // Pre-llenar costo con el costo promedio actual del producto
             const item = inventoryData.find(i => i.productoKey === val);
             if (item && item.costoPromedioUSD > 0) {
-                document.getElementById('compra-costo-unit').value = item.costoPromedioUSD.toFixed(2);
+                document.getElementById('compra-costo-unit').value = (parseFloat(item.costoPromedioUSD)||0).toFixed(2);
             }
             updateCompraSubtotal();
         }
@@ -10162,10 +10162,10 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; background:white; border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:13px;">
                     <div>
                         <strong>${item.nombre}</strong>
-                        <span style="color:#666;"> - ${item.cantidad} u × $${item.costoUnitarioUSD.toFixed(2)}</span>
+                        <span style="color:#666;"> - ${item.cantidad} u × $${(parseFloat(item.costoUnitarioUSD)||0).toFixed(2)}</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <strong style="color:#2e7d32;">$${item.subtotalUSD.toFixed(2)}</strong>
+                        <strong style="color:#2e7d32;">$${(parseFloat(item.subtotalUSD)||0).toFixed(2)}</strong>
                         <span onclick="eliminarItemCompra(${idx})" style="cursor:pointer; color:#f44336; font-size:16px;">✕</span>
                     </div>
                 </div>`).join('');
@@ -10198,7 +10198,7 @@
                 registrarMovimiento(
                     item.productoKey, 'compra', item.cantidad,
                     stockAnt, nuevoStock,
-                    `Gasto #${expenseId} - $${item.costoUnitarioUSD.toFixed(2)}/u`
+                    `Gasto #${expenseId} - $${(parseFloat(item.costoUnitarioUSD)||0).toFixed(2)}/u`
                 );
             });
             saveInventory();
