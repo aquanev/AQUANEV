@@ -967,6 +967,11 @@
             <div id="login-step-usuario">
                 <p style="color:#555; margin-bottom:14px; font-weight:600;">Selecciona tu usuario:</p>
                 <div id="login-usuarios-lista" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;"></div>
+                <div id="login-sync-status" style="font-size:11px; color:#aaa; text-align:center; margin-top:4px;"></div>
+                <button onclick="descargaUsuariosAntesLogin().then(()=>{ renderLoginUsuarios(); document.getElementById('login-sync-status').textContent='✅ Usuarios actualizados'; })" 
+                    style="width:100%; margin-top:8px; padding:8px; background:#f0f4ff; border:1px solid #c5cae9; border-radius:6px; color:#3949ab; font-size:12px; cursor:pointer;">
+                    <i class="fas fa-sync"></i> Actualizar lista de usuarios
+                </button>
             </div>
 
             <!-- Paso 2: Ingresar PIN -->
@@ -4658,9 +4663,10 @@
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
-            renderLoginUsuarios();   // B7: mostrar usuarios en pantalla de login
             registrarServiceWorker(); // B9: PWA
             initializeApp();
+            // Descargar usuarios de Sheets ANTES del login para sincronizar entre dispositivos
+            descargaUsuariosAntesLogin().then(() => renderLoginUsuarios());
         });
 
         function initializeApp() {
@@ -16457,6 +16463,51 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
     }
 
     // ========== MENÚ MÓVIL ==========
+    // Descarga usuarios de Sheets ANTES del login — sin autenticación
+    async function descargaUsuariosAntesLogin() {
+        try {
+            const cfg = JSON.parse(localStorage.getItem('syncConfig') || '{}');
+            if (!cfg.activa || !cfg.appsScriptUrl) {
+                renderLoginUsuarios();
+                return;
+            }
+            // Usar GET con parámetro — funciona sin login porque el script es público
+            const url = cfg.appsScriptUrl + '?accion=usuarios&ts=' + Date.now();
+            const resp = await fetch(url);
+            const result = await resp.json();
+            if (!result.success || !Array.isArray(result.usuarios) || result.usuarios.length === 0) return;
+
+            let cambios = 0;
+            result.usuarios.forEach(u => {
+                const id = u.id || u.ID || '';
+                if (!id) return;
+                const existing = usersData.find(x => x.id === id);
+                if (!existing) {
+                    usersData.push({
+                        id,
+                        nombre:      u.nombre || u.Nombre || 'Usuario',
+                        email:       u.email  || u.Email  || '',
+                        rol:         (u.rol   || u.Rol    || 'vendedor').toLowerCase(),
+                        dispositivo: (u.dispositivo || u.Dispositivo || 'mobile').toLowerCase(),
+                        pin:         '0000',
+                        permisos:    (u.rol||'').toLowerCase() === 'admin' ? ['all'] : ['ventas.crear','ventas.ver','clientes.ver','creditos.ver','creditos.abonar','inventario.ver'],
+                        activo:      u.activo === 'Sí' || u.activo === true || u.activo !== 'No',
+                        creadoEn:    u.creadoen || u.creadoEn || new Date().toISOString()
+                    });
+                    cambios++;
+                } else {
+                    existing.nombre  = u.nombre || u.Nombre || existing.nombre;
+                    existing.email   = u.email  || u.Email  || existing.email;
+                    existing.activo  = u.activo === 'Sí' || u.activo === true || u.activo !== 'No';
+                    cambios++;
+                }
+            });
+            if (cambios > 0) localStorage.setItem('usersData', JSON.stringify(usersData));
+        } catch(e) {
+            console.log('descargaUsuariosAntesLogin:', e.message);
+        }
+    }
+
     async function forzarSyncUsuarios() {
         if (!syncConfig.activa || !syncConfig.appsScriptUrl) {
             alert('⚠️ Sync no configurado'); return;
@@ -16528,7 +16579,16 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
     async function sincronizarUsuariosDesdeSheets() {
         if (!syncConfig.activa || !syncConfig.appsScriptUrl) return;
         try {
-            const resp = await fetch(syncConfig.appsScriptUrl + '?accion=usuarios');
+            const resp = await fetch(syncConfig.appsScriptUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                    usuario:   getCurrentUserId(),
+                    timestamp: new Date().toISOString(),
+                    modo:      'get_usuarios',
+                    datos:     {}
+                })
+            });
             const result = await resp.json();
             if (!result.success || !Array.isArray(result.usuarios) || result.usuarios.length === 0) return;
 
