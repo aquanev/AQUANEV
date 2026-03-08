@@ -7167,31 +7167,34 @@
 
         function saveUsers() {
             localStorage.setItem('usersData', JSON.stringify(usersData));
-            // Sync usuarios a Google Sheets — SOLO desde admin
-            const currentUser = usersData.find(u => u.id === currentUserId);
-            if (syncConfig.activa && syncConfig.appsScriptUrl && currentUser && currentUser.rol === 'admin') {
-                const usuariosSinPin = usersData.map(u => ({
-                    id:          u.id,
-                    nombre:      u.nombre,
-                    email:       u.email || '',
-                    rol:         u.rol,
-                    dispositivo: u.dispositivo,
-                    activo:      u.activo,
-                    ultimaLogin: u.ultimaLogin || '',
-                    creadoEn:    u.creadoEn || new Date().toISOString()
-                }));
-                const payload = {
-                    usuario:   getCurrentUserId(),
-                    timestamp: new Date().toISOString(),
-                    modo:      'solo_subir',
-                    datos:     { usuarios: usuariosSinPin }
-                };
-                fetch(syncConfig.appsScriptUrl, {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body:    JSON.stringify(payload)
-                }).catch(e => console.log('Sync usuarios:', e.message));
-            }
+            // Sync usuarios a Google Sheets — SOLO desde admin, completamente no-bloqueante
+            try {
+                const cu = usersData.find(u => u.id === currentUserId);
+                if (syncConfig && syncConfig.activa && syncConfig.appsScriptUrl && cu && cu.rol === 'admin') {
+                    const usuariosSinPin = usersData.map(u => ({
+                        id:          u.id,
+                        nombre:      u.nombre,
+                        email:       u.email || '',
+                        rol:         u.rol,
+                        dispositivo: u.dispositivo,
+                        activo:      u.activo,
+                        ultimaLogin: u.ultimaLogin || '',
+                        creadoEn:    u.creadoEn || new Date().toISOString()
+                    }));
+                    setTimeout(() => {
+                        fetch(syncConfig.appsScriptUrl, {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body:    JSON.stringify({
+                                usuario:   getCurrentUserId(),
+                                timestamp: new Date().toISOString(),
+                                modo:      'solo_subir',
+                                datos:     { usuarios: usuariosSinPin }
+                            })
+                        }).catch(e => console.log('Sync usuarios:', e.message));
+                    }, 2000);
+                }
+            } catch(e) { console.log('saveUsers sync error:', e.message); }
         }
 
         // ---- Permisos helpers ----
