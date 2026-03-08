@@ -1800,6 +1800,11 @@
                         title="Sube todos los datos históricos a Google Sheets de una sola vez">
                         <i class="fas fa-cloud-upload-alt"></i> Carga Inicial Histórica
                     </button>
+                    <button class="btn" onclick="forzarSyncUsuarios()"
+                        style="background:#1565c0; color:white; margin-left:8px;"
+                        title="Descarga usuarios desde Google Sheets a este dispositivo">
+                        <i class="fas fa-users"></i> Sincronizar Usuarios
+                    </button>
                     <div id="carga-masiva-progress" style="display:none; margin-top:10px; background:#fff3e0; border-radius:8px; padding:12px; font-size:13px; border-left:4px solid #e65100;">
                         <div id="carga-masiva-msg" style="font-weight:600; margin-bottom:4px;">Iniciando carga...</div>
                         <div style="background:#e0e0e0; border-radius:4px; height:8px; overflow:hidden; margin-top:8px;">
@@ -16452,6 +16457,52 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
     }
 
     // ========== MENÚ MÓVIL ==========
+    async function forzarSyncUsuarios() {
+        if (!syncConfig.activa || !syncConfig.appsScriptUrl) {
+            alert('⚠️ Sync no configurado'); return;
+        }
+        try {
+            const resp = await fetch(syncConfig.appsScriptUrl + '?accion=usuarios');
+            const result = await resp.json();
+            if (!result.success) { alert('Error: ' + result.error); return; }
+            
+            const remotos = result.usuarios || [];
+            if (remotos.length === 0) { alert('No hay usuarios en Sheets'); return; }
+            
+            let nuevos = 0, actualizados = 0;
+            remotos.forEach(u => {
+                const id = u.id || u.ID || '';
+                if (!id) return;
+                const existing = usersData.find(x => x.id === id);
+                if (!existing) {
+                    usersData.push({
+                        id, 
+                        nombre:      u.nombre || u.Nombre || 'Usuario',
+                        email:       u.email  || u.Email  || '',
+                        rol:         (u.rol   || u.Rol    || 'vendedor').toLowerCase(),
+                        dispositivo: (u.dispositivo || u.Dispositivo || 'mobile').toLowerCase(),
+                        pin:         '0000',
+                        permisos:    (u.rol||'').toLowerCase() === 'admin' ? ['all'] : ['ventas.crear','ventas.ver','clientes.ver','creditos.ver','creditos.abonar','inventario.ver'],
+                        activo:      u.activo === 'Sí' || u.activo === true || u.activo !== 'No',
+                        creadoEn:    u.creadoen || u.creadoEn || new Date().toISOString()
+                    });
+                    nuevos++;
+                } else {
+                    existing.nombre      = u.nombre || u.Nombre || existing.nombre;
+                    existing.email       = u.email  || u.Email  || existing.email;
+                    existing.activo      = u.activo === 'Sí' || u.activo === true || u.activo !== 'No';
+                    actualizados++;
+                }
+            });
+            
+            localStorage.setItem('usersData', JSON.stringify(usersData));
+            loadUsersList();
+            alert(`✅ Usuarios sincronizados\n${nuevos} nuevos · ${actualizados} actualizados\n\nCierra sesión para ver los cambios en el login.`);
+        } catch(e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
     function toggleMobileMenu() {
         const menu = document.getElementById('mobile-menu-dropdown');
         if (!menu) return;
