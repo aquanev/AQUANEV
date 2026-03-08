@@ -8215,6 +8215,13 @@
                 return;
             }
             try {
+                // Forzar desregistro de SW anterior y limpiar caché en cada carga
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const reg of registrations) { await reg.unregister(); }
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                }
                 swRegistration = await navigator.serviceWorker.register('./service-worker.js', { scope: './' });
                 console.log('[B9] SW registrado:', swRegistration.scope);
 
