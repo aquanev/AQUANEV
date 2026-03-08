@@ -7110,7 +7110,7 @@
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
                         <div>
                             <div style="font-weight:700; font-size:16px;">${tipoIcon[p.tipo] || '🏦'} ${p.prestamista}</div>
-                            <small style="color:#888;">${p.tipo.charAt(0).toUpperCase()+p.tipo.slice(1)}${p.contrato ? ' · ' + p.contrato : ''} · ${p.tasaInteres}% anual · ${p.plazoMeses} meses</small>
+                            <small style="color:#888;">${(p.tipo||'').charAt(0).toUpperCase()+(p.tipo||'').slice(1)}${p.contrato ? ' · ' + p.contrato : ''} · ${p.tasaInteres}% anual · ${p.plazoMeses} meses</small>
                             ${proximaInfo}
                         </div>
                         <div style="text-align:right;">
@@ -12047,7 +12047,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 }
                 
                 // Búsqueda por iniciales
-                const words = (client.name||client.nombre||'').split(' ');
+                const words = (client.name||client.nombre||'').split(' ').filter(Boolean);
                 const initials = words.map(word => word.charAt(0)).join('').toLowerCase();
                 
                 if (initials.includes(searchTerm)) {
