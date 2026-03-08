@@ -7976,28 +7976,59 @@
             // Normalizar objeto de Sheets (PascalCase → camelCase) y parsear campos JSON
             function normalizarDesdeSheets(obj) {
                 if (!obj || typeof obj !== 'object') return obj;
+                
+                // Mapeo explícito de campos especiales Sheets → app
+                const mapaExplicito = {
+                    'ID': 'id', 'ProductoKey': 'productoKey', 'Nombre': 'nombre',
+                    'Fecha': 'fecha', 'Proveedor': 'proveedor', 'Factura': 'factura',
+                    'Items': 'items', 'SubtotalUSD': 'subtotalUSD', 'TotalUSD': 'totalUSD',
+                    'MetodoPago': 'metodoPago', 'EstadoPago': 'estadoPago',
+                    'StockActual': 'stockActual', 'TotalCompras': 'totalCompras',
+                    'TotalVentas': 'totalVentas', 'CostoPromUSD': 'costoPromUSD',
+                    'Estado': 'estado', 'UltimaCompra': 'ultimaCompra', 'UltimaVenta': 'ultimaVenta',
+                    'ModificadoEn': 'modificadoEn', 'Prestamista': 'prestamista',
+                    'Tipo': 'tipo', 'Contrato': 'contrato', 'MontoOriginalUSD': 'montoOriginalUSD',
+                    'TasaInteres': 'tasaInteres', 'PlazoMeses': 'plazoMeses',
+                    'CuotaMensualUSD': 'cuotaMensualUSD', 'FechaDesembolso': 'fechaDesembolso',
+                    'FechaPrimeraCuota': 'fechaPrimeraCuota', 'CuotasPagadas': 'cuotasPagadas',
+                    'TotalPagadoUSD': 'totalPagadoUSD', 'SaldoPendienteUSD': 'saldoPendienteUSD',
+                    'Observaciones': 'observaciones', 'Usuario': 'usuario',
+                    'Timestamp': 'timestamp', 'Cliente': 'cliente', 'Productos': 'productos',
+                    'TotalBS': 'totalBS', 'Descuento': 'descuento', 'Notas': 'notas',
+                    'Concepto': 'concepto', 'Monto': 'monto', 'MontoUSD': 'montoUSD',
+                    'Categoria': 'categoria', 'Referencia': 'referencia',
+                    'ProductoNombre': 'productoNombre', 'CantidadEntregada': 'cantidadEntregada',
+                    'CantidadDevuelta': 'cantidadDevuelta', 'PrecioUnitarioUSD': 'precioUnitarioUSD',
+                    'MontoCobradoUSD': 'montoCobradoUSD', 'FechaEntrega': 'fechaEntrega',
+                    'FechaDevolucion': 'fechaDevolucion', 'Pagos': 'pagos',
+                    'Amortizacion': 'amortizacion', 'Saldo': 'saldo', 'Email': 'email',
+                    'Telefono': 'telefono', 'Direccion': 'direccion', 'RIF': 'rif'
+                };
+                
                 const n = {};
                 Object.keys(obj).forEach(k => {
-                    const lk = k.charAt(0).toLowerCase() + k.slice(1);
-                    n[lk] = obj[k];
+                    if (k === '_fromSync') return; // ignorar campo interno
+                    const mappedKey = mapaExplicito[k] || k.charAt(0).toLowerCase() + k.slice(1);
+                    n[mappedKey] = obj[k];
                 });
+                
+                // Convertir ID numérico a string
+                if (n.id !== undefined && n.id !== null) n.id = String(n.id);
+                
                 // Parsear campos que vienen como string JSON
                 ['items','amortizacion','pagos','productos','usos','payments','componentes','comprasItems'].forEach(campo => {
-                    if (typeof n[campo] === 'string' && n[campo].startsWith('[')) {
+                    if (typeof n[campo] === 'string' && (n[campo].startsWith('[') || n[campo].startsWith('{'))) {
                         try { n[campo] = JSON.parse(n[campo]); } catch(e) { n[campo] = []; }
-                    } else if (n[campo] === undefined || n[campo] === '') {
+                    } else if (n[campo] === undefined || n[campo] === null || n[campo] === '') {
                         n[campo] = [];
                     }
                 });
+                
                 // Garantizar strings en campos críticos
-                ['tipo','estado','prestamista','cliente','nombre','rol','metodo'].forEach(campo => {
+                ['tipo','estado','prestamista','cliente','nombre','metodoPago','usuario'].forEach(campo => {
                     if (n[campo] === undefined || n[campo] === null) n[campo] = '';
                 });
-                // Normalizar IDs
-                if (!n.id && n.ID) n.id = String(n.ID);
-                if (!n.productoKey && n.ProductoKey) n.productoKey = n.ProductoKey;
-                // Limpiar campo interno de sync
-                delete n._fromSync;
+                
                 return n;
             }
 
