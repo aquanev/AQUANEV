@@ -7065,6 +7065,30 @@
 
         function saveUsers() {
             localStorage.setItem('usersData', JSON.stringify(usersData));
+            // Sync usuarios a Google Sheets (sin PIN por seguridad)
+            if (syncConfig.activa && syncConfig.appsScriptUrl) {
+                const usuariosSinPin = usersData.map(u => ({
+                    id:          u.id,
+                    nombre:      u.nombre,
+                    email:       u.email || '',
+                    rol:         u.rol,
+                    dispositivo: u.dispositivo,
+                    activo:      u.activo,
+                    ultimaLogin: u.ultimaLogin || '',
+                    creadoEn:    u.creadoEn || new Date().toISOString()
+                }));
+                const payload = {
+                    usuario:   getCurrentUserId(),
+                    timestamp: new Date().toISOString(),
+                    modo:      'solo_subir',
+                    datos:     { usuarios: usuariosSinPin }
+                };
+                fetch(syncConfig.appsScriptUrl, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body:    JSON.stringify(payload)
+                }).catch(e => console.log('Sync usuarios:', e.message));
+            }
         }
 
         // ---- Permisos helpers ----
@@ -7388,10 +7412,10 @@
             // Auto-sync al iniciar sesión — descarga datos frescos del servidor
             if (syncConfig.activa && syncConfig.appsScriptUrl) {
                 setTimeout(() => {
-                    if (!syncEnCurso) {
-                        ejecutarSync();
-                    }
-                }, 1500); // 1.5s después del login para no bloquear la UI
+                    if (!syncEnCurso) ejecutarSync();
+                }, 1500);
+                // Descargar usuarios desde Sheets (para sincronizar entre dispositivos)
+                setTimeout(() => sincronizarUsuariosDesdeSheets(), 3000);
             }
         }
 
@@ -16334,6 +16358,52 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
         setTimeout(() => cerrarMiPerfil(), 1800);
     }
 
+    // ========== SYNC DE USUARIOS DESDE SHEETS ==========
+    async function sincronizarUsuariosDesdeSheets() {
+        if (!syncConfig.activa || !syncConfig.appsScriptUrl) return;
+        try {
+            const resp = await fetch(syncConfig.appsScriptUrl + '?accion=usuarios');
+            const result = await resp.json();
+            if (!result.success || !Array.isArray(result.usuarios) || result.usuarios.length === 0) return;
+
+            let cambios = 0;
+            result.usuarios.forEach(u => {
+                if (!u.id) return;
+                const existing = usersData.find(x => x.id === u.id);
+                if (!existing) {
+                    // Usuario nuevo — agregar con PIN temporal
+                    usersData.push({
+                        id:          u.id,
+                        nombre:      u.nombre || 'Usuario',
+                        email:       u.email || '',
+                        rol:         u.rol || 'vendedor',
+                        dispositivo: u.dispositivo || 'mobile',
+                        pin:         u.pin || '0000',
+                        permisos:    u.rol === 'admin' ? ['all'] : ['ventas.crear','ventas.ver','clientes.ver','creditos.ver','creditos.abonar','inventario.ver'],
+                        activo:      u.activo !== false,
+                        creadoEn:    u.creadoEn || new Date().toISOString()
+                    });
+                    cambios++;
+                } else {
+                    // Actualizar nombre, email, rol, activo — nunca el PIN
+                    existing.nombre      = u.nombre      || existing.nombre;
+                    existing.email       = u.email       || existing.email;
+                    existing.rol         = u.rol         || existing.rol;
+                    existing.dispositivo = u.dispositivo || existing.dispositivo;
+                    existing.activo      = u.activo !== false;
+                    cambios++;
+                }
+            });
+
+            if (cambios > 0) {
+                localStorage.setItem('usersData', JSON.stringify(usersData));
+                loadUsersList();
+            }
+        } catch(e) {
+            console.log('Sync usuarios desde Sheets:', e.message);
+        }
+    }
+
     // ========== CARGA INICIAL MASIVA A GOOGLE SHEETS ==========
     async function cargaInicialMasiva() {
         if (!syncConfig.activa || !syncConfig.appsScriptUrl) {
@@ -16363,6 +16433,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             { key: 'inventoryData',       tabla: 'inventario',     nombre: 'Inventario' },
             { key: 'proveedoresData',     tabla: 'proveedores',    nombre: 'Proveedores' },
             { key: 'bcvRateHistory',      tabla: 'tasasbcv',       nombre: 'Tasas BCV' },
+            { key: 'usersData',           tabla: 'usuarios',       nombre: 'Usuarios', sinPin: true },
         ];
 
         const LOTE = 500; // registros por lote — evita timeout Apps Script
@@ -16389,6 +16460,16 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             } catch(e) { datos = []; }
 
             if (datos.length === 0) continue;
+
+            // Para usuarios: enviar sin PIN por seguridad
+            if (modulo.sinPin) {
+                datos = datos.map(u => ({
+                    id: u.id, nombre: u.nombre, email: u.email || '',
+                    rol: u.rol, dispositivo: u.dispositivo,
+                    activo: u.activo, ultimaLogin: u.ultimaLogin || '',
+                    creadoEn: u.creadoEn || new Date().toISOString()
+                }));
+            }
 
             // Dividir en lotes
             const lotes = [];
