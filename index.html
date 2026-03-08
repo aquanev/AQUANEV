@@ -7867,8 +7867,14 @@
 
             // Añadir estado actual completo para tablas maestras (modo bidireccional)
             if (syncConfig.modo !== 'solo_subir') {
+                // Si nunca se ha sincronizado o tiene pocos registros → pull completo
+                const pocosRegistros = (salesData.length < 10 && expensesData.length < 5);
+                const nuncaSincronizado = !syncConfig.ultimaSync;
+                const ultimaSyncEfectiva = (nuncaSincronizado || pocosRegistros)
+                    ? '2023-01-01T00:00:00.000Z'
+                    : syncConfig.ultimaSync;
                 payload.estadoLocal = {
-                    ultimaSync: syncConfig.ultimaSync || null
+                    ultimaSync: ultimaSyncEfectiva
                 };
             }
 
@@ -7955,18 +7961,67 @@
         // ---- Procesar datos recibidos del servidor ----
         function procesarActualizaciones(updates) {
             let count = 0;
-            // Ventas: solo añadir las que no existan localmente (append-only)
-            if (updates.ventas && syncConfig.modo !== 'solo_subir') {
-                updates.ventas.forEach(v => {
-                    if (!salesData.find(x => x.id == v.id)) {
-                        salesData.unshift(v);
-                        count++;
+            if (syncConfig.modo === 'solo_subir') return count;
+
+            // Helper: merge por ID — agrega nuevos, actualiza existentes si remoto es más nuevo
+            function mergeById(local, remotos, idField) {
+                idField = idField || 'id';
+                let cambios = 0;
+                remotos.forEach(r => {
+                    const rid = r[idField] || r.ID || r.id;
+                    if (!rid) return;
+                    const idx = local.findIndex(x => (x[idField]||x.ID||x.id) == rid);
+                    if (idx === -1) {
+                        local.push(r);
+                        cambios++;
+                    } else {
+                        const tsR = new Date(r.modificadoEn || r.timestamp || r.fecha || 0).getTime();
+                        const tsL = new Date(local[idx].modificadoEn || local[idx].timestamp || local[idx].fecha || 0).getTime();
+                        if (tsR >= tsL) { local[idx] = { ...local[idx], ...r }; cambios++; }
                     }
                 });
-                if (count > 0) {
-                    localStorage.setItem('salesData', JSON.stringify(salesData));
-                    loadSalesHistory && loadSalesHistory();
-                }
+                return cambios;
+            }
+
+            // Ventas
+            if (updates.ventas) {
+                count += mergeById(salesData, updates.ventas);
+                localStorage.setItem('salesData', JSON.stringify(salesData));
+                loadSalesHistory && loadSalesHistory();
+            }
+            // Gastos
+            if (updates.gastos) {
+                count += mergeById(expensesData, updates.gastos);
+                localStorage.setItem('expensesData', JSON.stringify(expensesData));
+                loadExpensesHistory && loadExpensesHistory();
+            }
+            // Clientes
+            if (updates.clientes) {
+                count += mergeById(clientsData, updates.clientes);
+                localStorage.setItem('clientsData', JSON.stringify(clientsData));
+                loadClientsList && loadClientsList();
+                loadCustomerSelect && loadCustomerSelect();
+            }
+            // Créditos
+            if (updates.creditos) {
+                count += mergeById(creditsData, updates.creditos);
+                localStorage.setItem('creditsData', JSON.stringify(creditsData));
+                loadPendingCredits && loadPendingCredits();
+            }
+            // Compras
+            if (updates.compras) {
+                count += mergeById(comprasData, updates.compras);
+                localStorage.setItem('comprasData', JSON.stringify(comprasData));
+            }
+            // Consignaciones
+            if (updates.consignaciones) {
+                count += mergeById(consignacionesData, updates.consignaciones);
+                localStorage.setItem('consignacionesData', JSON.stringify(consignacionesData));
+            }
+            // Préstamos
+            if (updates.prestamos) {
+                count += mergeById(prestamosData, updates.prestamos);
+                localStorage.setItem('prestamosData', JSON.stringify(prestamosData));
             }
             // Tasas BCV: recibir del servidor y aplicar a bcvRateHistory + campos visuales
             if (updates.tasaBCV || updates.tasasBCV) {
