@@ -4917,7 +4917,8 @@
 
         // ---- Dashboard de Inventario ----
         function loadInventoryDashboard() {
-            let normal = 0, bajo = 0, agotado = 0, valorTotal = 0;
+            if (!Array.isArray(inventoryData)) inventoryData = [];
+                        let normal = 0, bajo = 0, agotado = 0, valorTotal = 0;
             inventoryData.forEach(item => {
                 const est = calcularEstadoInventario(item);
                 if (est.estado === 'normal') normal++;
@@ -5586,7 +5587,8 @@
 
         // ---- Dashboard de Compras ----
         function loadComprasDashboard() {
-            const hoy   = new Date();
+            if (!Array.isArray(comprasData)) comprasData = [];
+                        const hoy   = new Date();
             const mes   = hoy.getMonth();
             const anio  = hoy.getFullYear();
             const deMes = comprasData.filter(c => {
@@ -5604,7 +5606,8 @@
 
         // ---- Historial de Compras ----
         function loadComprasHistorial() {
-            filtrarCompras();
+            if (!Array.isArray(comprasData)) comprasData = [];
+                        filtrarCompras();
         }
 
         function filtrarCompras() {
@@ -6166,7 +6169,8 @@
 
         // ---- Dashboard ----
         function loadConsignacionesDashboard() {
-            const abiertas = consignacionesData.filter(c => c.estado === 'entregado' || c.estado === 'mixto');
+            if (!Array.isArray(consignacionesData)) consignacionesData = [];
+                        const abiertas = consignacionesData.filter(c => c.estado === 'entregado' || c.estado === 'mixto');
             const hoy   = new Date();
             const mes   = hoy.getMonth();
             const anio  = hoy.getFullYear();
@@ -6191,7 +6195,8 @@
 
         // ---- Lista de consignaciones ----
         function loadConsignacionesList() {
-            const filtro    = document.getElementById('cons-filtro')?.value || 'todos';
+            if (!Array.isArray(consignacionesData)) consignacionesData = [];
+                        const filtro    = document.getElementById('cons-filtro')?.value || 'todos';
             let lista       = [...consignacionesData];
             if (filtro !== 'todos') lista = lista.filter(c => c.estado === filtro);
 
@@ -7008,7 +7013,8 @@
 
         // ---- Dashboard préstamos ----
         function loadPrestamosDashboard() {
-            const activos    = prestamosData.filter(p => p.estado === 'activo');
+            if (!Array.isArray(prestamosData)) prestamosData = [];
+                        const activos    = prestamosData.filter(p => p.estado === 'activo');
             const deudaTotal = activos.reduce((s, p) => s + (p.saldoPendienteUSD || 0), 0);
             const cuotaMes   = activos.reduce((s, p) => s + (p.cuotaMensualUSD   || 0), 0);
             const pagadoTotal= prestamosData.reduce((s, p) => s + (p.totalPagadoUSD || 0), 0);
@@ -7062,7 +7068,8 @@
 
         // ---- Lista de préstamos ----
         function loadPrestamosList() {
-            const filtroEstado = document.getElementById('prest-filtro-estado')?.value || 'todos';
+            if (!Array.isArray(prestamosData)) prestamosData = [];
+                        const filtroEstado = document.getElementById('prest-filtro-estado')?.value || 'todos';
             const filtroTipo   = document.getElementById('prest-filtro-tipo')?.value   || 'todos';
             const hoy          = new Date().toISOString().split('T')[0];
 
@@ -7169,7 +7176,7 @@
             localStorage.setItem('usersData', JSON.stringify(usersData));
             // Sync usuarios a Google Sheets — SOLO desde admin, completamente no-bloqueante
             try {
-                const cu = usersData.find(u => u.id === currentUserId);
+                const cu = usersData.find(u => u.id === (currentUser ? currentUser.id : ''));
                 if (syncConfig && syncConfig.activa && syncConfig.appsScriptUrl && cu && cu.rol === 'admin') {
                     const usuariosSinPin = usersData.map(u => ({
                         id:          u.id,
@@ -7973,216 +7980,134 @@
             let count = 0;
             if (syncConfig.modo === 'solo_subir') return count;
 
-            // Normalizar objeto de Sheets (PascalCase → camelCase) y parsear campos JSON
-            function normalizarDesdeSheets(obj) {
-                if (!obj || typeof obj !== 'object') return obj;
-                
-                // Mapeo explícito de campos especiales Sheets → app
-                const mapaExplicito = {
-                    'ID': 'id', 'ProductoKey': 'productoKey', 'Nombre': 'nombre',
-                    'Fecha': 'fecha', 'Proveedor': 'proveedor', 'Factura': 'factura',
-                    'Items': 'items', 'SubtotalUSD': 'subtotalUSD', 'TotalUSD': 'totalUSD',
-                    'MetodoPago': 'metodoPago', 'EstadoPago': 'estadoPago',
-                    'StockActual': 'stockActual', 'TotalCompras': 'totalCompras',
-                    'TotalVentas': 'totalVentas', 'CostoPromUSD': 'costoPromUSD',
-                    'Estado': 'estado', 'UltimaCompra': 'ultimaCompra', 'UltimaVenta': 'ultimaVenta',
-                    'ModificadoEn': 'modificadoEn', 'Prestamista': 'prestamista',
-                    'Tipo': 'tipo', 'Contrato': 'contrato', 'MontoOriginalUSD': 'montoOriginalUSD',
-                    'TasaInteres': 'tasaInteres', 'PlazoMeses': 'plazoMeses',
-                    'CuotaMensualUSD': 'cuotaMensualUSD', 'FechaDesembolso': 'fechaDesembolso',
-                    'FechaPrimeraCuota': 'fechaPrimeraCuota', 'CuotasPagadas': 'cuotasPagadas',
-                    'TotalPagadoUSD': 'totalPagadoUSD', 'SaldoPendienteUSD': 'saldoPendienteUSD',
-                    'Observaciones': 'observaciones', 'Usuario': 'usuario',
-                    'Timestamp': 'timestamp', 'Cliente': 'cliente', 'Productos': 'productos',
-                    'TotalBS': 'totalBS', 'Descuento': 'descuento', 'Notas': 'notas',
-                    'Concepto': 'concepto', 'Monto': 'monto', 'MontoUSD': 'montoUSD',
-                    'Categoria': 'categoria', 'Referencia': 'referencia',
-                    'ProductoNombre': 'productoNombre', 'CantidadEntregada': 'cantidadEntregada',
-                    'CantidadDevuelta': 'cantidadDevuelta', 'PrecioUnitarioUSD': 'precioUnitarioUSD',
-                    'MontoCobradoUSD': 'montoCobradoUSD', 'FechaEntrega': 'fechaEntrega',
-                    'FechaDevolucion': 'fechaDevolucion', 'Pagos': 'pagos',
-                    'Amortizacion': 'amortizacion', 'Saldo': 'saldo', 'Email': 'email',
-                    'Telefono': 'telefono', 'Direccion': 'direccion', 'RIF': 'rif'
-                };
-                
-                const n = {};
-                Object.keys(obj).forEach(k => {
-                    if (k === '_fromSync') return; // ignorar campo interno
-                    const mappedKey = mapaExplicito[k] || k.charAt(0).toLowerCase() + k.slice(1);
-                    n[mappedKey] = obj[k];
-                });
-                
-                // Convertir ID numérico a string
-                if (n.id !== undefined && n.id !== null) n.id = String(n.id);
-                
-                // Parsear campos que vienen como string JSON
-                ['items','amortizacion','pagos','productos','usos','payments','componentes','comprasItems'].forEach(campo => {
-                    if (typeof n[campo] === 'string' && (n[campo].startsWith('[') || n[campo].startsWith('{'))) {
-                        try { n[campo] = JSON.parse(n[campo]); } catch(e) { n[campo] = []; }
-                    } else if (n[campo] === undefined || n[campo] === null || n[campo] === '') {
-                        n[campo] = [];
-                    }
-                });
-                
-                // Garantizar strings en campos críticos
-                ['tipo','estado','prestamista','cliente','nombre','metodoPago','usuario'].forEach(campo => {
-                    if (n[campo] === undefined || n[campo] === null) n[campo] = '';
-                });
-                
-                return n;
+            // El Apps Script devuelve el mismo formato que el backup.
+            // Solo se parsean campos JSON que puedan llegar como string.
+            function safeParse(val, fallback) {
+                if (Array.isArray(val)) return val;
+                if (typeof val === 'string' && (val.startsWith('[') || val.startsWith('{'))) {
+                    try { return JSON.parse(val); } catch(e) { return fallback; }
+                }
+                return (val === undefined || val === null || val === '') ? fallback : val;
             }
 
-            function normalizarArray(arr, tipo) {
-                if (!Array.isArray(arr)) return [];
-                return arr.map(o => normalizarDesdeSheets(o, tipo));
+            function sanitizarRegistro(obj) {
+                if (!obj) return obj;
+                ['items','payments','amortizacion','pagos','usos','componentes'].forEach(k => {
+                    obj[k] = safeParse(obj[k], []);
+                });
+                if (obj.id !== undefined && obj.id !== null) obj.id = String(obj.id);
+                return obj;
             }
 
-            // Helper: merge por ID — agrega nuevos, actualiza existentes si remoto es más nuevo
             function mergeById(local, remotos, idField) {
                 idField = idField || 'id';
                 let cambios = 0;
+                if (!Array.isArray(remotos)) return 0;
                 remotos.forEach(r => {
-                    const rid = r[idField] || r.ID || r.id;
+                    if (!r) return;
+                    sanitizarRegistro(r);
+                    const rid = String(r[idField] || r.id || '');
                     if (!rid) return;
-                    const idx = local.findIndex(x => (x[idField]||x.ID||x.id) == rid);
+                    const idx = local.findIndex(x => String(x[idField] || x.id || '') === rid);
                     if (idx === -1) {
                         local.push(r);
                         cambios++;
                     } else {
-                        const tsR = new Date(r.modificadoEn || r.timestamp || r.fecha || 0).getTime();
-                        const tsL = new Date(local[idx].modificadoEn || local[idx].timestamp || local[idx].fecha || 0).getTime();
+                        const tsR = new Date(r.timestamp || r.modificadoEn || r.fecha || r.date || 0).getTime();
+                        const tsL = new Date(local[idx].timestamp || local[idx].modificadoEn || local[idx].fecha || local[idx].date || 0).getTime();
                         if (tsR >= tsL) { local[idx] = { ...local[idx], ...r }; cambios++; }
                     }
                 });
                 return cambios;
             }
 
-            // Ventas
-            if (updates.ventas) {
-                count += mergeById(salesData, normalizarArray(updates.ventas, 'ventas'));
+            // Ventas: id, date, customer, items, subtotal, iva, total, totalUSD, paymentMethod, documentType
+            if (updates.ventas && updates.ventas.length > 0) {
+                count += mergeById(salesData, updates.ventas);
                 localStorage.setItem('salesData', JSON.stringify(salesData));
                 loadSalesHistory && loadSalesHistory();
+                loadRecentSales && loadRecentSales();
             }
-            // Gastos
-            if (updates.gastos) {
-                count += mergeById(expensesData, normalizarArray(updates.gastos, 'gastos'));
+            // Gastos: id, date, description, invoiceNumber, amount, amountUSD, category
+            if (updates.gastos && updates.gastos.length > 0) {
+                count += mergeById(expensesData, updates.gastos);
                 localStorage.setItem('expensesData', JSON.stringify(expensesData));
                 loadExpensesHistory && loadExpensesHistory();
             }
-            // Clientes
-            if (updates.clientes) {
-                count += mergeById(clientsData, normalizarArray(updates.clientes, 'clientes'));
+            // Clientes: id, name, rif, contact, permiteCredito, diasCredito, retieneIva, retieneIslr
+            if (updates.clientes && updates.clientes.length > 0) {
+                count += mergeById(clientsData, updates.clientes);
                 localStorage.setItem('clientsData', JSON.stringify(clientsData));
                 loadClientsList && loadClientsList();
                 loadCustomerSelect && loadCustomerSelect();
             }
-            // Créditos
-            if (updates.creditos) {
-                count += mergeById(creditsData, normalizarArray(updates.creditos, 'creditos'));
+            // Créditos: id, customer, date, amount, amountUSD, paid, paidUSD, balance, balanceUSD, status, payments
+            if (updates.creditos && updates.creditos.length > 0) {
+                count += mergeById(creditsData, updates.creditos);
                 localStorage.setItem('creditsData', JSON.stringify(creditsData));
                 loadPendingCredits && loadPendingCredits();
             }
-            // Compras
-            if (updates.compras) {
-                count += mergeById(comprasData, normalizarArray(updates.compras, 'compras'));
+            // Compras: id, fecha, proveedor, factura, items, subtotalUSD, totalUSD, metodoPago, estadoPago
+            if (updates.compras && updates.compras.length > 0) {
+                count += mergeById(comprasData, updates.compras);
                 localStorage.setItem('comprasData', JSON.stringify(comprasData));
+                loadComprasHistorial && loadComprasHistorial();
+                loadComprasDashboard && loadComprasDashboard();
             }
-            // Consignaciones
-            if (updates.consignaciones) {
-                count += mergeById(consignacionesData, normalizarArray(updates.consignaciones, 'consignaciones'));
+            // Consignaciones: id, cliente, fechaEntrega, productoNombre, cantidadEntregada, estado...
+            if (updates.consignaciones && updates.consignaciones.length > 0) {
+                count += mergeById(consignacionesData, updates.consignaciones);
                 localStorage.setItem('consignacionesData', JSON.stringify(consignacionesData));
+                loadConsignacionesList && loadConsignacionesList();
             }
-            // Préstamos
-            if (updates.prestamos) {
-                count += mergeById(prestamosData, normalizarArray(updates.prestamos, 'prestamos'));
+            // Préstamos: id, prestamista, tipo, montoOriginalUSD, tasaInteres, plazoMeses, estado...
+            if (updates.prestamos && updates.prestamos.length > 0) {
+                count += mergeById(prestamosData, updates.prestamos);
                 localStorage.setItem('prestamosData', JSON.stringify(prestamosData));
+                loadPrestamosList && loadPrestamosList();
+                loadPrestamosDashboard && loadPrestamosDashboard();
             }
-            // Inventario
-            if (updates.inventario) {
-                const invNorm = normalizarArray(updates.inventario, 'inventario');
-                count += mergeById(inventoryData, invNorm, 'productoKey');
+            // Inventario: productoKey (clave), nombre, stockActual, costoPromedioUSD...
+            if (updates.inventario && updates.inventario.length > 0) {
+                count += mergeById(inventoryData, updates.inventario, 'productoKey');
                 localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
                 loadInventoryList && loadInventoryList();
+                loadInventoryDashboard && loadInventoryDashboard();
                 poblarSaleProductSelect && poblarSaleProductSelect();
             }
-            // Tasas BCV: recibir del servidor y aplicar a bcvRateHistory + campos visuales
+            // Tasas BCV
             if (updates.tasaBCV || updates.tasasBCV) {
-                if (!updates.tasaBCV) updates.tasaBCV = updates.tasasBCV;
-                // Puede venir como objeto único o como array de tasas
-                const tasasRecibidas = Array.isArray(updates.tasaBCV) ? updates.tasaBCV : [updates.tasaBCV];
+                const src = updates.tasaBCV || updates.tasasBCV;
+                const tasasRecibidas = Array.isArray(src) ? src : [src];
                 let cambiaron = false;
                 const today = new Date().toISOString().split('T')[0];
-
                 tasasRecibidas.forEach(item => {
                     const nuevaTasa = parseFloat(item.tasa);
                     const fechaTasa = item.fecha || today;
                     if (isNaN(nuevaTasa) || nuevaTasa <= 0) return;
-
-                    // Actualizar bcvRateHistory
                     const idx = bcvRateHistory.findIndex(r => r.date === fechaTasa);
                     if (idx !== -1) {
-                        if (bcvRateHistory[idx].rate !== nuevaTasa) {
-                            bcvRateHistory[idx].rate = nuevaTasa;
-                            cambiaron = true;
-                        }
+                        if (bcvRateHistory[idx].rate !== nuevaTasa) { bcvRateHistory[idx].rate = nuevaTasa; cambiaron = true; }
                     } else {
                         bcvRateHistory.push({ date: fechaTasa, rate: nuevaTasa });
                         bcvRateHistory.sort((a, b) => b.date.localeCompare(a.date));
                         cambiaron = true;
                     }
-
-                    // Si es la tasa de hoy, propagar a appConfig y campos visuales
-                    if (fechaTasa === today && item.esHoy !== false) {
-                        priceExchangeRate               = nuevaTasa;
-                        appConfig.exchangeRates.bcv      = nuevaTasa;
+                    if (fechaTasa === today) {
+                        priceExchangeRate = nuevaTasa;
+                        appConfig.exchangeRates.bcv = nuevaTasa;
                         appConfig.exchangeRates.priceRate = nuevaTasa;
                         count++;
                     }
                 });
-
                 if (cambiaron) {
                     localStorage.setItem('bcvRateHistory', JSON.stringify(bcvRateHistory));
                     localStorage.setItem('appConfig', JSON.stringify(appConfig));
-                    // Actualizar todos los campos visuales
-                    syncRateFromBCV();
+                    syncRateFromBCV && syncRateFromBCV();
                     loadManualRates && loadManualRates();
-                    loadManualExchangeRates && loadManualExchangeRates();
                     cargarHistorialTasasBCV && cargarHistorialTasasBCV();
                     loadCurrentPrices && loadCurrentPrices();
                 }
-            }
-            // Inventario: merge conservador (solo actualizar si timestamp remoto > local)
-            if (updates.inventario && syncConfig.modo !== 'solo_subir') {
-                updates.inventario.forEach(remoto => {
-                    const idx = inventoryData.findIndex(x => x.productoKey === remoto.productoKey);
-                    if (idx !== -1) {
-                        const local = inventoryData[idx];
-                        const tsRemoto = new Date(remoto.modificadoEn || 0).getTime();
-                        const tsLocal  = new Date(local.modificadoEn  || 0).getTime();
-                        if (tsRemoto > tsLocal) {
-                            inventoryData[idx] = { ...local, ...remoto };
-                            count++;
-                        }
-                    }
-                });
-                if (count > 0) {
-                    saveInventory && saveInventory();
-                    loadInventoryList && loadInventoryList();
-                }
-            }
-            // Refrescar UI en todos los módulos si llegaron datos nuevos
-            if (count > 0) {
-                setTimeout(() => {
-                    loadDashboard       && loadDashboard();
-                    loadSalesHistory    && loadSalesHistory();
-                    loadExpensesHistory && loadExpensesHistory();
-                    loadPendingCredits  && loadPendingCredits();
-                    loadClientsList     && loadClientsList();
-                    loadCustomerSelect  && loadCustomerSelect();
-                    poblarSaleProductSelect && poblarSaleProductSelect();
-                    actualizarSyncBadge && actualizarSyncBadge();
-                    console.log('[Sync] UI refrescada con', count, 'registros nuevos');
-                }, 300);
             }
             return count;
         }
@@ -9315,11 +9240,45 @@
                         loadProveedoresList();
                         actualizarDatalistProveedores();
                     } else if (tabId === 'expenses') {
+                        loadExpensesHistory();
                         actualizarDatalistProveedores();
                     } else if (tabId === 'compras') {
+                        loadComprasHistorial();
+                        loadComprasDashboard();
                         actualizarDatalistProveedores();
                     } else if (tabId === 'config') {
                         if (esAdmin()) loadUsersList();
+                    } else if (tabId === 'dashboard') {
+                        loadDashboard();
+                        loadRecentSales();
+                    } else if (tabId === 'credits') {
+                        loadPendingCredits();
+                    } else if (tabId === 'adelantos') {
+                        loadAdelantosClientes();
+                        loadAdelantosClientesList();
+                        loadAdelantosHieloList();
+                    } else if (tabId === 'inventory') {
+                        loadInventoryList();
+                        loadInventoryDashboard();
+                        loadMovimientosHistorial();
+                    } else if (tabId === 'consignaciones') {
+                        loadConsignacionesList();
+                        loadConsignacionesDashboard();
+                    } else if (tabId === 'prestamos') {
+                        loadPrestamosList();
+                        loadPrestamosDashboard();
+                    } else if (tabId === 'orders') {
+                        loadOrdersHistory();
+                        loadOrderCustomerSelect();
+                    } else if (tabId === 'clients') {
+                        loadClientsList();
+                    } else if (tabId === 'reports') {
+                        loadSalesReportClients();
+                        loadCreditReportClients();
+                    } else if (tabId === 'prices') {
+                        loadCurrentPrices();
+                        loadCurrentPricesTable();
+                        loadPriceHistory();
                     }
                 });
             });
@@ -10978,7 +10937,8 @@
         }
 
         function loadSalesHistory() {
-            const tbody = document.getElementById('sales-history');
+            if (!Array.isArray(salesData)) salesData = [];
+                        const tbody = document.getElementById('sales-history');
             const filterSelect = document.getElementById('filter-sales-client');
             tbody.innerHTML = '';
             
@@ -13786,6 +13746,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
         
         // Cargar clientes en selector de adelantos
         function loadAdelantosClientes() {
+            if (!Array.isArray(adelantosClientes)) adelantosClientes = [];
             const select = document.getElementById('adelanto-cliente');
             if (!select) return;
             
@@ -13859,6 +13820,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
 
         // Cargar lista de adelantos de clientes
         function loadAdelantosClientesList() {
+            if (!Array.isArray(adelantosClientes)) adelantosClientes = [];
             const tbody = document.getElementById('adelantos-clientes-list');
             if (!tbody) return;
             
@@ -15706,7 +15668,8 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
         function filtrarProveedores() { loadProveedoresList(); }
 
         function loadProveedoresList() {
-            const container = document.getElementById('prov-lista-container');
+            if (!Array.isArray(proveedoresData)) proveedoresData = [];
+                        const container = document.getElementById('prov-lista-container');
             if (!container) return;
 
             const busq = (document.getElementById('prov-search')?.value || '').toLowerCase();
@@ -16247,7 +16210,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 for (const c of cmDatosExcel.clientes) {
                     try {
                         if (!c.nombre) { stats.errores++; continue; }
-                        const idx = clientsData.findIndex(x => x.name.toLowerCase() === c.nombre.toLowerCase());
+                        const idx = clientsData.findIndex(x => (x.name||x.nombre||'').toLowerCase() === (c.nombre||'').toLowerCase());
                         const obj = {
                             id: idx >= 0 ? clientsData[idx].id : Date.now().toString() + Math.random().toString(36).slice(2,6),
                             name: c.nombre, rif: c.rif, contact: c.telefono, address: c.direccion,
