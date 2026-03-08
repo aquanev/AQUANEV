@@ -7161,8 +7161,9 @@
 
         function saveUsers() {
             localStorage.setItem('usersData', JSON.stringify(usersData));
-            // Sync usuarios a Google Sheets (sin PIN por seguridad)
-            if (syncConfig.activa && syncConfig.appsScriptUrl) {
+            // Sync usuarios a Google Sheets — SOLO desde admin
+            const currentUser = usersData.find(u => u.id === currentUserId);
+            if (syncConfig.activa && syncConfig.appsScriptUrl && currentUser && currentUser.rol === 'admin') {
                 const usuariosSinPin = usersData.map(u => ({
                     id:          u.id,
                     nombre:      u.nombre,
