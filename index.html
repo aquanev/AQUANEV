@@ -16581,12 +16581,21 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
         try {
             const cfg = JSON.parse(localStorage.getItem('syncConfig') || '{}');
             if (!cfg.activa || !cfg.appsScriptUrl) {
-                alert('⚠️ Sync no configurado. URL: ' + (cfg.appsScriptUrl || 'vacía'));
+                if (status) status.textContent = '⚠️ Sync no configurado';
                 return;
             }
             
-            const url = cfg.appsScriptUrl + '?accion=usuarios&ts=' + Date.now();
-            const resp = await fetch(url);
+            // Usar POST para evitar problemas CORS en móvil
+            const resp = await fetch(cfg.appsScriptUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({
+                    usuario: 'login-screen',
+                    timestamp: new Date().toISOString(),
+                    modo: 'get_usuarios',
+                    datos: {}
+                })
+            });
             const result = await resp.json();
             
             if (!result.success) {
