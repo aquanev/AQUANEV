@@ -16502,7 +16502,11 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     cambios++;
                 }
             });
-            if (cambios > 0) localStorage.setItem('usersData', JSON.stringify(usersData));
+            if (cambios > 0) {
+                localStorage.setItem('usersData', JSON.stringify(usersData));
+                // Forzar re-render inmediato
+                renderLoginUsuarios();
+            }
         } catch(e) {
             console.log('descargaUsuariosAntesLogin:', e.message);
         }
