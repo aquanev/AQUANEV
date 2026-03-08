@@ -7973,6 +7973,31 @@
             let count = 0;
             if (syncConfig.modo === 'solo_subir') return count;
 
+            // Normalizar objeto de Sheets (PascalCase → camelCase) y parsear campos JSON
+            function normalizarDesdeSheets(obj, tipo) {
+                if (!obj || typeof obj !== 'object') return obj;
+                const n = {};
+                Object.keys(obj).forEach(k => {
+                    const lk = k.charAt(0).toLowerCase() + k.slice(1);
+                    n[lk] = obj[k];
+                });
+                // Parsear campos que vienen como string JSON
+                ['items','amortizacion','pagos','productos','usos','payments','componentes'].forEach(campo => {
+                    if (typeof n[campo] === 'string') {
+                        try { n[campo] = JSON.parse(n[campo]); } catch(e) { n[campo] = []; }
+                    }
+                });
+                // Normalizar IDs
+                if (n.id === undefined && n.ID !== undefined) n.id = n.ID;
+                if (n.productoKey === undefined && n.ProductoKey !== undefined) n.productoKey = n.ProductoKey;
+                return n;
+            }
+
+            function normalizarArray(arr, tipo) {
+                if (!Array.isArray(arr)) return [];
+                return arr.map(o => normalizarDesdeSheets(o, tipo));
+            }
+
             // Helper: merge por ID — agrega nuevos, actualiza existentes si remoto es más nuevo
             function mergeById(local, remotos, idField) {
                 idField = idField || 'id';
@@ -7995,43 +8020,51 @@
 
             // Ventas
             if (updates.ventas) {
-                count += mergeById(salesData, updates.ventas);
+                count += mergeById(salesData, normalizarArray(updates.ventas, 'ventas'));
                 localStorage.setItem('salesData', JSON.stringify(salesData));
                 loadSalesHistory && loadSalesHistory();
             }
             // Gastos
             if (updates.gastos) {
-                count += mergeById(expensesData, updates.gastos);
+                count += mergeById(expensesData, normalizarArray(updates.gastos, 'gastos'));
                 localStorage.setItem('expensesData', JSON.stringify(expensesData));
                 loadExpensesHistory && loadExpensesHistory();
             }
             // Clientes
             if (updates.clientes) {
-                count += mergeById(clientsData, updates.clientes);
+                count += mergeById(clientsData, normalizarArray(updates.clientes, 'clientes'));
                 localStorage.setItem('clientsData', JSON.stringify(clientsData));
                 loadClientsList && loadClientsList();
                 loadCustomerSelect && loadCustomerSelect();
             }
             // Créditos
             if (updates.creditos) {
-                count += mergeById(creditsData, updates.creditos);
+                count += mergeById(creditsData, normalizarArray(updates.creditos, 'creditos'));
                 localStorage.setItem('creditsData', JSON.stringify(creditsData));
                 loadPendingCredits && loadPendingCredits();
             }
             // Compras
             if (updates.compras) {
-                count += mergeById(comprasData, updates.compras);
+                count += mergeById(comprasData, normalizarArray(updates.compras, 'compras'));
                 localStorage.setItem('comprasData', JSON.stringify(comprasData));
             }
             // Consignaciones
             if (updates.consignaciones) {
-                count += mergeById(consignacionesData, updates.consignaciones);
+                count += mergeById(consignacionesData, normalizarArray(updates.consignaciones, 'consignaciones'));
                 localStorage.setItem('consignacionesData', JSON.stringify(consignacionesData));
             }
             // Préstamos
             if (updates.prestamos) {
-                count += mergeById(prestamosData, updates.prestamos);
+                count += mergeById(prestamosData, normalizarArray(updates.prestamos, 'prestamos'));
                 localStorage.setItem('prestamosData', JSON.stringify(prestamosData));
+            }
+            // Inventario
+            if (updates.inventario) {
+                const invNorm = normalizarArray(updates.inventario, 'inventario');
+                count += mergeById(inventoryData, invNorm, 'productoKey');
+                localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+                loadInventoryList && loadInventoryList();
+                poblarSaleProductSelect && poblarSaleProductSelect();
             }
             // Tasas BCV: recibir del servidor y aplicar a bcvRateHistory + campos visuales
             if (updates.tasaBCV || updates.tasasBCV) {
