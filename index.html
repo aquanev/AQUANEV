@@ -150,6 +150,21 @@
             gap: 10px;
         }
         
+        /* Tablas con scroll horizontal en móvil */
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-container table {
+            min-width: 600px;
+            width: 100%;
+        }
+        
+        /* Botones móvil — ocultos en desktop */
+        .header-actions-mobile {
+            display: none;
+        }
+        
         .btn {
             padding: 10px 15px;
             border: none;
@@ -632,9 +647,26 @@
 
         @media (max-width: 768px) {
             .header-content {
-                flex-direction: column;
-                gap: 10px;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                gap: 8px;
+                flex-wrap: nowrap;
+                position: relative;
             }
+            
+            /* Ocultar botones desktop en móvil */
+            #header-actions-desktop { display: none !important; }
+            /* Mostrar botones móvil */
+            .header-actions-mobile { display: flex !important; gap: 6px; }
+            
+            /* Logo más compacto en móvil */
+            .logo h1 { font-size: 15px; }
+            .logo-subtitle { display: none; }
+            .logo i { font-size: 20px; }
+            
+            /* Badge usuario en móvil */
+            #header-user-badge { font-size: 11px; padding: 3px 8px; }
             
             .nav-tabs {
                 flex-wrap: nowrap;
@@ -656,6 +688,35 @@
                 grid-template-columns: 1fr 1fr;
             }
             
+            /* Tablas responsive en móvil */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                border-radius: 8px;
+            }
+            table {
+                min-width: 500px;
+            }
+            /* Cards de ventas más compactas */
+            .sale-card-grid {
+                grid-template-columns: 1fr !important;
+            }
+            /* Modales full screen en móvil */
+            .modal-content {
+                width: 96% !important;
+                max-width: 96% !important;
+                margin: 10px !important;
+                max-height: 92vh !important;
+            }
+            /* Stats 2 columnas en móvil */
+            .stats-grid-4 {
+                grid-template-columns: 1fr 1fr !important;
+            }
+            /* Formularios full width */
+            .form-grid-2 {
+                grid-template-columns: 1fr !important;
+            }
+
             .dollar-card {
                 min-width: 100%;
             }
@@ -966,7 +1027,7 @@
                         <span class="logo-subtitle">Comercializadora y Distribuidora de Agua</span>
                     </div>
                 </div>
-                <div class="header-actions">
+                <div class="header-actions" id="header-actions-desktop">
                     <button class="btn btn-warning" onclick="updateExchangeRates()">
                         <i class="fas fa-dollar-sign"></i> Actualizar USD
                     </button>
@@ -981,6 +1042,30 @@
                     </button>
                     <button class="btn" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3);" onclick="abrirMiPerfil()">
                         <i class="fas fa-user-cog"></i> Mi Perfil
+                    </button>
+                </div>
+                <!-- Menú móvil — ícono hamburguesa -->
+                <div class="header-actions-mobile" id="header-actions-mobile">
+                    <button class="btn" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3); padding:8px 12px;" onclick="abrirMiPerfil()">
+                        <i class="fas fa-user-cog"></i>
+                    </button>
+                    <button class="btn btn-danger" onclick="logoutB7()" style="padding:8px 12px;">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                    <button class="btn" style="background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3); padding:8px 12px;" onclick="toggleMobileMenu()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+                <!-- Menú desplegable móvil -->
+                <div id="mobile-menu-dropdown" style="display:none; position:absolute; top:70px; right:10px; background:white; border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,0.2); z-index:999; min-width:200px; overflow:hidden;">
+                    <button onclick="updateExchangeRates(); closeMobileMenu()" style="display:flex; align-items:center; gap:10px; width:100%; padding:14px 16px; border:none; background:white; cursor:pointer; font-size:14px; font-weight:600; color:#333; border-bottom:1px solid #f0f0f0;">
+                        <i class="fas fa-dollar-sign" style="color:#f39c12; width:20px;"></i> Actualizar USD
+                    </button>
+                    <button onclick="showPriceManager(); closeMobileMenu()" style="display:flex; align-items:center; gap:10px; width:100%; padding:14px 16px; border:none; background:white; cursor:pointer; font-size:14px; font-weight:600; color:#333; border-bottom:1px solid #f0f0f0;">
+                        <i class="fas fa-tags" style="color:#3498db; width:20px;"></i> Precios
+                    </button>
+                    <button onclick="downloadBackup(); closeMobileMenu()" style="display:flex; align-items:center; gap:10px; width:100%; padding:14px 16px; border:none; background:white; cursor:pointer; font-size:14px; font-weight:600; color:#333;">
+                        <i class="fas fa-download" style="color:#27ae60; width:20px;"></i> Respaldo
                     </button>
                 </div>
                 <div class="user-info">
@@ -14856,15 +14941,23 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
         // ========== FUNCIONES AUXILIARES ==========
         function formatDate(dateString) {
             if (!dateString) return 'N/A';
-            // Separar la fecha para evitar problemas de zona horaria
-            const parts = dateString.split('-');
-            if (parts.length === 3) {
-                const year = parts[0];
-                const month = parts[1];
-                const day = parts[2];
-                return day + '/' + month + '/' + year;
+            // Extraer solo la parte de fecha (antes de T si es ISO)
+            const datePart = String(dateString).split('T')[0];
+            const parts = datePart.split('-');
+            if (parts.length === 3 && parts[0].length === 4) {
+                return parts[2] + '/' + parts[1] + '/' + parts[0];
             }
-            return dateString;
+            // Intentar parsear otros formatos
+            try {
+                const d = new Date(dateString);
+                if (!isNaN(d.getTime())) {
+                    const dd = String(d.getUTCDate()).padStart(2,'0');
+                    const mm = String(d.getUTCMonth()+1).padStart(2,'0');
+                    const yy = d.getUTCFullYear();
+                    return dd + '/' + mm + '/' + yy;
+                }
+            } catch(e) {}
+            return String(dateString).substring(0, 10);
         }
         
         function formatShortDate(dateString) {
@@ -16356,6 +16449,28 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
         document.getElementById('mp-pin-nuevo').value   = '';
         document.getElementById('mp-pin-confirm').value = '';
         setTimeout(() => cerrarMiPerfil(), 1800);
+    }
+
+    // ========== MENÚ MÓVIL ==========
+    function toggleMobileMenu() {
+        const menu = document.getElementById('mobile-menu-dropdown');
+        if (!menu) return;
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        // Cerrar al hacer clic fuera
+        if (menu.style.display === 'block') {
+            setTimeout(() => {
+                document.addEventListener('click', function handler(e) {
+                    if (!menu.contains(e.target) && !e.target.closest('#header-actions-mobile')) {
+                        menu.style.display = 'none';
+                        document.removeEventListener('click', handler);
+                    }
+                });
+            }, 100);
+        }
+    }
+    function closeMobileMenu() {
+        const menu = document.getElementById('mobile-menu-dropdown');
+        if (menu) menu.style.display = 'none';
     }
 
     // ========== SYNC DE USUARIOS DESDE SHEETS ==========
