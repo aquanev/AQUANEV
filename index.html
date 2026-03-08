@@ -7974,7 +7974,7 @@
             if (syncConfig.modo === 'solo_subir') return count;
 
             // Normalizar objeto de Sheets (PascalCase → camelCase) y parsear campos JSON
-            function normalizarDesdeSheets(obj, tipo) {
+            function normalizarDesdeSheets(obj) {
                 if (!obj || typeof obj !== 'object') return obj;
                 const n = {};
                 Object.keys(obj).forEach(k => {
@@ -7982,14 +7982,22 @@
                     n[lk] = obj[k];
                 });
                 // Parsear campos que vienen como string JSON
-                ['items','amortizacion','pagos','productos','usos','payments','componentes'].forEach(campo => {
-                    if (typeof n[campo] === 'string') {
+                ['items','amortizacion','pagos','productos','usos','payments','componentes','comprasItems'].forEach(campo => {
+                    if (typeof n[campo] === 'string' && n[campo].startsWith('[')) {
                         try { n[campo] = JSON.parse(n[campo]); } catch(e) { n[campo] = []; }
+                    } else if (n[campo] === undefined || n[campo] === '') {
+                        n[campo] = [];
                     }
                 });
+                // Garantizar strings en campos críticos
+                ['tipo','estado','prestamista','cliente','nombre','rol','metodo'].forEach(campo => {
+                    if (n[campo] === undefined || n[campo] === null) n[campo] = '';
+                });
                 // Normalizar IDs
-                if (n.id === undefined && n.ID !== undefined) n.id = n.ID;
-                if (n.productoKey === undefined && n.ProductoKey !== undefined) n.productoKey = n.ProductoKey;
+                if (!n.id && n.ID) n.id = String(n.ID);
+                if (!n.productoKey && n.ProductoKey) n.productoKey = n.ProductoKey;
+                // Limpiar campo interno de sync
+                delete n._fromSync;
                 return n;
             }
 
