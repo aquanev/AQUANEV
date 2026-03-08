@@ -4826,7 +4826,7 @@
             creditsData.forEach(credit => {
                 if (credit.status === 'Pagado') return;
                 
-                const cliente = clientsData.find(c => c.name === credit.customer);
+                const cliente = clientsData.find(c => (c.name||c.nombre||'') === credit.customer);
                 if (cliente && cliente.permiteCredito && cliente.diasCredito && credit.date) {
                     const fechaBase = new Date(credit.date + 'T00:00:00');
                     fechaBase.setDate(fechaBase.getDate() + cliente.diasCredito);
@@ -5808,9 +5808,9 @@
         function poblarConsClienteSelect() {
             const sel = document.getElementById('cons-cliente');
             if (!sel) return;
-            const sorted = [...clientsData].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+            const sorted = [...clientsData].sort((a, b) => (a.name||a.nombre||'').localeCompare((b.name||b.nombre||''), 'es'));
             sel.innerHTML = '<option value="">Seleccionar cliente…</option>' +
-                sorted.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+                sorted.map(c => `<option value="${c.name||c.nombre||''}">${c.name||c.nombre||''}</option>`).join('');
         }
 
         function poblarConsProductoSelect() {
@@ -6077,7 +6077,7 @@
                     id:           ventaId,
                     date:         hoy,
                     customer:     cons.cliente,
-                    customerRif:  (clientsData.find(c => c.name === cons.cliente)?.rif) || '',
+                    customerRif:  (clientsData.find(c => (c.name||c.nombre||'') === cons.cliente)?.rif) || '',
                     items: [{
                         productKey:  cons.productoKey || 'consignacion',
                         name:        cons.productoNombre,
@@ -6103,7 +6103,7 @@
 
                 // ---- Si método es Crédito: crear registro en creditsData ----
                 if (metodoPago === 'Crédito') {
-                    const clienteData  = clientsData.find(c => c.name === cons.cliente);
+                    const clienteData  = clientsData.find(c => (c.name||c.nombre||'') === cons.cliente);
                     const diasCredito  = clienteData?.diasCredito    || 30;
                     const diasAlerta   = clienteData?.diasAlertaAntes || 3;
                     const fechaBase    = new Date(hoy + 'T00:00:00');
@@ -9793,10 +9793,10 @@
             const datalist = document.getElementById('customer-datalist');
             if (datalist) {
                 datalist.innerHTML = '';
-                const sortedClients = [...clientsData].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+                const sortedClients = [...clientsData].sort((a, b) => (a.name||a.nombre||'').localeCompare((b.name||b.nombre||''), 'es'));
                 sortedClients.forEach(client => {
                     const option = document.createElement('option');
-                    option.value = client.name;
+                    option.value = client.name||client.nombre||'';
                     datalist.appendChild(option);
                 });
             }
@@ -9904,7 +9904,7 @@
             if (documentType !== 'Factura') return;
 
             const customerName = document.getElementById('customer-name').value;
-            const client = clientsData.find(c => c.name === customerName);
+            const client = clientsData.find(c => (c.name||c.nombre||'') === customerName);
 
             // IVA solo aplica en Factura
             let subtotalSinIva = 0;
@@ -10052,7 +10052,7 @@
             const totalConIva = subtotalSinIva + ivaTotalBS;
 
             // Retenciones solo si es Factura
-            const client = clientsData.find(c => c.name === customerName);
+            const client = clientsData.find(c => (c.name||c.nombre||'') === customerName);
             let totalNeto = totalConIva;
             if (documentType === 'Factura' && client) {
                 let retencionIva  = client.retieneIva  ? ivaTotalBS * 0.75       : 0;
@@ -10634,7 +10634,7 @@
                 return;
             }
             
-            const client = clientsData.find(c => c.name === customer);
+            const client = clientsData.find(c => (c.name||c.nombre||'') === customer);
             
             // B1: Validar crédito si el método de pago es Crédito
             if (paymentMethod === 'Crédito') {
@@ -10762,7 +10762,7 @@
                 const creditAmountUSD = parseFloat((_totalUSDBase * _netoRatio).toFixed(2));
                 
                 // B1: Calcular fecha de vencimiento según cliente
-                const clienteData = clientsData.find(c => c.name === customer);
+                const clienteData = clientsData.find(c => (c.name||c.nombre||'') === customer);
                 let fechaVencimiento = null;
                 let diasAlertaAntes = 3;
                 let diasCredito = null;
@@ -12074,12 +12074,12 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             // Ordenar clientes alfabéticamente
             const sortedClients = [...clientsData].sort((a, b) => 
-                a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+                (a.name||a.nombre||'').localeCompare((b.name||b.nombre||''), 'es', { sensitivity: 'base' })
             );
             
             // Filtrar clientes por nombre completo o iniciales
             const filteredClients = sortedClients.filter(client => {
-                const nameLower = client.name.toLowerCase();
+                const nameLower = (client.name||client.nombre||'').toLowerCase();
                 
                 // Búsqueda por nombre completo
                 if (nameLower.includes(searchTerm)) {
@@ -12087,7 +12087,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 }
                 
                 // Búsqueda por iniciales
-                const words = client.name.split(' ');
+                const words = (client.name||client.nombre||'').split(' ');
                 const initials = words.map(word => word.charAt(0)).join('').toLowerCase();
                 
                 if (initials.includes(searchTerm)) {
@@ -12123,7 +12123,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 option.className = 'client-option';
                 option.innerHTML = `
                     <div>
-                        <div class="client-name">${client.name}</div>
+                        <div class="client-name">${client.name||client.nombre||''}</div>
                         ${client.contact ? `<div class="client-contact">${client.contact}</div>` : ''}
                     </div>
                 `;
@@ -12143,7 +12143,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const dropdown = document.getElementById('client-dropdown');
             const hiddenInput = document.getElementById('selected-customer-id');
             
-            searchInput.value = client.name;
+            searchInput.value = client.name||client.nombre||'';
             if (hiddenInput) {
                 hiddenInput.value = client.id;
             }
@@ -12155,7 +12155,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             tbody.innerHTML = '';
             
             // Ordenar alfabéticamente
-            const sortedClients = [...clientsData].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+            const sortedClients = [...clientsData].sort((a, b) => (a.name||a.nombre||'').localeCompare((b.name||b.nombre||''), 'es'));
             
             if (sortedClients.length === 0) {
                 tbody.innerHTML = `
@@ -12169,7 +12169,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             }
             
             sortedClients.forEach(client => {
-                const clientSales = salesData.filter(sale => sale.customer === client.name);
+                const clientSales = salesData.filter(sale => sale.customer === (client.name||client.nombre||''));
                 const totalPurchasesUSD = clientSales.reduce((sum, sale) =>
                     sum + (sale.totalUSD ?? convertBStoUSD(sale.total ?? 0)), 0);
                 const lastPurchase = clientSales.length > 0 ? clientSales[0].date : 'Nunca';
@@ -12181,7 +12181,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><strong>${client.name}</strong><br><small>${client.rif || 'Sin RIF'}</small></td>
+                    <td><strong>${client.name||client.nombre||''}</strong><br><small>${client.rif || 'Sin RIF'}</small></td>
                     <td>${client.contact || 'N/A'}</td>
                     <td>${client.permiteCredito ? `<span style="color:#4caf50; font-weight:600;">✅ ${client.diasCredito || 30} días</span>` : '<span style="color:#999;">❌ No</span>'}</td>
                     <td><small>${retencionesText}</small></td>
@@ -12206,7 +12206,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const tbody = document.getElementById('clients-list');
             tbody.innerHTML = '';
             const filteredClients = clientsData.filter(client =>
-                client.name.toLowerCase().includes(searchTerm) ||
+                (client.name||client.nombre||'').toLowerCase().includes(searchTerm) ||
                 (client.rif || '').toLowerCase().includes(searchTerm) ||
                 (client.contact || '').toLowerCase().includes(searchTerm)
             );
@@ -12216,7 +12216,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 return;
             }
             filteredClients.forEach(client => {
-                const clientSales       = salesData.filter(s => s.customer === client.name);
+                const clientSales       = salesData.filter(s => s.customer === (client.name||client.nombre||''));
                 const totalPurchasesUSD = clientSales.reduce((sum, s) =>
                     sum + (s.totalUSD ?? convertBStoUSD(s.total ?? 0)), 0);
                 const lastPurchase      = clientSales.length > 0 ? clientSales[0].date : 'Nunca';
@@ -12226,7 +12226,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 ].filter(Boolean).join(', ') || 'Ninguna';
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><strong>${client.name}</strong><br><small>${client.rif || 'Sin RIF'}</small></td>
+                    <td><strong>${client.name||client.nombre||''}</strong><br><small>${client.rif || 'Sin RIF'}</small></td>
                     <td>${client.contact || 'N/A'}</td>
                     <td>${client.permiteCredito
                         ? `<span style="color:#4caf50;font-weight:600;">&#10003; ${client.diasCredito||30} dias</span>`
@@ -12337,7 +12337,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             }
             
             // Verificar si el cliente ya existe
-            if (clientsData.some(client => client.name.toLowerCase() === name.toLowerCase())) {
+            if (clientsData.some(client => (client.name||client.nombre||'').toLowerCase() === name.toLowerCase())) {
                 alert('Ya existe un cliente con ese nombre');
                 return;
             }
@@ -12362,7 +12362,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             syncCliente(client);
             
             // Ordenar alfabéticamente
-            clientsData.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+            clientsData.sort((a, b) => (a.name||a.nombre||'').localeCompare((b.name||b.nombre||''), 'es'));
             
             localStorage.setItem('clientsData', JSON.stringify(clientsData));
             
@@ -12392,7 +12392,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const client = clientsData.find(c => c.id === clientId);
             if (!client) return;
             
-            document.getElementById('new-client-name').value = client.name;
+            document.getElementById('new-client-name').value = client.name||client.nombre||'';
             document.getElementById('new-client-rif').value = client.rif || '';
             document.getElementById('new-client-contact').value = client.contact || '';
             document.getElementById('new-client-address').value = client.address || '';
@@ -12493,7 +12493,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             localStorage.setItem('creditsData', JSON.stringify(creditsData));
             
             // Ordenar alfabéticamente
-            clientsData.sort((a, b) => a.name.localeCompare(b.name, 'es'));
+            clientsData.sort((a, b) => (a.name||a.nombre||'').localeCompare((b.name||b.nombre||''), 'es'));
             
             localStorage.setItem('clientsData', JSON.stringify(clientsData));
             
@@ -13567,12 +13567,12 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             select.innerHTML = '<option value="">Seleccionar cliente</option>';
             
-            const sortedClients = [...clientsData].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+            const sortedClients = [...clientsData].sort((a, b) => (a.name||a.nombre||'').localeCompare((b.name||b.nombre||''), 'es'));
             
             sortedClients.forEach(client => {
                 const option = document.createElement('option');
-                option.value = client.name;
-                option.textContent = client.name;
+                option.value = client.name||client.nombre||'';
+                option.textContent = client.name||client.nombre||'';
                 select.appendChild(option);
             });
         }
@@ -13793,8 +13793,8 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             clientsData.forEach(client => {
                 const option = document.createElement('option');
-                option.value = client.name;
-                option.textContent = client.name;
+                option.value = client.name||client.nombre||'';
+                option.textContent = client.name||client.nombre||'';
                 select.appendChild(option);
             });
         }
@@ -16262,7 +16262,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                         cmUpd(1);
                     } catch(e) { stats.errores++; cmLog('Error cliente: ' + e.message, 'err'); }
                 }
-                clientsData.sort((a,b) => a.name.localeCompare(b.name,'es'));
+                clientsData.sort((a,b) => (a.name||a.nombre||'').localeCompare((b.name||b.nombre||''),'es'));
                 localStorage.setItem('clientsData', JSON.stringify(clientsData));
                 cmLog('Clientes: ' + stats.clientes + ' procesados', 'ok');
                 await tick();
@@ -16274,7 +16274,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 for (const v of cmDatosExcel.ventas) {
                     try {
                         if (!v.fecha || !v.cliente) { stats.errores++; continue; }
-                        if (!clientsData.find(c => c.name.toLowerCase() === v.cliente.toLowerCase())) {
+                        if (!clientsData.find(c => (c.name||c.nombre||'').toLowerCase() === v.cliente.toLowerCase())) {
                             clientsData.push({ id: Date.now().toString()+Math.random().toString(36).slice(2,6),
                                 name:v.cliente, rif:'N/A', contact:'', address:'',
                                 retieneIva:false, retieneIslr:false, tipoCliente:'natural',
