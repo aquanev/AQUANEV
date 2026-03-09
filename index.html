@@ -8076,8 +8076,8 @@
                 poblarSaleProductSelect && poblarSaleProductSelect();
             }
             // Tasas BCV
-            if (updates.tasaBCV || updates.tasasBCV) {
-                const src = updates.tasaBCV || updates.tasasBCV;
+            if (updates.tasaBCV || updates.tasasBCV || updates.tasasbcv) {
+                const src = updates.tasaBCV || updates.tasasBCV || updates.tasasbcv;
                 const tasasRecibidas = Array.isArray(src) ? src : [src];
                 let cambiaron = false;
                 const today = new Date().toISOString().split('T')[0];
