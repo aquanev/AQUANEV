@@ -4958,6 +4958,7 @@
 
         // ---- Lista de productos de inventario (tarjetas) ----
         function loadInventoryList() {
+            if (!Array.isArray(inventoryData)) inventoryData = [];
             loadInventoryDashboard();
             const container = document.getElementById('inventory-cards');
             const filtro = document.getElementById('inv-filter')?.value || 'todos';
@@ -5021,7 +5022,7 @@
                         </div>
                         <div style="background:#f8f9fa; padding:6px 10px; border-radius:6px;">
                             <div style="color:#888; font-size:11px;">VALOR STOCK</div>
-                            <div style="font-weight:600; color:#667eea;">$${valorItem.toFixed(2)}</div>
+                            <div style="font-weight:600; color:#667eea;">$${(parseFloat(valorItem)||0).toFixed(2)}</div>
                         </div>
                         ${margen !== null ? `
                         <div style="background:#f8f9fa; padding:6px 10px; border-radius:6px;">
@@ -6826,7 +6827,7 @@
             currentPrestId = prestId;
 
             document.getElementById('prest-amort-title').textContent =
-                `📋 ${p.prestamista} - ${p.plazoMeses} cuotas de $${p.cuotaMensualUSD.toFixed(2)}`;
+                `📋 ${p.prestamista} - ${p.plazoMeses} cuotas de $${(parseFloat(p.cuotaMensualUSD)||0).toFixed(2)}`;
 
             const hoy        = new Date().toISOString().split('T')[0];
             const pagadas    = (p.amortizacion || []).filter(c => c.estado === 'pagado').length;
@@ -7111,7 +7112,7 @@
                 const vencidaCuota = proximaCuota && proximaCuota.vencimiento < hoy;
                 const proximaInfo  = proximaCuota
                     ? `<div style="font-size:12px; color:${vencidaCuota ? '#f44336' : '#e65100'}; margin-top:4px;">
-                           ${vencidaCuota ? '🔴 Cuota vencida' : '⏰ Próxima cuota'}: #${proximaCuota.numero} - $${proximaCuota.cuotaUSD.toFixed(2)} · ${proximaCuota.vencimiento}
+                           ${vencidaCuota ? '🔴 Cuota vencida' : '⏰ Próxima cuota'}: #${proximaCuota.numero} - $${(parseFloat(proximaCuota.cuotaUSD)||0).toFixed(2)} · ${proximaCuota.vencimiento}
                        </div>`
                     : p.estado === 'activo' ? '<div style="font-size:12px; color:#4caf50; margin-top:4px;">✅ Todas las cuotas al día</div>' : '';
 
@@ -7126,7 +7127,7 @@
                         <div style="text-align:right;">
                             <div style="font-size:11px; font-weight:600; color:${color}; background:${color}18; padding:2px 10px; border-radius:20px;">${label}</div>
                             <div style="font-size:18px; font-weight:700; color:#f44336; margin-top:4px;">$${(p.saldoPendienteUSD||0).toFixed(2)}</div>
-                            <div style="font-size:11px; color:#888;">pendiente de $${p.montoOriginalUSD.toFixed(2)}</div>
+                            <div style="font-size:11px; color:#888;">pendiente de $${(parseFloat(p.montoOriginalUSD)||0).toFixed(2)}</div>
                         </div>
                     </div>
 
@@ -7144,7 +7145,7 @@
                     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(100px,1fr)); gap:8px; font-size:12px; margin-bottom:10px;">
                         <div style="background:#f8f9fa; padding:6px 8px; border-radius:6px;">
                             <div style="color:#888;">CUOTA/MES</div>
-                            <div style="font-weight:600;">$${p.cuotaMensualUSD.toFixed(2)}</div>
+                            <div style="font-weight:600;">$${(parseFloat(p.cuotaMensualUSD)||0).toFixed(2)}</div>
                         </div>
                         <div style="background:#f8f9fa; padding:6px 8px; border-radius:6px;">
                             <div style="color:#888;">DESEMBOLSO</div>
@@ -8072,10 +8073,16 @@
             }
             // Préstamos: id, prestamista, tipo, montoOriginalUSD, tasaInteres, plazoMeses, estado...
             if (updates.prestamos && updates.prestamos.length > 0) {
-                count += mergeById(prestamosData, updates.prestamos);
-                localStorage.setItem('prestamosData', JSON.stringify(prestamosData));
-                loadPrestamosList && loadPrestamosList();
-                loadPrestamosDashboard && loadPrestamosDashboard();
+                const tiposValidos = ['persona','banco','empresa'];
+                const prestamosSanos = updates.prestamos
+                    .filter(p => p && p.prestamista && tiposValidos.includes(String(p.tipo||'')))
+                    .map(p => ({ ...p, tipo: String(p.tipo) }));
+                if (prestamosSanos.length > 0) {
+                    count += mergeById(prestamosData, prestamosSanos);
+                    localStorage.setItem('prestamosData', JSON.stringify(prestamosData));
+                    loadPrestamosList && loadPrestamosList();
+                    loadPrestamosDashboard && loadPrestamosDashboard();
+                }
             }
             // Inventario: productoKey (clave), nombre, stockActual, costoPromedioUSD...
             if (updates.inventario && updates.inventario.length > 0) {
@@ -9240,10 +9247,9 @@
                     // Cargar datos específicos de la pestaña
                     if (tabId === 'sales') {
                         loadProductsList();
+                        poblarSaleProductSelect && poblarSaleProductSelect();
                     } else if (tabId === 'ecuador') {
                         loadEcuadorView();
-                    } else if (tabId === 'sales') {
-                        poblarSaleProductSelect();
                     } else if (tabId === 'cargador') {
                         // cargador masivo - no necesita precarga
                     } else if (tabId === 'proveedores') {
@@ -9511,12 +9517,12 @@
 
             for (const [key, product] of Object.entries(products)) {
                 const priceUSD = waterPrices[key]?.priceUSD || 0;
-                const priceBS = priceUSD * priceExchangeRate;
+                const priceBS = priceUSD * (parseFloat(priceExchangeRate) || 0);
                 const hasIva = waterPrices[key]?.hasIva || false;
                 
                 const displayPrice = currentCurrencyDisplay === 'usd' ? 
-                    `$${priceUSD.toFixed(2)} USD` : 
-                    `${priceBS.toFixed(2)} BS`;
+                    `$${(parseFloat(priceUSD)||0).toFixed(2)} USD` : 
+                    `${(parseFloat(priceBS)||0).toFixed(2)} BS`;
                 
                 const statCard = document.createElement('div');
                 statCard.className = 'stat-card';
@@ -9527,8 +9533,8 @@
                     </div>
                     <div class="stat-value">${displayPrice}</div>
                     ${currentCurrencyDisplay === 'usd' ? 
-                        `<div class="stat-desc">${priceBS.toFixed(2)} BS</div>` : 
-                        `<div class="stat-desc">$${priceUSD.toFixed(2)} USD</div>`
+                        `<div class="stat-desc">${(parseFloat(priceBS)||0).toFixed(2)} BS</div>` : 
+                        `<div class="stat-desc">$${(parseFloat(priceUSD)||0).toFixed(2)} USD</div>`
                     }
                 `;
                 container.appendChild(statCard);
@@ -9562,8 +9568,8 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${displayName}</td>
-                    <td>$${priceUSD.toFixed(2)}</td>
-                    <td>${priceBS.toFixed(2)} BS</td>
+                    <td>$${(parseFloat(priceUSD)||0).toFixed(2)}</td>
+                    <td>${(parseFloat(priceBS)||0).toFixed(2)} BS</td>
                     <td>${hasIva ? 'Sí' : 'No'}</td>
                     <td>${formatDate(lastUpdate)}</td>
                     <td>
@@ -10575,7 +10581,7 @@
             document.getElementById('subtotal-amount').textContent = subtotalBS.toFixed(2) + ' BS';
             document.getElementById('iva-amount').textContent = ivaTotalBS.toFixed(2) + ' BS';
             document.getElementById('total-amount').textContent = totalBS.toFixed(2) + ' BS';
-            document.getElementById('total-usd').textContent = totalUSD.toFixed(2) + ' USD';
+            document.getElementById('total-usd').textContent = (parseFloat(totalUSD)||0).toFixed(2) + ' USD';
             document.getElementById('iva-percentage-display').textContent = aplicaIva ? ivaPercentage : '0 (N/A)';
             
             totalContainer.style.display = 'block';
@@ -10795,6 +10801,9 @@
 
         // ========== DASHBOARD Y REPORTES ==========
         function loadDashboard() {
+            if (!Array.isArray(salesData))   salesData   = [];
+            if (!Array.isArray(expensesData)) expensesData = [];
+            if (!Array.isArray(creditsData))  creditsData  = [];
             const today = new Date().toISOString().split('T')[0];
 
             const todaySales      = salesData.filter(sale => sale.date === today);
@@ -10818,11 +10827,11 @@
             const dailyBalanceUSD = todayIncomeUSD - todayExpensesUSD;
 
             document.getElementById('today-sales').textContent    = todaySalesCount;
-            document.getElementById('today-income').textContent   = '$' + todayIncomeUSD.toFixed(2);
-            document.getElementById('today-expenses').textContent = '$' + todayExpensesUSD.toFixed(2);
+            document.getElementById('today-income').textContent   = '$' + (isNaN(todayIncomeUSD) ? '0.00' : todayIncomeUSD.toFixed(2));
+            document.getElementById('today-expenses').textContent = '$' + (isNaN(todayExpensesUSD) ? '0.00' : todayExpensesUSD.toFixed(2));
 
             const balEl = document.getElementById('daily-balance');
-            balEl.textContent = '$' + dailyBalanceUSD.toFixed(2);
+            balEl.textContent = '$' + (isNaN(dailyBalanceUSD) ? '0.00' : dailyBalanceUSD.toFixed(2));
             balEl.style.color = dailyBalanceUSD >= 0 ? '#2e7d32' : '#f44336';
 
             // ---- META DE VENTA DIARIA ----
@@ -10871,10 +10880,10 @@
             const raw = (incomeUSD / metaUSD) * 100;  // sin límite para mostrar superación
 
             // Labels fijos
-            if (lbl1) lbl1.textContent = '$' + metaUSD.toFixed(2);
+            if (lbl1) lbl1.textContent = '$' + (parseFloat(metaUSD)||0).toFixed(2);
             if (lbl2) lbl2.textContent = '$' + metaUSD;
 
-            usdEl.textContent  = '$' + incomeUSD.toFixed(2);
+            usdEl.textContent  = '$' + (parseFloat(incomeUSD)||0).toFixed(2);
             pctEl.textContent  = Math.round(raw) + '%';
             barra.style.width  = pct + '%';
 
@@ -11569,6 +11578,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
 
         // ========== FUNCIONES DE CARGA DE DATOS ==========
         function loadExpensesHistory() {
+            if (!Array.isArray(expensesData)) expensesData = [];
             const tbody = document.getElementById('expenses-history');
             tbody.innerHTML = '';
             
@@ -11586,7 +11596,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const mostrarTodosG = tbody.dataset.showAll === '1';
             const expVis = mostrarTodosG ? expensesData : expensesData.slice(0, 10);
             expVis.forEach(expense => {
-                const totalUSD    = expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0);
+                const totalUSD    = parseFloat(expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0)) || 0;
                 const invoiceInfo = expense.invoiceNumber ? `<br><small>Fact. ${expense.invoiceNumber}</small>` : '';
                 const ivaInfo     = (expense.iva && expense.iva > 0) ? ` | IVA: ${expense.iva}%` : ' | Sin IVA';
 
@@ -11594,7 +11604,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 let extraDetail = '';
                 if (expense.category === 'Compras' && expense.comprasItems?.length) {
                     const itemsList = expense.comprasItems.map(it =>
-                        `<div style="font-size:11px;color:#2e7d32;">• ${it.cantidad} × ${it.nombre} @ $${it.costoUnitarioUSD.toFixed(2)} = $${it.subtotalUSD.toFixed(2)}</div>`
+                        `<div style="font-size:11px;color:#2e7d32;">• ${it.cantidad} × ${it.nombre} @ $${(parseFloat(it.costoUnitarioUSD)||0).toFixed(2)} = $${(parseFloat(it.subtotalUSD)||0).toFixed(2)}</div>`
                     ).join('');
                     extraDetail = `<div style="margin-top:4px;background:#f1f8e9;border-radius:4px;padding:4px 6px;">${itemsList}</div>`;
                 } else if (expense.category === 'Crédito' && expense.creditoRef) {
@@ -11625,7 +11635,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     <td>${formatDate(expense.date)}</td>
                     <td><strong>${expense.description}</strong>${expense.supplier ? '<br><small style="color:#888;">🏭 '+expense.supplier+'</small>' : ''}${invoiceInfo}${extraDetail}</td>
                     <td>${categoryBadge}</td>
-                    <td><strong>$${totalUSD.toFixed(2)} USD</strong>${(expense.iva > 0) ? `<br><small>IVA ${expense.iva}%</small>` : '<br><small style="color:#9e9e9e;">Sin IVA</small>'}</td>
+                    <td><strong>$${(parseFloat(totalUSD)||0).toFixed(2)} USD</strong>${(expense.iva > 0) ? `<br><small>IVA ${expense.iva}%</small>` : '<br><small style="color:#9e9e9e;">Sin IVA</small>'}</td>
                     <td><small>${expense.documentType || 'N/A'}</small></td>
                     <td>
                         <button class="btn btn-small btn-danger" onclick="deleteExpense(${expense.id})" title="Eliminar">
@@ -11684,6 +11694,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
         }
         
         function loadOrdersHistory() {
+            if (!Array.isArray(ordersData)) ordersData = [];
             const tbody = document.getElementById('orders-history');
             tbody.innerHTML = '';
             
@@ -11824,6 +11835,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
         function fmtUSD(n) { return '$' + parseFloat(n || 0).toFixed(2); }
 
         function loadPendingCredits() {
+            if (!Array.isArray(creditsData)) creditsData = [];
             const tbody = document.getElementById('pending-credits');
             tbody.innerHTML = '';
             
@@ -12121,6 +12133,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
         }
         
         function loadClientsList() {
+            if (!Array.isArray(clientsData)) clientsData = [];
             const tbody = document.getElementById('clients-list');
             tbody.innerHTML = '';
             
@@ -13488,7 +13501,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             }
             
             filteredExpenses.forEach(expense => {
-                const totalUSD    = expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0);
+                const totalUSD    = parseFloat(expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0)) || 0;
                 const invoiceInfo = expense.invoiceNumber ? `<br><small>Fact. ${expense.invoiceNumber}</small>` : '';
 
                 let extraDetail = '';
@@ -13518,7 +13531,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     <td>${formatDate(expense.date)}</td>
                     <td><strong>${expense.description}</strong>${invoiceInfo}${extraDetail}</td>
                     <td>${categoryBadge}</td>
-                    <td><strong>$${totalUSD.toFixed(2)} USD</strong>${(expense.iva > 0) ? `<br><small>IVA ${expense.iva}%</small>` : '<br><small style="color:#9e9e9e;">Sin IVA</small>'}</td>
+                    <td><strong>$${(parseFloat(totalUSD)||0).toFixed(2)} USD</strong>${(expense.iva > 0) ? `<br><small>IVA ${expense.iva}%</small>` : '<br><small style="color:#9e9e9e;">Sin IVA</small>'}</td>
                     <td><small>${expense.documentType || 'N/A'}</small></td>
                     <td>
                         <button class="btn btn-small btn-danger" onclick="deleteExpense(${expense.id})" title="Eliminar">
@@ -14139,8 +14152,8 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     'Tipo Documento':     sale.documentType || 'N/A',
                     'Productos':          products,
                     'Base Imponible USD': baseUSD.toFixed(2),
-                    'IVA USD':            ivaUSD.toFixed(2),
-                    'Total con IVA USD':  totalUSD.toFixed(2),
+                    'IVA USD':            (parseFloat(ivaUSD)||0).toFixed(2),
+                    'Total con IVA USD':  (parseFloat(totalUSD)||0).toFixed(2),
                     'Retención IVA USD':  retIvaUSD.toFixed(2),
                     'Retención ISLR USD': retIsUSD.toFixed(2),
                     'Total Neto USD':     netoUSD.toFixed(2),
@@ -14178,7 +14191,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             filteredExpenses.forEach(expense => {
                 const ivaPercent = expense.iva || 16;
-                const totalUSD   = expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0);
+                const totalUSD   = parseFloat(expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0)) || 0;
                 const baseUSD    = totalUSD / (1 + ivaPercent / 100);
                 const ivaUSD     = totalUSD - baseUSD;
                 
@@ -14190,8 +14203,8 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     'Categoría':      expense.category,
                     'Base USD':       baseUSD.toFixed(2),
                     'IVA %':          ivaPercent,
-                    'IVA USD':        ivaUSD.toFixed(2),
-                    'Total USD':      totalUSD.toFixed(2)
+                    'IVA USD':        (parseFloat(ivaUSD)||0).toFixed(2),
+                    'Total USD':      (parseFloat(totalUSD)||0).toFixed(2)
                 });
             });
             
@@ -14372,7 +14385,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             const exportData = filteredExpenses.map(expense => {
                 const ivaPercent = expense.iva || 16;
-                const totalUSD   = expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0);
+                const totalUSD   = parseFloat(expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0)) || 0;
                 const baseUSD    = parseFloat((totalUSD / (1 + ivaPercent / 100)).toFixed(2));
                 const ivaUSD     = parseFloat((totalUSD - baseUSD).toFixed(2));
                 const adelUSD    = expense.adelantoUsado
@@ -14509,7 +14522,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 hasData = true;
                 const expensesExport = filteredExpenses.map(expense => {
                     const ivaPercent = expense.iva || 16;
-                    const totalUSD   = expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0);
+                    const totalUSD   = parseFloat(expense.amountUSD ?? convertBStoUSD(expense.amount ?? 0)) || 0;
                     const baseUSD    = parseFloat((totalUSD / (1 + ivaPercent / 100)).toFixed(2));
                     return {
                         'Fecha':       expense.date,
