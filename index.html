@@ -4515,11 +4515,21 @@
         let priceHistory = JSON.parse(localStorage.getItem('priceHistory')) || [];
         let currentSaleItems = [];
         let ivaPercentage = parseFloat(localStorage.getItem('ivaPercentage')) || 16;
-        let priceExchangeRate = appConfig.exchangeRates.priceRate;
-        let currentCurrencyDisplay = 'bs';
         
         // Sistema de historial de tasas BCV
         let bcvRateHistory = JSON.parse(localStorage.getItem('bcvRateHistory')) || [];
+
+        // Tomar tasa más reciente del historial si existe
+        if (bcvRateHistory.length > 0) {
+            const ultimaTasa = [...bcvRateHistory].sort((a,b) => b.date.localeCompare(a.date))[0];
+            if (ultimaTasa && ultimaTasa.rate > 0) {
+                appConfig.exchangeRates.bcv = ultimaTasa.rate;
+                appConfig.exchangeRates.priceRate = ultimaTasa.rate;
+            }
+        }
+
+        let priceExchangeRate = appConfig.exchangeRates.priceRate;
+        let currentCurrencyDisplay = 'bs';
 
         // ========== B2: DATOS DE INVENTARIO ==========
         let inventoryData   = JSON.parse(localStorage.getItem('inventoryData'))   || [];
