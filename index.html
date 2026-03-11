@@ -4613,10 +4613,125 @@
         let proveedoresData = JSON.parse(localStorage.getItem('proveedoresData')) || [];
         function saveProveedores() { localStorage.setItem('proveedoresData', JSON.stringify(proveedoresData)); }
 
-        let syncQueue    = JSON.parse(localStorage.getItem('syncQueue'))    || [];   // [{id,tabla,accion,datos,timestamp,intentos}]
+        let syncQueue    = [];   // caché en memoria — fuente real es IndexedDB
         let syncLog      = JSON.parse(localStorage.getItem('syncLog'))      || [];   // [{timestamp,usuario,accion,tabla,enviados,recibidos,errores,msg}]
         let syncTimer    = null;   // setInterval handle
         let syncEnCurso  = false;
+
+        // ========== INDEXED DB — COLA PERSISTENTE ==========
+        const IDB_NAME    = 'aquanev_db';
+        const IDB_VERSION = 1;
+        const IDB_STORE   = 'syncQueue';
+        let   _idb        = null;   // instancia abierta
+
+        function abrirIDB() {
+            return new Promise((resolve, reject) => {
+                if (_idb) { resolve(_idb); return; }
+                const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+                req.onupgradeneeded = e => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(IDB_STORE)) {
+                        const store = db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+                        store.createIndex('intentos', 'intentos', { unique: false });
+                    }
+                };
+                req.onsuccess = e => { _idb = e.target.result; resolve(_idb); };
+                req.onerror   = e => {
+                    console.warn('[IDB] Error al abrir:', e.target.error);
+                    reject(e.target.error);
+                };
+            });
+        }
+
+        async function idbGuardarItem(item) {
+            try {
+                const db = await abrirIDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(IDB_STORE, 'readwrite');
+                    tx.objectStore(IDB_STORE).put(item);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror    = e => reject(e.target.error);
+                });
+            } catch(e) {
+                // Fallback: si IDB falla, mantener solo en memoria
+                console.warn('[IDB] Fallback memoria:', e);
+            }
+        }
+
+        async function idbEliminarItems(ids) {
+            try {
+                const db = await abrirIDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(IDB_STORE, 'readwrite');
+                    const store = tx.objectStore(IDB_STORE);
+                    ids.forEach(id => store.delete(id));
+                    tx.oncomplete = () => resolve();
+                    tx.onerror    = e => reject(e.target.error);
+                });
+            } catch(e) {
+                console.warn('[IDB] Error eliminando:', e);
+            }
+        }
+
+        async function idbActualizarItem(item) {
+            try {
+                const db = await abrirIDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(IDB_STORE, 'readwrite');
+                    tx.objectStore(IDB_STORE).put(item);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror    = e => reject(e.target.error);
+                });
+            } catch(e) {
+                console.warn('[IDB] Error actualizando:', e);
+            }
+        }
+
+        async function idbCargarTodos() {
+            try {
+                const db = await abrirIDB();
+                return new Promise((resolve, reject) => {
+                    const tx    = db.transaction(IDB_STORE, 'readonly');
+                    const req   = tx.objectStore(IDB_STORE).getAll();
+                    req.onsuccess = e => resolve(e.target.result || []);
+                    req.onerror   = e => reject(e.target.error);
+                });
+            } catch(e) {
+                console.warn('[IDB] Error cargando:', e);
+                return [];
+            }
+        }
+
+        async function idbLimpiarTodos() {
+            try {
+                const db = await abrirIDB();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction(IDB_STORE, 'readwrite');
+                    tx.objectStore(IDB_STORE).clear();
+                    tx.oncomplete = () => resolve();
+                    tx.onerror    = e => reject(e.target.error);
+                });
+            } catch(e) {
+                console.warn('[IDB] Error limpiando:', e);
+            }
+        }
+
+        // Cargar cola desde IDB al iniciar — sincroniza memoria con IDB
+        async function inicializarColaIDB() {
+            // Migrar items existentes en localStorage a IDB (solo primera vez)
+            const legacy = JSON.parse(localStorage.getItem('syncQueue') || '[]');
+            if (legacy.length > 0) {
+                console.log('[IDB] Migrando', legacy.length, 'items de localStorage a IDB');
+                for (const item of legacy) {
+                    await idbGuardarItem(item);
+                }
+                localStorage.removeItem('syncQueue');
+            }
+            syncQueue = await idbCargarTodos();
+            console.log('[IDB] Cola cargada:', syncQueue.length, 'items');
+            actualizarSyncBadge && actualizarSyncBadge();
+        }
+        // ========== FIN INDEXED DB ==========
         
         // Función para obtener tasa BCV de una fecha específica
         function getBCVRateForDate(date) {
@@ -4694,6 +4809,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             registrarServiceWorker(); // B9: PWA
             initializeApp();
+            // Inicializar cola IDB (migra localStorage → IDB si hay items legacy)
+            inicializarColaIDB();
             // Descargar usuarios de Sheets ANTES del login para sincronizar entre dispositivos
             descargaUsuariosAntesLogin().then(() => renderLoginUsuarios());
         });
@@ -7783,7 +7900,7 @@
 
         // ---- Persistencia ----
         function saveSyncConfig()  { localStorage.setItem('syncConfig', JSON.stringify(syncConfig)); }
-        function saveSyncQueue()   { localStorage.setItem('syncQueue',  JSON.stringify(syncQueue));  }
+        function saveSyncQueue()   { /* IDB maneja persistencia — no-op para compatibilidad */ }
         function saveSyncLog()     { localStorage.setItem('syncLog',    JSON.stringify(syncLog));    }
 
         // ---- Encolar operación para sync ----
@@ -7799,7 +7916,7 @@
                 error:     null
             };
             syncQueue.push(entry);
-            saveSyncQueue();
+            idbGuardarItem(entry);   // ← persiste en IDB, sobrevive a limpieza de caché
             actualizarSyncBadge();
             // Disparar sync en 2s si hay conexión y no está en curso
             if (syncConfig.activa && syncConfig.appsScriptUrl && !syncEnCurso) {
@@ -7944,7 +8061,7 @@
                     // Marcar como sincronizados
                     const idsEnviados = new Set(pendientes.map(e => e.id));
                     syncQueue = syncQueue.filter(e => !idsEnviados.has(e.id));
-                    saveSyncQueue();
+                    idbEliminarItems([...idsEnviados]);   // ← eliminar de IDB
 
                     // Procesar actualizaciones recibidas
                     let recibidos = 0;
@@ -7980,9 +8097,12 @@
                 // Incrementar intentos en los fallidos
                 pendientes.forEach(e => {
                     const q = syncQueue.find(x => x.id === e.id);
-                    if (q) { q.intentos++; q.error = err.message; }
+                    if (q) {
+                        q.intentos++;
+                        q.error = err.message;
+                        idbActualizarItem(q);   // ← persistir intentos en IDB
+                    }
                 });
-                saveSyncQueue();
 
                 logEntry.errores = 1;
                 logEntry.msg     = `❌ Error: ${err.message}`;
@@ -8231,9 +8351,18 @@
                 ? `Hay ${fallidas} entradas fallidas (3 intentos) y ${syncQueue.length - fallidas} pendientes.\n¿Qué deseas hacer?`
                 : `Hay ${syncQueue.length} entradas pendientes de sync.\n¿Limpiar toda la cola?`;
             if (!confirm(msg)) return;
-            syncQueue = syncQueue.filter(e => e.intentos < 3 && fallidas > 0);
-            if (fallidas === 0) syncQueue = [];
-            saveSyncQueue();
+
+            if (fallidas === 0) {
+                // Limpiar todo
+                const ids = syncQueue.map(e => e.id);
+                syncQueue = [];
+                idbEliminarItems(ids);
+            } else {
+                // Solo limpiar fallidas
+                const fallidas_ids = syncQueue.filter(e => e.intentos >= 3).map(e => e.id);
+                syncQueue = syncQueue.filter(e => e.intentos < 3);
+                idbEliminarItems(fallidas_ids);
+            }
             loadSyncQueueDisplay();
             actualizarSyncBadge();
         }
