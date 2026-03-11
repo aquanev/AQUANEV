@@ -4968,8 +4968,7 @@
                 
                 const cliente = clientsData.find(c => (c.name||c.nombre||'') === credit.customer);
                 if (cliente && cliente.permiteCredito && cliente.diasCredito && credit.date) {
-                    const fechaRaw = (credit.date || '').includes('T') ? credit.date.substring(0, 10) : credit.date;
-                    const fechaBase = new Date(fechaRaw + 'T00:00:00');
+                    const fechaBase = new Date(credit.date + 'T00:00:00');
                     fechaBase.setDate(fechaBase.getDate() + cliente.diasCredito);
                     const nuevaFecha = fechaBase.toISOString().split('T')[0];
                     
@@ -16770,11 +16769,14 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     });
                     cambios++;
                 } else {
-                    existing.nombre  = u.nombre || u.Nombre || existing.nombre;
-                    existing.email   = u.email  || u.Email  || existing.email;
-                    existing.activo  = u.activo === 'Sí' || u.activo === true || u.activo !== 'No';
-                    cambios++;
-                }
+    			existing.nombre      = u.nombre || u.Nombre || existing.nombre;
+    			existing.email       = u.email  || u.Email  || existing.email;
+    			existing.activo      = u.activo === 'Sí' || u.activo === true || u.activo !== 'No';
+   			existing.rol         = (u.rol || u.Rol || existing.rol).toLowerCase();
+    			existing.dispositivo = (u.dispositivo || u.Dispositivo || existing.dispositivo).toLowerCase();
+    			if (u.pin) existing.pin = String(u.pin);
+    			cambios++;
+		}
             });
             if (cambios > 0) {
                 localStorage.setItem('usersData', JSON.stringify(usersData));
