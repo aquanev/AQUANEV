@@ -4968,7 +4968,8 @@
                 
                 const cliente = clientsData.find(c => (c.name||c.nombre||'') === credit.customer);
                 if (cliente && cliente.permiteCredito && cliente.diasCredito && credit.date) {
-                    const fechaBase = new Date(credit.date + 'T00:00:00');
+                    const fechaRaw = (credit.date || '').includes('T') ? credit.date.substring(0, 10) : credit.date;
+                    const fechaBase = new Date(fechaRaw + 'T00:00:00');
                     fechaBase.setDate(fechaBase.getDate() + cliente.diasCredito);
                     const nuevaFecha = fechaBase.toISOString().split('T')[0];
                     
