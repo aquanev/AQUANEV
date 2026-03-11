@@ -8165,7 +8165,12 @@
             }
             // Clientes: id, name, rif, contact, permiteCredito, diasCredito, retieneIva, retieneIslr
             if (updates.clientes && updates.clientes.length > 0) {
-                count += mergeById(clientsData, updates.clientes);
+    		const clientesNormalizados = updates.clientes.map(c => ({
+        	   ...c,
+        	   nombre: c.nombre || c.Nombre || c.name || '',
+        	   rif:    c.rif    || c.RIF    || '',
+    		}));
+    		count += mergeById(clientsData, clientesNormalizados);
                 localStorage.setItem('clientsData', JSON.stringify(clientsData));
                 loadClientsList && loadClientsList();
                 loadCustomerSelect && loadCustomerSelect();
