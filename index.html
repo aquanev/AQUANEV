@@ -7319,28 +7319,12 @@
             try {
                 const cu = usersData.find(u => u.id === (currentUser ? currentUser.id : ''));
                 if (syncConfig && syncConfig.activa && syncConfig.appsScriptUrl && cu && cu.rol === 'admin') {
-                    const usuariosSinPin = usersData.map(u => ({
-                        id:          u.id,
-                        nombre:      u.nombre,
-                        email:       u.email || '',
-                        rol:         u.rol,
-                        dispositivo: u.dispositivo,
-                        activo:      u.activo,
-                        ultimaLogin: u.ultimaLogin || '',
-                        creadoEn:    u.creadoEn || new Date().toISOString()
-                    }));
                     setTimeout(() => {
-                        fetch(syncConfig.appsScriptUrl, {
-                            method:  'POST',
-                            headers: { 'Content-Type': 'text/plain' },
-                            body:    JSON.stringify({
-                                usuario:   getCurrentUserId(),
-                                timestamp: new Date().toISOString(),
-                                modo:      'solo_subir',
-                                datos:     { usuarios: usuariosSinPin }
-                            })
-                        }).catch(e => console.log('Sync usuarios:', e.message));
-                    }, 2000);
+    			if (currentUser) {
+        		    const u = usersData.find(x => x.id === currentUser.id);
+        		    if (u) encolarSync('usuarios', 'upsert', u);
+    			}
+		    }, 2000);
                 }
             } catch(e) { console.log('saveUsers sync error:', e.message); }
         }
