@@ -955,6 +955,19 @@
     })();
     </script>
 
+    <script>
+    function generarId() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+    </script>
+
     <!-- B10: Pull-to-refresh indicator -->
     <div id="ptr-indicator">↓ Suelta para sincronizar</div>
     <!-- B10: Conexión lenta -->
@@ -4884,7 +4897,7 @@
         // ---- Registrar movimiento ----
         function registrarMovimiento(productoKey, tipo, cantidad, stockAnterior, stockNuevo, referencia) {
             movimientosData.unshift({
-                id: Date.now().toString(),
+                id: generarId(),
                 fecha: new Date().toISOString().split('T')[0],
                 tipo: tipo, // 'compra' | 'venta' | 'ajuste'
                 productoKey: productoKey,
@@ -5177,7 +5190,7 @@
                 inventoryData[idx].estado = est.estado;
             } else {
                 // Nuevo producto
-                const key = 'inv_' + Date.now();
+                const key = generarId();
                 // Verificar que no haya otro vinculado al mismo producto de venta
                 if (vinculadoA && inventoryData.some(i => i.vinculadoA === vinculadoA)) {
                     if (!confirm(`Ya existe un producto vinculado a "${vinculadoA}". ¿Deseas continuar de todas formas?`)) return;
@@ -5542,7 +5555,7 @@
 
             const totalUSD = cItems.reduce((s, i) => s + i.subtotalUSD, 0);
             const compra = {
-                id: Date.now().toString(),
+                id: generarId(),
                 fecha,
                 proveedor,
                 factura:       document.getElementById('c-factura').value.trim(),
@@ -5930,7 +5943,7 @@
             }
 
             const consignacion = {
-                id:               Date.now().toString(),
+                id: generarId(),
                 cliente:          clienteNombre,
                 fechaEntrega,
                 productoKey:      productoKey && productoKey !== '__manual__' ? productoKey : null,
@@ -6086,7 +6099,7 @@
             if (cobrados > 0) {
                 const montoCobro   = cobrados * precioVigente;
                 const montoCobroBS = convertUSDtoBS(montoCobro);
-                ventaId = Date.now();
+                ventaId = generarId();
                 const ventaCons = {
                     id:           ventaId,
                     date:         hoy,
@@ -6759,7 +6772,7 @@
             } else {
                 // Nuevo
                 const nuevoPrest = {
-                    id: Date.now().toString(),
+                    id: generarId(),
                     prestamista, tipo, contrato,
                     montoOriginalUSD: monto,
                     tasaInteres: tasa,
@@ -7723,7 +7736,7 @@
                 // Generar secret TOTP si aplica
                 const secret = metodo2fa === 'totp' ? generarTOTPSecret() : null;
                 usersData.push({
-                    id: 'user-' + Date.now(),
+                    id: generarId(),
                     nombre, rol, email, cedula, cargo,
                     dispositivo: disp,
                     pin,
@@ -7777,7 +7790,7 @@
         // Llamar desde cualquier módulo que guarde datos
         function encolarSync(tabla, accion, datos) {
             const entry = {
-                id:        tabla + '-' + Date.now() + '-' + Math.random().toString(36).substr(2,5),
+                id:        generarId(),
                 tabla,
                 accion,    // 'upsert' | 'delete'
                 datos:     JSON.parse(JSON.stringify(datos)),
@@ -10662,7 +10675,7 @@
             }
             
             const sale = {
-                id: Date.now(),
+                id: generarId(),
                 date: document.getElementById('sale-date').value,
                 customer: customer,
                 customerRif: client ? client.rif : '',
@@ -11389,7 +11402,7 @@
                         : `Pago cuota #${nroCuota} - ${p.prestamista}${excedente > 0 ? ' + excedente $'+excedente.toFixed(2) : ''}`;
 
                     const expCred = {
-                        id: Date.now(), date: fecha, description: descCredito,
+                        id: generarId(), date: fecha, description: descCredito,
                         invoiceNumber: '', documentType: 'Recibo',
                         amount: montoTotal, amountUSD: montoTotal, iva: 0,
                         category: 'Crédito',
@@ -11443,7 +11456,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 }
                 
                 const expense = {
-                    id: Date.now(), date: fecha,
+                    id: generarId(), date: fecha,
                     supplier:      (document.getElementById('expense-supplier')?.value || '').trim(),
                     description:   document.getElementById('expense-description').value,
                     invoiceNumber: document.getElementById('expense-invoice-number').value,
@@ -11540,7 +11553,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 }
                 
                 const order = {
-                    id: Date.now(),
+                    id: generarId(),
                     date: document.getElementById('order-date').value,
                     customer: customer,
                     products: products,
@@ -12327,7 +12340,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             }
             
             const client = {
-                id: Date.now().toString(),
+                id: generarId(),
                 name: name,
                 rif: rif || 'N/A',
                 contact: contact,
@@ -12809,7 +12822,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             syncCredito(credit);
 
             syncAbono({
-                id:            Date.now(),
+                id: generarId(),
                 creditId:      credit.id,
                 date:          date,
                 amount:        abonoEfectivoUSD,
@@ -12903,7 +12916,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             uniqueClients.forEach(clientName => {
                 clientsData.push({
-                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                     id: generarId(),
                     name: clientName,
                     createdAt: new Date().toISOString()
                 });
@@ -13174,7 +13187,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             uniqueExpenses.forEach(expense => {
                 expensesData.push({
-                    id: Date.now() + Math.random().toString(36).substr(2, 5),
+                     id: generarId(),
                     date: new Date().toISOString().split('T')[0],
                     description: expense.description,
                     amount: expense.amount,
@@ -13804,7 +13817,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const montoBS = convertUSDtoBS(montoUSD);
             
             const adelanto = {
-                id:        Date.now(),
+                id: generarId(),
                 cliente:   cliente,
                 monto:     montoBS,      // legacy BS - usado por calculateFiscalBreakdown
                 montoUSD:  montoUSD,
@@ -13978,7 +13991,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const montoBS = convertUSDtoBS(montoUSD);
             
             const adelanto = {
-                id:                  Date.now(),
+                id: generarId(),
                 monto:               montoBS,       // legacy BS
                 montoUSD:            montoUSD,
                 saldoDisponible:     montoBS,
@@ -15662,7 +15675,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 const idx = proveedoresData.findIndex(x => x.id === editProvId);
                 if (idx !== -1) proveedoresData[idx] = { ...proveedoresData[idx], ...data, modificadoEn: new Date().toISOString() };
             } else {
-                proveedoresData.unshift({ id: 'prov-' + Date.now(), ...data, creadoEn: new Date().toISOString() });
+                proveedoresData.unshift({ id: generarId(), ...data, creadoEn: new Date().toISOString() });
             }
             saveProveedores();
             cerrarProvModal();
@@ -16236,7 +16249,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                         if (!c.nombre) { stats.errores++; continue; }
                         const idx = clientsData.findIndex(x => (x.name||x.nombre||'').toLowerCase() === (c.nombre||'').toLowerCase());
                         const obj = {
-                            id: idx >= 0 ? clientsData[idx].id : Date.now().toString() + Math.random().toString(36).slice(2,6),
+                            id: idx >= 0 ? clientsData[idx].id : generarId(),
                             name: c.nombre, rif: c.rif, contact: c.telefono, address: c.direccion,
                             retieneIva: c.retieneIva, retieneIslr: c.retieneIslr,
                             tipoCliente: c.tipo, permiteCredito: c.permiteCredito,
@@ -16262,7 +16275,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     try {
                         if (!v.fecha || !v.cliente) { stats.errores++; continue; }
                         if (!clientsData.find(c => (c.name||c.nombre||'').toLowerCase() === v.cliente.toLowerCase())) {
-                            clientsData.push({ id: Date.now().toString()+Math.random().toString(36).slice(2,6),
+                            clientsData.push({ id: generarId(),
                                 name:v.cliente, rif:'N/A', contact:'', address:'',
                                 retieneIva:false, retieneIslr:false, tipoCliente:'natural',
                                 permiteCredito:false, diasCredito:30, diasAlertaAntes:3,
@@ -16275,7 +16288,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                         const metodoPago = pendiente > 0 ? 'Crédito' : (v.metodoPago || 'Efectivo');
 
                         const sale = {
-                            id: Date.now() + Math.floor(Math.random()*99999),
+                            id: generarId(),
                             date: v.fecha, customer: v.cliente, customerRif: 'N/A',
                             items: [{ id:1, name: v.descripcion || 'Producto',
                                 quantity: v.cantidad || 1,
@@ -16326,7 +16339,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                             if (idx >= 0) expensesData.splice(idx, 1);
                         }
                         expensesData.unshift({
-                            id: Date.now() + Math.floor(Math.random()*99999),
+                            id: generarId(),
                             date: g.fecha, description: g.descripcion || 'Gasto',
                             invoiceNumber: '', documentType: 'Recibo',
                             amount: g.montoUSD, amountUSD: g.montoUSD, iva: 0,
@@ -16351,7 +16364,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 for (const p of cmDatosExcel.prestamos) {
                     try {
                         if (!p.prestamista || p.montoOriginalUSD <= 0) { stats.errores++; continue; }
-                        const id = 'prest-' + Date.now() + Math.random().toString(36).slice(2,6);
+                        const id = generarId();
                         const tasa = p.tasaInteres / 100 / 12;
                         const plazo = p.plazoMeses;
                         const cuota = tasa > 0
