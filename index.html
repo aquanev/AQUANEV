@@ -16802,7 +16802,8 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             const result = await resp.json();
             
             if (!result.success) {
-                alert('Error del servidor: ' + JSON.stringify(result));
+                if (status) status.textContent = '⚠️ Error al descargar usuarios';
+                console.log('btnActualizarUsuarios error:', result.error);
                 return;
             }
             
@@ -16825,7 +16826,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     email:       u.email  || u.Email  || '',
                     rol:         (u.rol   || u.Rol    || 'vendedor').toLowerCase(),
                     dispositivo: (u.dispositivo || u.Dispositivo || 'mobile').toLowerCase(),
-                    pin:         pinesActuales[id] || '0000',
+                    pin:         String(u.pin || pinesActuales[id] || '0000'),
                     permisos:    (u.rol||'').toLowerCase() === 'admin' ? ['all'] : ['ventas.crear','ventas.ver','clientes.ver','creditos.ver','creditos.abonar','inventario.ver'],
                     activo:      u.activo === 'Sí' || u.activo === true,
                     creadoEn:    u.creadoen || u.creadoEn || new Date().toISOString()
