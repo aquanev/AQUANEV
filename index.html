@@ -16734,7 +16734,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 return;
             }
             // Usar GET con parámetro — funciona sin login porque el script es público
-            const url = cfg.appsScriptUrl + '?accion=usuarios&ts=' + Date.now();
+            const url = cfg.appsScriptUrl + '?accion=usuarios&k=' + encodeURIComponent('Bp13799141..Bp') + '&ts=' + Date.now();
             const resp = await fetch(url);
             const result = await resp.json();
             if (!result.success || !Array.isArray(result.usuarios) || result.usuarios.length === 0) return;
