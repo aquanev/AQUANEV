@@ -1797,6 +1797,18 @@
                             style="font-size:12px; font-family:monospace;">
                         <small style="color:#888;">Despliega el script como WebApp y pega la URL aquí. Ver instrucciones adjuntas.</small>
                     </div>
+                    <!-- FIX-6: Campo API Key — elimina la key hardcodeada del código fuente -->
+                    <div class="form-group">
+                        <label>API Key del servidor <small style="color:#c0392b; font-weight:600;">(requerida)</small></label>
+                        <input type="password" id="sync-api-key"
+                            placeholder="Ingresa la API Key configurada en Script Properties de GAS"
+                            style="font-size:13px; font-family:monospace;"
+                            autocomplete="new-password">
+                        <small style="color:#888;">
+                            ⚠️ Sin API Key la sincronización será rechazada por el servidor.
+                            Se almacena localmente en este dispositivo, nunca en el código fuente.
+                        </small>
+                    </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
                         <div class="form-group">
                             <label>Frecuencia Automática</label>
@@ -4601,12 +4613,20 @@
             appsScriptUrl: APPS_SCRIPT_URL_DEFAULT,
             frecuenciaMin: 15,
             modo: 'bidireccional',
-            activa: true
+            activa: true,
+            // FIX-6: apiKey se almacena aquí, no en el código fuente.
+            // El admin la ingresa desde el panel de configuración.
+            apiKey: ''
         };
         // Si ya existe en localStorage pero sin URL, inyectar la URL por defecto
         if (!syncConfig.appsScriptUrl) {
             syncConfig.appsScriptUrl = APPS_SCRIPT_URL_DEFAULT;
             syncConfig.activa = true;
+            localStorage.setItem('syncConfig', JSON.stringify(syncConfig));
+        }
+        // FIX-6: migración silenciosa — si no tiene campo apiKey, inicializarlo vacío
+        if (!('apiKey' in syncConfig)) {
+            syncConfig.apiKey = '';
             localStorage.setItem('syncConfig', JSON.stringify(syncConfig));
         }
         // ========== PROVEEDORES ==========
@@ -7936,14 +7956,19 @@
 
         // ---- Guardar config de sync ----
         function guardarConfigSync() {
-            const url       = document.getElementById('sync-apps-script-url').value.trim();
+            const url        = document.getElementById('sync-apps-script-url').value.trim();
             const frecuencia = parseInt(document.getElementById('sync-frecuencia').value) || 0;
-            const modo      = document.getElementById('sync-modo').value;
+            const modo       = document.getElementById('sync-modo').value;
+            // FIX-6: leer apiKey del campo de formulario (no del código fuente)
+            const apiKeyEl   = document.getElementById('sync-api-key');
+            const apiKeyVal  = apiKeyEl ? apiKeyEl.value.trim() : '';
 
             syncConfig.appsScriptUrl = url;
             syncConfig.frecuenciaMin = frecuencia;
             syncConfig.modo          = modo;
             syncConfig.activa        = url.length > 0;
+            // Solo actualizar si el campo no está vacío (evitar borrar la key al guardar sin tocarla)
+            if (apiKeyVal) syncConfig.apiKey = apiKeyVal;
             saveSyncConfig();
 
             // Arrancar/detener timer automático
@@ -7994,11 +8019,20 @@
             }
 
             // Agrupar por tabla para envío eficiente
+            // FIX-6: La API key ya NO está hardcodeada aquí.
+            // Se lee desde syncConfig.apiKey (almacenado en localStorage via panel de config).
+            // INSTRUCCIÓN DE MIGRACIÓN: en el panel de Configuración > Sincronización,
+            // ingresa tu API key en el nuevo campo "API Key". Solo el admin puede hacerlo.
             const payload = {
-                k:          'Bp13799141..Bp',
+                k:          syncConfig.apiKey || '',
                 usuario:    getCurrentUserId(),
                 timestamp:  new Date().toISOString(),
                 modo:       syncConfig.modo,
+                // FIX-7: payloadID único e idempotente por intento de sync.
+                // El servidor registra este ID para evitar procesar el mismo payload
+                // dos veces si la red cae después de que GAS procesó pero antes de
+                // que el cliente recibió confirmación (escenario de retry-duplication).
+                payloadID:  generarId(),
                 datos: {}
             };
 
@@ -8358,12 +8392,17 @@
 
         // ---- Cargar config guardada en el formulario ----
         function loadSyncConfigForm() {
-            const urlEl = document.getElementById('sync-apps-script-url');
+            const urlEl  = document.getElementById('sync-apps-script-url');
             const freqEl = document.getElementById('sync-frecuencia');
             const modoEl = document.getElementById('sync-modo');
+            // FIX-6: mostrar indicador de si la apiKey está configurada (sin revelarla)
+            const apiKeyEl = document.getElementById('sync-api-key');
             if (urlEl)  urlEl.value  = syncConfig.appsScriptUrl || '';
             if (freqEl) freqEl.value = String(syncConfig.frecuenciaMin || 5);
             if (modoEl) modoEl.value = syncConfig.modo || 'bidireccional';
+            if (apiKeyEl) apiKeyEl.placeholder = syncConfig.apiKey
+                ? '••••••••••• (configurada — deja vacío para mantener)'
+                : 'Ingresa la API Key configurada en Script Properties de GAS';
 
             const btnSync = document.getElementById('btn-sync-manual');
             if (btnSync) btnSync.disabled = !syncConfig.activa;
@@ -8419,6 +8458,10 @@
         }
 
         // ---- Registrar Service Worker ----
+        // FIX-5: Se eliminó el bloque que desregistraba el SW y borraba toda la caché
+        // en cada carga de página. Ese código destruía la funcionalidad offline al
+        // impedir que el SW sirviera archivos cacheados. El SW ahora persiste entre
+        // cargas y gestiona su propio ciclo de vida mediante CACHE_VERSION en service-worker.js.
         async function registrarServiceWorker() {
             if (!('serviceWorker' in navigator)) {
                 console.warn('[B9] Service Worker no soportado en este navegador');
@@ -8426,13 +8469,6 @@
                 return;
             }
             try {
-                // Forzar desregistro de SW anterior y limpiar caché en cada carga
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                for (const reg of registrations) { await reg.unregister(); }
-                if ('caches' in window) {
-                    const keys = await caches.keys();
-                    await Promise.all(keys.map(k => caches.delete(k)));
-                }
                 swRegistration = await navigator.serviceWorker.register('./service-worker.js', { scope: './' });
                 console.log('[B9] SW registrado:', swRegistration.scope);
 
@@ -16734,7 +16770,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 return;
             }
             // Usar GET con parámetro — funciona sin login porque el script es público
-            const url = cfg.appsScriptUrl + '?accion=usuarios&k=' + encodeURIComponent('Bp13799141..Bp') + '&ts=' + Date.now();
+            const url = cfg.appsScriptUrl + '?accion=usuarios&k=' + encodeURIComponent(cfg.apiKey || '') + '&ts=' + Date.now();
             const resp = await fetch(url);
             const result = await resp.json();
             if (!result.success || !Array.isArray(result.usuarios) || result.usuarios.length === 0) return;
