@@ -4963,8 +4963,50 @@
             setupForms();
             setupClientSearch();
             
-            // Cargar clientes predefinidos si no existen
-            if (clientsData.length === 0) {
+            // Deduplicar clientsData en localStorage al arrancar
+            // Pueden existir duplicados si el SW se limpió y el pull corrió dos veces
+            (function deduplicarClientes() {
+                if (!Array.isArray(clientsData) || clientsData.length === 0) return;
+                const vistos = new Map();
+                const limpios = [];
+                clientsData.forEach(c => {
+                    const cid = String(c.id || '').trim();
+                    if (!cid) return; // descartar sin ID
+                    if (!vistos.has(cid)) {
+                        vistos.set(cid, true);
+                        limpios.push(c);
+                    }
+                });
+                // También deduplicar por nombre (para predefinidos sin ID real)
+                const vistosNombre = new Map();
+                const limpios2 = [];
+                limpios.forEach(c => {
+                    const nombre = (c.name || c.nombre || '').toLowerCase().trim();
+                    const cid = String(c.id || '').trim();
+                    // Si el cliente tiene ID de UUID real (36 chars), priorizar sobre predefinidos
+                    const esReal = cid.length > 10;
+                    if (!nombre) { limpios2.push(c); return; }
+                    if (!vistosNombre.has(nombre)) {
+                        vistosNombre.set(nombre, { idx: limpios2.length, esReal });
+                        limpios2.push(c);
+                    } else if (esReal && !vistosNombre.get(nombre).esReal) {
+                        // Reemplazar el predefinido con el real
+                        const idxExistente = vistosNombre.get(nombre).idx;
+                        limpios2[idxExistente] = c;
+                        vistosNombre.set(nombre, { idx: idxExistente, esReal: true });
+                    }
+                });
+                if (limpios2.length !== clientsData.length) {
+                    console.log('[AQUANEV] Deduplicación clientes: ' + clientsData.length + ' → ' + limpios2.length);
+                    clientsData = limpios2;
+                    localStorage.setItem('clientsData', JSON.stringify(clientsData));
+                }
+            })();
+
+            // Cargar clientes predefinidos SOLO si no hay sync configurado
+            // Si syncConfig.activa es true, los clientes vienen de Sheets — no cargar predefinidos
+            // para evitar duplicación cuando el localStorage se limpia y el pull trae los reales
+            if (clientsData.length === 0 && !syncConfig.activa) {
                 loadPredefinedClients();
             }
             
@@ -8202,8 +8244,10 @@
             if (updates.clientes && updates.clientes.length > 0) {
     		const clientesNormalizados = updates.clientes.map(c => ({
         	   ...c,
-        	   nombre: c.nombre || c.Nombre || c.name || '',
-        	   rif:    c.rif    || c.RIF    || '',
+        	   nombre:    c.nombre    || c.Nombre    || c.name || '',
+        	   name:      c.name      || c.nombre    || c.Nombre || '',
+        	   rif:       c.rif       || c.RIF       || '',
+        	   timestamp: c.timestamp || c.Timestamp || '',
     		}));
     		count += mergeById(clientsData, clientesNormalizados);
                 localStorage.setItem('clientsData', JSON.stringify(clientsData));
