@@ -7516,8 +7516,9 @@
             if (syncConfig?.appsScriptUrl) {
                 fetch(syncConfig.appsScriptUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
+                        k:      syncConfig.apiKey || '',
                         accion: 'enviar2FA',
                         email:   user.email,
                         nombre:  user.nombre,
@@ -16829,10 +16830,11 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({
-                    usuario: 'login-screen',
+                    k:         cfg.apiKey || '',
+                    usuario:   'login-screen',
                     timestamp: new Date().toISOString(),
-                    modo: 'get_usuarios',
-                    datos: {}
+                    modo:      'get_usuarios',
+                    datos:     {}
                 })
             });
             const result = await resp.json();
@@ -16885,7 +16887,9 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
             alert('⚠️ Sync no configurado'); return;
         }
         try {
-            const resp = await fetch(syncConfig.appsScriptUrl + '?accion=usuarios');
+            const resp = await fetch(
+                syncConfig.appsScriptUrl + '?accion=usuarios&k=' + encodeURIComponent(syncConfig.apiKey || '') + '&ts=' + Date.now()
+            );
             const result = await resp.json();
             if (!result.success) { alert('Error: ' + result.error); return; }
             
@@ -16955,6 +16959,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({
+                    k:         syncConfig.apiKey || '',
                     usuario:   getCurrentUserId(),
                     timestamp: new Date().toISOString(),
                     modo:      'get_usuarios',
@@ -17084,6 +17089,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
 
                 try {
                     const payload = {
+                        k:         syncConfig.apiKey || '',
                         usuario:   getCurrentUserId(),
                         timestamp: new Date().toISOString(),
                         modo:      'carga_inicial',
