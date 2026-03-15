@@ -5030,7 +5030,7 @@
                 
                 const cliente = clientsData.find(c => (c.name||c.nombre||'') === credit.customer);
                 if (cliente && cliente.permiteCredito && cliente.diasCredito && credit.date) {
-                    const fechaBase = new Date(credit.date + 'T00:00:00');
+                    const fechaBase = new Date(limpiarFecha(credit.date) + 'T00:00:00');
                     fechaBase.setDate(fechaBase.getDate() + cliente.diasCredito);
                     const nuevaFecha = fechaBase.toISOString().split('T')[0];
                     
@@ -5795,7 +5795,7 @@
             const mes   = hoy.getMonth();
             const anio  = hoy.getFullYear();
             const deMes = comprasData.filter(c => {
-                const d = new Date(c.fecha + 'T00:00:00');
+                const d = new Date(limpiarFecha(c.fecha) + 'T00:00:00');
                 return d.getMonth() === mes && d.getFullYear() === anio;
             });
             const pendientes = comprasData.filter(c => c.estadoPago !== 'pagado');
@@ -6385,7 +6385,7 @@
             const cobradoMes  = consignacionesData
                 .filter(c => {
                     if (!c.fechaProceso) return false;
-                    const d = new Date(c.fechaProceso + 'T00:00:00');
+                    const d = new Date(limpiarFecha(c.fechaProceso) + 'T00:00:00');
                     return d.getMonth() === mes && d.getFullYear() === anio;
                 })
                 .reduce((s, c) => s + (c.montoCobradoUSD || 0), 0);
@@ -8691,7 +8691,7 @@
 
             creditsData.forEach(c => {
                 if (c.status === 'Pagado' || !c.fechaVencimiento) return;
-                const venc      = new Date(c.fechaVencimiento + 'T00:00:00');
+                const venc      = new Date(limpiarFecha(c.fechaVencimiento) + 'T00:00:00');
                 const diasHasta = Math.ceil((venc - hoy) / 86400000);
                 const key       = 'c-' + c.id;
                 if (alertasNotifHoy[key]) return;  // ya notificado hoy
@@ -8726,7 +8726,7 @@
                     if (cuota.estado === 'pagado') return;
                     const key       = 'p-' + p.id + '-' + cuota.numero;
                     if (alertasNotifHoy[key]) return;
-                    const venc      = new Date(cuota.vencimiento + 'T00:00:00');
+                    const venc      = new Date(limpiarFecha(cuota.vencimiento) + 'T00:00:00');
                     const diasHasta = Math.ceil((venc - hoy) / 86400000);
                     if (diasHasta >= 0 && diasHasta <= 5) {
                         notifCuotaProxima(p.prestamista, cuota.numero, cuota.cuotaUSD, diasHasta);
@@ -8911,9 +8911,23 @@
             </div>`;
         }
 
+        // Normaliza cualquier valor de fecha a string YYYY-MM-DD
+        // Maneja: 'YYYY-MM-DD', 'YYYY-MM-DDTHH:MM:SS.sssZ', objetos Date, timestamps numéricos
+        function limpiarFecha(f) {
+            if (!f) return '';
+            const s = String(f);
+            // Si ya es YYYY-MM-DD puro → retornar directo
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+            // Si tiene T (ISO timestamp) → cortar en T
+            if (s.includes('T')) return s.split('T')[0];
+            // Si es numérico (timestamp ms) → convertir
+            if (/^\d{10,}$/.test(s)) return new Date(parseInt(s)).toISOString().split('T')[0];
+            return s;
+        }
+
         function repFecha(str) {
             if (!str) return '-';
-            const d = new Date(str + 'T00:00:00');
+            const d = new Date(limpiarFecha(str) + 'T00:00:00');
             return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
@@ -8989,7 +9003,7 @@
             let creditos = creditsData.filter(c => (c.balance || c.balanceUSD || 0) > 0);
 
             const conEstado = creditos.map(c => {
-                const venc = c.fechaVencimiento ? new Date(c.fechaVencimiento + 'T00:00:00') : null;
+                const venc = c.fechaVencimiento ? new Date(limpiarFecha(c.fechaVencimiento) + 'T00:00:00') : null;
                 const diasHasta = venc ? Math.ceil((venc - hoy) / 86400000) : null;
                 let estado, badge;
                 if (!venc)              { estado = 'sin_fecha'; badge = repBadge('Sin fecha', 'rep-info'); }
@@ -9033,7 +9047,7 @@
             const hoy = new Date();
             const data = [['Cliente','Monto USD','Saldo USD','Fecha Venta','Vencimiento','Días Rest/Venc','Estado','Método']];
             creditsData.filter(c => (c.balance || c.balanceUSD || 0) > 0).forEach(c => {
-                const venc = c.fechaVencimiento ? new Date(c.fechaVencimiento + 'T00:00:00') : null;
+                const venc = c.fechaVencimiento ? new Date(limpiarFecha(c.fechaVencimiento) + 'T00:00:00') : null;
                 const dias = venc ? Math.ceil((venc - hoy) / 86400000) : null;
                 data.push([
                     c.customer,
@@ -9138,7 +9152,7 @@
                 // Próxima cuota pendiente
                 const proxCuota = (p.amortizacion || []).find(c => c.estado === 'pendiente');
                 const diasVence = proxCuota
-                    ? Math.ceil((new Date(proxCuota.vencimiento + 'T00:00:00') - hoy) / 86400000)
+                    ? Math.ceil((new Date(limpiarFecha(proxCuota.vencimiento) + 'T00:00:00') - hoy) / 86400000)
                     : null;
                 let estadoBadge;
                 if (p.estado === 'cancelado') estadoBadge = repBadge('Cancelado', 'rep-info');
@@ -10958,7 +10972,7 @@
                 if (clienteData && clienteData.permiteCredito) {
                     diasCredito = clienteData.diasCredito || 30;
                     diasAlertaAntes = clienteData.diasAlertaAntes || 3;
-                    const fechaBase = new Date(sale.date + 'T00:00:00');
+                    const fechaBase = new Date(limpiarFecha(sale.date) + 'T00:00:00');
                     fechaBase.setDate(fechaBase.getDate() + diasCredito);
                     fechaVencimiento = fechaBase.toISOString().split('T')[0];
                 }
@@ -11998,7 +12012,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 return { estado: 'sin_vencimiento', color: '#607d8b', icono: '⚪', label: credit.status || 'Pendiente', diasRestantes: null };
             }
             const hoy = new Date(); hoy.setHours(0,0,0,0);
-            const venc = new Date(credit.fechaVencimiento + 'T00:00:00');
+            const venc = new Date(limpiarFecha(credit.fechaVencimiento) + 'T00:00:00');
             const diasHasta = Math.ceil((venc - hoy) / (1000*60*60*24));
             const diasAlerta = credit.diasAlertaAntes || 3;
             if (diasHasta < 0) {
@@ -12661,7 +12675,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 const nombreBuscar = oldName !== name ? oldName : name;
                 if (credit.customer === nombreBuscar && credit.status !== 'Pagado') {
                     if (clienteActualizado.permiteCredito && clienteActualizado.diasCredito && credit.date) {
-                        const fechaBase = new Date(credit.date + 'T00:00:00');
+                        const fechaBase = new Date(limpiarFecha(credit.date) + 'T00:00:00');
                         fechaBase.setDate(fechaBase.getDate() + clienteActualizado.diasCredito);
                         credit.fechaVencimiento = fechaBase.toISOString().split('T')[0];
                         credit.diasCredito = clienteActualizado.diasCredito;
@@ -13404,11 +13418,11 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             const lastDay  = new Date(today.getFullYear(), today.getMonth() + 1, 0);
             
             const monthlySales    = salesData.filter(sale => {
-                const d = new Date(sale.date + 'T00:00:00');
+                const d = new Date(limpiarFecha(sale.date) + 'T00:00:00');
                 return d >= firstDay && d <= lastDay;
             });
             const monthlyExpenses = expensesData.filter(expense => {
-                const d = new Date(expense.date + 'T00:00:00');
+                const d = new Date(limpiarFecha(expense.date) + 'T00:00:00');
                 return d >= firstDay && d <= lastDay;
             });
             
