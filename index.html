@@ -4984,7 +4984,7 @@
                     const nombre = (c.name || c.nombre || '').toLowerCase().trim();
                     const cid = String(c.id || '').trim();
                     // Si el cliente tiene ID de UUID real (36 chars), priorizar sobre predefinidos
-                    const esReal = cid.length > 10;
+                    const esReal = cid.length === 36 && cid.includes('-');
                     if (!nombre) { limpios2.push(c); return; }
                     if (!vistosNombre.has(nombre)) {
                         vistosNombre.set(nombre, { idx: limpios2.length, esReal });
@@ -8250,6 +8250,30 @@
         	   timestamp: c.timestamp || c.Timestamp || '',
     		}));
     		count += mergeById(clientsData, clientesNormalizados);
+                // Deduplicar post-pull: si el pull trajo UUIDs reales para clientes
+                // que el dispositivo tenía con IDs cortos (predefinidos), eliminar los cortos
+                (function deduplicarPostPull() {
+                    const vistosNombre = new Map();
+                    const limpios = [];
+                    clientsData.forEach(c => {
+                        const nombre = (c.name || c.nombre || '').toLowerCase().trim();
+                        const cid = String(c.id || '').trim();
+                        const esUUID = cid.length === 36 && cid.includes('-');
+                        if (!nombre) { limpios.push(c); return; }
+                        if (!vistosNombre.has(nombre)) {
+                            vistosNombre.set(nombre, { idx: limpios.length, esUUID });
+                            limpios.push(c);
+                        } else if (esUUID && !vistosNombre.get(nombre).esUUID) {
+                            // UUID real gana sobre ID corto predefinido
+                            limpios[vistosNombre.get(nombre).idx] = c;
+                            vistosNombre.set(nombre, { idx: vistosNombre.get(nombre).idx, esUUID: true });
+                        }
+                    });
+                    if (limpios.length !== clientsData.length) {
+                        console.log('[AQUANEV] Dedup post-pull: ' + clientsData.length + ' → ' + limpios.length);
+                        clientsData = limpios;
+                    }
+                })();
                 localStorage.setItem('clientsData', JSON.stringify(clientsData));
                 loadClientsList && loadClientsList();
                 loadCustomerSelect && loadCustomerSelect();
