@@ -5006,14 +5006,14 @@
             // Cargar clientes predefinidos SOLO si no hay sync configurado
             // Si syncConfig.activa es true, los clientes vienen de Sheets — no cargar predefinidos
             // para evitar duplicación cuando el localStorage se limpia y el pull trae los reales
-            if (clientsData.length === 0 && !syncConfig.activa) {
-                loadPredefinedClients();
-            }
+            if (clientsData.length === 0 && !localStorage.getItem('aquanev_datos_cargados')) {
+    	        loadPredefinedClients();
+	    }
             
             // Cargar gastos predefinidos si no existen
-            if (expensesData.length === 0) {
-                loadPredefinedExpenses();
-            }
+            if (expensesData.length === 0 && !localStorage.getItem('aquanev_datos_cargados')) {
+   		loadPredefinedExpenses();
+	    }
             
             // B1: Migrar datos existentes
             migrarDatosB1();
@@ -16682,6 +16682,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 </table>
                 <p style="margin-top:12px;font-size:13px;color:#555;">Los datos ya están visibles en todos los módulos de AQUANEV.</p>
             `;
+            localStorage.setItem('aquanev_datos_cargados', '1');
             btn.disabled = false;
             btn.textContent = '🔄 Importar nuevamente';
         }
