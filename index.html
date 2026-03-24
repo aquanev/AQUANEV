@@ -16378,34 +16378,41 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                                 });
                             }
                         }
-                        if (name.includes('Prestamos')) {
-                            for (let i = 3; i < Math.min(8, rows.length); i++) {
-                                const r = rows[i];
-                                if (!r[0]) continue;
-                                const monto = parseFloat(String(r[3]).replace(',','.')) || 0;
-                                if (monto <= 0) continue;
-                                cmDatosExcel.prestamos.push({
-                                    prestamista: cmLimpiar(r[0]), tipo: cmLimpiar(r[1]) || 'Bancario',
-                                    contrato: cmLimpiar(r[2]) || '', montoOriginalUSD: monto,
-                                    tasaInteres: parseFloat(r[4]) || 0, plazoMeses: parseInt(r[5]) || 12,
-                                    fechaDesembolso: cmParseFecha(r[6]) || new Date().toISOString().slice(0,10),
-                                    fechaPrimeraCuota: cmParseFecha(r[7]) || new Date().toISOString().slice(0,10),
-                                    observaciones: cmLimpiar(r[9]) || ''
-                                });
-                            }
-                            for (let i = 9; i < rows.length; i++) {
-                                const r = rows[i];
-                                if (!r[0]) continue;
-                                const fecha = cmParseFecha(r[2]);
-                                if (!fecha) continue;
-                                cmDatosExcel.pagos.push({
-                                    prestamista: cmLimpiar(r[0]), nCuota: parseInt(r[1]) || 1,
-                                    fecha, monto: parseFloat(String(r[3]).replace(',','.')) || 0,
-                                    metodoPago: cmLimpiar(r[4]) || 'Efectivo',
-                                    notas: cmLimpiar(r[5]) || ''
-                                });
-                            }
+                        // CÓDIGO CORREGIDO
+                    if (name.includes('Préstamos') && !name.includes('Pagos')) {
+                        // Solo lee préstamos (filas 4 a 8, índice 3 a 7)
+                        for (let i = 3; i < Math.min(8, rows.length); i++) {
+                            const r = rows[i];
+                            if (!r[0]) continue;
+                            const monto = parseFloat(String(r[3]).replace(',','.')) || 0;
+                            if (monto <= 0) continue;
+                            cmDatosExcel.prestamos.push({
+                                prestamista: cmLimpiar(r[0]), tipo: cmLimpiar(r[1]) || 'Bancario',
+                                contrato: cmLimpiar(r[2]) || '', montoOriginalUSD: monto,
+                                tasaInteres: parseFloat(r[4]) || 0, plazoMeses: parseInt(r[5]) || 12,
+                                fechaDesembolso: cmParseFecha(r[6]) || new Date().toISOString().slice(0,10),
+                                fechaPrimeraCuota: cmParseFecha(r[7]) || new Date().toISOString().slice(0,10),
+                                observaciones: cmLimpiar(r[8]) || ''
+                            });
                         }
+                    }
+                    if (name.includes('Pagos') && (name.includes('Prestamos') || name.includes('Préstamos'))) {
+                        // Lee pagos desde fila 5 (índice 4) — sin límite de filas
+                        for (let i = 4; i < rows.length; i++) {
+                            const r = rows[i];
+                            if (!r[0]) continue;
+                            const fecha = cmParseFecha(r[2]);
+                            if (!fecha) continue;
+                            cmDatosExcel.pagos.push({
+                                prestamista: cmLimpiar(r[0]),
+                                nCuota: parseInt(r[1]) || 1,
+                                fecha,
+                                monto: parseFloat(String(r[3]).replace(',','.')) || 0,
+                                metodoPago: cmLimpiar(r[4]) || 'Efectivo',
+                                notas: cmLimpiar(r[5]) || ''
+                            });
+                        }
+                    }
                     });
 
                     // Mostrar resumen
@@ -16431,8 +16438,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                     document.getElementById('cm-progress').style.display    = 'none';
 
                     // Advertir si hay filas de ejemplo
-                    const tieneEjemplos = cmDatosExcel.ventas.some(v =>
-                        v.cliente === 'PLASTICOS BICENTENARIO' || v.cliente === 'TALLER LA SOLUCION');
+                    const tieneEjemplos = false;
                     document.getElementById('cm-aviso-ejemplos').style.display = tieneEjemplos ? 'block' : 'none';
 
                 } catch(err) {
