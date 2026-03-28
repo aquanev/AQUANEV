@@ -8236,6 +8236,16 @@
             }
             // Gastos: id, date, description, invoiceNumber, amount, amountUSD, category
             if (updates.gastos && updates.gastos.length > 0) {
+                // Eliminar gastos predefinidos hardcodeados antes del merge
+                // Los predefinidos no tienen flag importado:true ni existen en el servidor
+                const idsServidorG = new Set(updates.gastos.map(g => String(g.id || '')).filter(Boolean));
+                const antesCountG = expensesData.length;
+                expensesData = expensesData.filter(g => {
+                    return g.importado === true || idsServidorG.has(String(g.id || ''));
+                });
+                if (expensesData.length !== antesCountG) {
+                    console.log('[AQUANEV] Limpieza pre-merge gastos: ' + antesCountG + ' → ' + expensesData.length);
+                }
                 count += mergeById(expensesData, updates.gastos);
                 localStorage.setItem('expensesData', JSON.stringify(expensesData));
                 loadExpensesHistory && loadExpensesHistory();
