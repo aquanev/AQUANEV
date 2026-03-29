@@ -8237,14 +8237,12 @@
             // Gastos: id, date, description, invoiceNumber, amount, amountUSD, category
             if (updates.gastos && updates.gastos.length > 0) {
                 // Eliminar gastos predefinidos hardcodeados antes del merge
-                // Los predefinidos no tienen flag importado:true ni existen en el servidor
-                const idsServidorG = new Set(updates.gastos.map(g => String(g.id || '')).filter(Boolean));
+                // Solo se eliminan los marcados explícitamente con predefinido:true
+                // Los gastos reales registrados por el admin nunca tienen este flag
                 const antesCountG = expensesData.length;
-                expensesData = expensesData.filter(g => {
-                    return g.importado === true || idsServidorG.has(String(g.id || ''));
-                });
+                expensesData = expensesData.filter(g => !g.predefinido);
                 if (expensesData.length !== antesCountG) {
-                    console.log('[AQUANEV] Limpieza pre-merge gastos: ' + antesCountG + ' → ' + expensesData.length);
+                    console.log('[AQUANEV] Limpieza predefinidos gastos: ' + antesCountG + ' → ' + expensesData.length);
                 }
                 count += mergeById(expensesData, updates.gastos);
                 localStorage.setItem('expensesData', JSON.stringify(expensesData));
@@ -8252,6 +8250,12 @@
             }
             // Clientes: id, name, rif, contact, permiteCredito, diasCredito, retieneIva, retieneIslr
             if (updates.clientes && updates.clientes.length > 0) {
+                // Eliminar clientes predefinidos hardcodeados antes del merge
+                const antesCountC = clientsData.length;
+                clientsData = clientsData.filter(c => !c.predefinido);
+                if (clientsData.length !== antesCountC) {
+                    console.log('[AQUANEV] Limpieza predefinidos clientes: ' + antesCountC + ' → ' + clientsData.length);
+                }
     		const clientesNormalizados = updates.clientes.map(c => ({
         	   ...c,
         	   nombre:    c.nombre    || c.Nombre    || c.name || '',
@@ -13163,8 +13167,9 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             uniqueClients.forEach(clientName => {
                 clientsData.push({
-                     id: generarId(),
+                    id: generarId(),
                     name: clientName,
+                    predefinido: true,
                     createdAt: new Date().toISOString()
                 });
             });
@@ -13434,11 +13439,12 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             
             uniqueExpenses.forEach(expense => {
                 expensesData.push({
-                     id: generarId(),
+                    id: generarId(),
                     date: new Date().toISOString().split('T')[0],
                     description: expense.description,
                     amount: expense.amount,
-                    category: expense.category
+                    category: expense.category,
+                    predefinido: true
                 });
             });
             
