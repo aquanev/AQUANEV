@@ -11903,7 +11903,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     <td><strong>$${(parseFloat(totalUSD)||0).toFixed(2)} USD</strong>${(expense.iva > 0) ? `<br><small>IVA ${expense.iva}%</small>` : '<br><small style="color:#9e9e9e;">Sin IVA</small>'}</td>
                     <td><small>${expense.documentType || 'N/A'}</small></td>
                     <td>
-                        <button class="btn btn-small btn-danger" onclick="deleteExpense(${expense.id})" title="Eliminar">
+                        <button class="btn btn-small btn-danger" onclick="deleteExpense('${expense.id}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -12026,10 +12026,10 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     </td>
                     <td>
                         ${order.status === 'Entregado' ? 
-                            `<button class="btn btn-small btn-success" onclick="convertOrderToSale(${order.id})" title="Convertir a venta">
+                            `<button class="btn btn-small btn-success" onclick="convertOrderToSale('${order.id}')" title="Convertir a venta">
                                 <i class="fas fa-cash-register"></i> Venta
                             </button>` : ''}
-                        <button class="btn btn-small btn-danger" onclick="deleteOrder(${order.id})" title="Eliminar">
+                        <button class="btn btn-small btn-danger" onclick="deleteOrder('${order.id}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -12218,7 +12218,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     <td><span class="badge ${statusClass}">${credit.status}</span></td>
                     <td>
                         ${credit.status !== 'Pagado' ? 
-                            `<button class="btn btn-primary btn-small" onclick="showPaymentModal(${credit.id})">
+                            `<button class="btn btn-primary btn-small" onclick="showPaymentModal('${credit.id}')">
                                 <i class="fas fa-plus"></i> Abonar
                             </button>` : 
                             `<span style="color: #4caf50;">✓ Pagado</span>`
@@ -13801,7 +13801,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     <td><strong>$${(parseFloat(totalUSD)||0).toFixed(2)} USD</strong>${(expense.iva > 0) ? `<br><small>IVA ${expense.iva}%</small>` : '<br><small style="color:#9e9e9e;">Sin IVA</small>'}</td>
                     <td><small>${expense.documentType || 'N/A'}</small></td>
                     <td>
-                        <button class="btn btn-small btn-danger" onclick="deleteExpense(${expense.id})" title="Eliminar">
+                        <button class="btn btn-small btn-danger" onclick="deleteExpense('${expense.id}')" title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -14142,7 +14142,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     <td>${adelanto.formaPago}</td>
                     <td><span class="badge ${statusClass}">${adelanto.status}</span></td>
                     <td>
-                        <button class="btn btn-small btn-primary" onclick="verHistorialAdelanto(${adelanto.id})">
+                        <button class="btn btn-small btn-primary" onclick="verHistorialAdelanto('${adelanto.id}')">
                             <i class="fas fa-history"></i> Historial
                         </button>
                     </td>
@@ -14298,7 +14298,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                     <td><strong>${fmtUSD(getHieloSaldoUSD(adelanto))}</strong></td>
                     <td><span class="badge ${statusClass}">${adelanto.status}</span></td>
                     <td>
-                        <button class="btn btn-small btn-primary" onclick="verHistorialAdelantoHielo(${adelanto.id})">
+                        <button class="btn btn-small btn-primary" onclick="verHistorialAdelantoHielo('${adelanto.id}')">
                             <i class="fas fa-history"></i> Historial
                         </button>
                     </td>
