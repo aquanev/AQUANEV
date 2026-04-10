@@ -4624,6 +4624,15 @@
             syncConfig.activa = true;
             localStorage.setItem('syncConfig', JSON.stringify(syncConfig));
         }
+        // FIX-APIKEY: si la apiKey está vacía, inyectar el valor de producción.
+        // El campo password del formulario NO se rellena automáticamente por seguridad,
+        // lo que causa que al guardar sin escribirla se borre. Este fix la protege.
+        const _API_KEY_DEFAULT = 'Bp13799141..Bp';
+        if (!syncConfig.apiKey) {
+            syncConfig.apiKey = _API_KEY_DEFAULT;
+            localStorage.setItem('syncConfig', JSON.stringify(syncConfig));
+            console.log('[AQUANEV] API key restaurada automáticamente.');
+        }
         // FIX-6: migración silenciosa — si no tiene campo apiKey, inicializarlo vacío
         if (!('apiKey' in syncConfig)) {
             syncConfig.apiKey = '';
@@ -7023,8 +7032,8 @@
 
             const hoy        = new Date().toISOString().split('T')[0];
             const pagadas    = (p.amortizacion || []).filter(c => c.estado === 'pagado').length;
-            const totalInt   = (p.amortizacion || []).reduce((s, c) => s + c.interesUSD, 0);
-            const totalCap   = (p.amortizacion || []).reduce((s, c) => s + c.capitalUSD, 0);
+            const totalInt   = (p.amortizacion || []).reduce((s, c) => s + (parseFloat(c.interesUSD) || 0), 0);
+            const totalCap   = (p.amortizacion || []).reduce((s, c) => s + (parseFloat(c.capitalUSD) || 0), 0);
 
             // Resumen
             let resumen = `
@@ -7035,11 +7044,11 @@
                     </div>
                     <div style="background:#e8f5e9; border-radius:8px; padding:10px; text-align:center;">
                         <div style="font-size:11px; color:#666;">TOTAL PAGADO</div>
-                        <div style="font-size:18px; font-weight:700; color:#2e7d32;">$${p.totalPagadoUSD.toFixed(2)}</div>
+                        <div style="font-size:18px; font-weight:700; color:#2e7d32;">$${(parseFloat(p.totalPagadoUSD)||0).toFixed(2)}</div>
                     </div>
                     <div style="background:#ffebee; border-radius:8px; padding:10px; text-align:center;">
                         <div style="font-size:11px; color:#666;">SALDO PENDIENTE</div>
-                        <div style="font-size:18px; font-weight:700; color:#f44336;">$${p.saldoPendienteUSD.toFixed(2)}</div>
+                        <div style="font-size:18px; font-weight:700; color:#f44336;">$${(parseFloat(p.saldoPendienteUSD)||0).toFixed(2)}</div>
                     </div>
                     <div style="background:#fff3e0; border-radius:8px; padding:10px; text-align:center;">
                         <div style="font-size:11px; color:#666;">TOTAL INTERESES</div>
@@ -7077,13 +7086,18 @@
                        </button>`
                     : '';
 
+                // Proteger campos numéricos que pueden llegar undefined en datos importados
+                const _cap  = parseFloat(c.capitalUSD  ?? c.capital  ?? 0);
+                const _int  = parseFloat(c.interesUSD  ?? c.interes  ?? 0);
+                const _cuot = parseFloat(c.cuotaUSD    ?? c.cuota    ?? p.cuotaMensualUSD ?? 0);
+                const _sald = parseFloat(c.saldoUSD    ?? c.saldo    ?? 0);
                 return `<tr style="${rowStyle}">
                     <td style="text-align:center; font-weight:600;">${c.numero}</td>
-                    <td style="text-align:center;">${c.vencimiento}</td>
-                    <td style="text-align:right;">$${c.capitalUSD.toFixed(2)}</td>
-                    <td style="text-align:right; color:#e65100;">$${c.interesUSD.toFixed(2)}</td>
-                    <td style="text-align:right; font-weight:700;">$${c.cuotaUSD.toFixed(2)}</td>
-                    <td style="text-align:right; color:#666;">$${c.saldoUSD.toFixed(2)}</td>
+                    <td style="text-align:center;">${c.vencimiento || '-'}</td>
+                    <td style="text-align:right;">$${_cap.toFixed(2)}</td>
+                    <td style="text-align:right; color:#e65100;">$${_int.toFixed(2)}</td>
+                    <td style="text-align:right; font-weight:700;">$${_cuot.toFixed(2)}</td>
+                    <td style="text-align:right; color:#666;">$${_sald.toFixed(2)}</td>
                     <td style="text-align:center;">${estadoBadge}</td>
                     <td style="text-align:center;">${botonPago}</td>
                 </tr>`;
@@ -8011,7 +8025,13 @@
             syncConfig.modo          = modo;
             syncConfig.activa        = url.length > 0;
             // Solo actualizar si el campo no está vacío (evitar borrar la key al guardar sin tocarla)
-            if (apiKeyVal) syncConfig.apiKey = apiKeyVal;
+            if (apiKeyVal) {
+                syncConfig.apiKey = apiKeyVal;
+            } else if (!syncConfig.apiKey) {
+                // Si no hay key guardada Y el campo está vacío, usar el default
+                syncConfig.apiKey = 'Bp13799141..Bp';
+            }
+            console.log('[AQUANEV] Sync guardada. API key presente:', !!syncConfig.apiKey, '| Modo:', syncConfig.modo);
             saveSyncConfig();
 
             // Arrancar/detener timer automático
@@ -8109,13 +8129,23 @@
             };
 
             try {
+                // Verificar que la API key está presente antes de enviar
+                if (!payload.k) {
+                    throw new Error('API Key no configurada. Ve a Configuración → Sincronización e ingresa la API Key.');
+                }
+                console.log('[Sync] Enviando a GAS. URL:', syncConfig.appsScriptUrl.substring(0,60) + '...');
+                console.log('[Sync] API Key presente:', !!payload.k, '| Modo:', payload.modo, '| Pendientes:', pendientes.length);
+                
                 const resp = await fetch(syncConfig.appsScriptUrl, {
                     method:  'POST',
                     headers: { 'Content-Type': 'text/plain' },   // Apps Script acepta text/plain para evitar CORS preflight
                     body:    JSON.stringify(payload)
                 });
 
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                if (!resp.ok) {
+                    const errText = await resp.text().catch(() => '');
+                    throw new Error(`HTTP ${resp.status} — ${errText.substring(0,200)}`);
+                }
                 const result = await resp.json();
 
                 if (result.success) {
@@ -11392,7 +11422,7 @@
                 nameSpan.style.flex = '1';
                 
                 const priceSpan = document.createElement('span');
-                priceSpan.textContent = '$' + item.priceUSD.toFixed(2);
+                priceSpan.textContent = '$' + (parseFloat(item.priceUSD ?? item.priceBS / (priceExchangeRate||1) ?? 0)||0).toFixed(2);
                 
                 itemDiv.appendChild(qtyInput);
                 itemDiv.appendChild(nameSpan);
