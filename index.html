@@ -4834,6 +4834,10 @@
         // Verificar alerta cada minuto
         setInterval(checkBCVAlert, 60000);
 
+        // ========== VERSIÓN DE BUILD ==========
+        // Cambiar este número en cada deploy para confirmar que el SW actualizó
+        const APP_BUILD = '20260411-v8';
+
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
             registrarServiceWorker(); // B9: PWA
@@ -4842,6 +4846,14 @@
             inicializarColaIDB();
             // Descargar usuarios de Sheets ANTES del login para sincronizar entre dispositivos
             descargaUsuariosAntesLogin().then(() => renderLoginUsuarios());
+            // Mostrar versión de build en pantalla de login
+            const loginBox = document.querySelector('.login-box');
+            if (loginBox) {
+                const vDiv = document.createElement('div');
+                vDiv.style.cssText = 'font-size:10px;color:#bbb;margin-top:10px;text-align:center;';
+                vDiv.textContent = 'Build: ' + APP_BUILD;
+                loginBox.appendChild(vDiv);
+            }
         });
 
         function initializeApp() {
@@ -8276,9 +8288,13 @@
                         local.push(r);
                         cambios++;
                     } else {
-                        const tsR = new Date(r.timestamp || r.modificadoEn || r.fecha || r.date || 0).getTime();
-                        const tsL = new Date(local[idx].timestamp || local[idx].modificadoEn || local[idx].fecha || local[idx].date || 0).getTime();
-                        if (tsR >= tsL) { local[idx] = { ...local[idx], ...r }; cambios++; }
+                        // Prioridad: modificadoEn > timestamp > fecha > date
+                        // El GAS pone timestamp=now() en cada sync, lo que causa falsos empates.
+                        // Usar modificadoEn que solo cambia cuando el dato realmente cambia.
+                        const tsR = new Date(r.modificadoEn || r.timestamp || r.fecha || r.date || 0).getTime();
+                        const tsL = new Date(local[idx].modificadoEn || local[idx].timestamp || local[idx].fecha || local[idx].date || 0).getTime();
+                        // Remoto gana SOLO si es ESTRICTAMENTE más nuevo (no empate)
+                        if (tsR > tsL) { local[idx] = { ...local[idx], ...r }; cambios++; }
                     }
                 });
                 return cambios;
@@ -8437,24 +8453,41 @@
                 console.log('[AQUANEV] Proveedores sincronizados del servidor:', updates.proveedores.length);
             }
 
-            // Usuarios: sincronización del servidor hacia la app (nombre, rol, activo)
+            // Usuarios: sincronización del servidor hacia la app
+            // REGLA: el servidor NUNCA gana sobre cambios locales más recientes
             if (updates.usuarios && updates.usuarios.length > 0) {
+                let usuariosCambiados = 0;
                 updates.usuarios.forEach(u => {
                     if (!u || !u.id) return;
                     const idx = usersData.findIndex(x => x.id === String(u.id));
-                    if (idx >= 0) {
-                        // Solo actualizar campos seguros, nunca sobreescribir PIN desde Sheets
-                        usersData[idx].nombre      = u.nombre      || usersData[idx].nombre;
-                        usersData[idx].email       = u.email       || usersData[idx].email;
-                        usersData[idx].rol         = u.rol         || usersData[idx].rol;
-                        usersData[idx].dispositivo = u.dispositivo || usersData[idx].dispositivo;
-                        if (u.activo !== undefined) usersData[idx].activo = u.activo !== false && u.activo !== 'No';
+                    if (idx < 0) return; // no crear usuarios desde el servidor — solo actualizar
+
+                    const local = usersData[idx];
+                    const tsR = new Date(u.modificadoEn || u.timestamp || 0).getTime();
+                    const tsL = new Date(local.modificadoEn || local.timestamp || 0).getTime();
+
+                    // Solo aplicar si el servidor es ESTRICTAMENTE más nuevo
+                    if (tsR > tsL) {
+                        // Nunca sobreescribir PIN, twoFA ni permisos desde Sheets
+                        usersData[idx] = {
+                            ...local,
+                            nombre:      u.nombre      || local.nombre,
+                            email:       u.email       || local.email,
+                            rol:         u.rol         || local.rol,
+                            dispositivo: u.dispositivo || local.dispositivo,
+                            activo:      (u.activo !== undefined) ? (u.activo !== false && u.activo !== 'No') : local.activo,
+                        };
+                        usuariosCambiados++;
+                        console.log('[AQUANEV] Usuario actualizado desde servidor:', local.nombre);
+                    } else {
+                        console.log('[AQUANEV] Usuario local más reciente, ignorando remoto:', local.nombre);
                     }
                 });
-                saveUsers && saveUsers();
-                loadUsersList && loadUsersList();
-                renderLoginUsuarios && renderLoginUsuarios();
-                console.log('[AQUANEV] Usuarios sincronizados del servidor:', updates.usuarios.length);
+                if (usuariosCambiados > 0) {
+                    saveUsers && saveUsers();
+                    loadUsersList && loadUsersList();
+                    renderLoginUsuarios && renderLoginUsuarios();
+                }
             }
 
             return count;
