@@ -8782,14 +8782,27 @@ En otros dispositivos, haz sync para recibir los datos.');
                     }
                 });
 
-                // Detectar nueva versión del SW
+                // Detectar nueva versión del SW y activarla automáticamente
                 swRegistration.addEventListener('updatefound', () => {
                     const newSW = swRegistration.installing;
                     newSW?.addEventListener('statechange', () => {
-                        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-                            mostrarBannerActualizacion();
+                        if (newSW.state === 'installed') {
+                            if (navigator.serviceWorker.controller) {
+                                // Hay SW anterior activo — forzar skipWaiting y recargar
+                                console.log('[B9] Nueva versión SW detectada — activando automáticamente');
+                                newSW.postMessage({ type: 'SKIP_WAITING' });
+                            } else {
+                                // Primera instalación
+                                mostrarBannerActualizacion && mostrarBannerActualizacion();
+                            }
                         }
                     });
+                });
+
+                // Cuando el SW nuevo tome control, recargar la página para cargar código fresco
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    console.log('[B9] SW nuevo activo — recargando para cargar versión actualizada');
+                    window.location.reload();
                 });
 
             } catch(err) {
