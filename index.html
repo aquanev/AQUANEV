@@ -1797,17 +1797,15 @@
                             style="font-size:12px; font-family:monospace;">
                         <small style="color:#888;">Despliega el script como WebApp y pega la URL aquí. Ver instrucciones adjuntas.</small>
                     </div>
-                    <!-- FIX-6: Campo API Key — elimina la key hardcodeada del código fuente -->
-                    <div class="form-group">
-                        <label>API Key del servidor <small style="color:#c0392b; font-weight:600;">(requerida)</small></label>
-                        <input type="password" id="sync-api-key"
-                            placeholder="Ingresa la API Key configurada en Script Properties de GAS"
-                            style="font-size:13px; font-family:monospace;"
-                            autocomplete="new-password">
-                        <small style="color:#888;">
-                            ⚠️ Sin API Key la sincronización será rechazada por el servidor.
-                            Se almacena localmente en este dispositivo, nunca en el código fuente.
-                        </small>
+                    <!-- API Key gestionada automáticamente - sin campo editable que confunda -->
+                    <div style="background:#e8f5e9; border-radius:8px; padding:10px 14px; border-left:4px solid #4caf50; margin-bottom:12px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:18px;" id="sync-apikey-status-icon">🔑</span>
+                            <div>
+                                <div style="font-weight:600; font-size:13px;">API Key del servidor</div>
+                                <div id="sync-apikey-status-text" style="font-size:12px; color:#555;">Cargando...</div>
+                            </div>
+                        </div>
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
                         <div class="form-group">
@@ -7732,6 +7730,22 @@
             document.getElementById('header-user-nombre').textContent  = currentUser.nombre;
             document.getElementById('header-user-rol').textContent     = '(' + currentUser.rol + ')';
 
+            // Registrar ultimaLogin y encolar para sync
+            const ahoraISO = new Date().toISOString();
+            currentUser.ultimaLogin = ahoraISO;
+            currentUser.modificadoEn = ahoraISO;
+            saveUsers();
+            encolarSync('usuarios', 'upsert', {
+                id:          currentUser.id,
+                nombre:      currentUser.nombre,
+                email:       currentUser.email || '',
+                rol:         currentUser.rol,
+                dispositivo: currentUser.dispositivo,
+                activo:      true,
+                ultimaLogin: ahoraISO,
+                modificadoEn: ahoraISO
+            });
+
             aplicarRestriccionesRol();
 
             // Si la tab activa no está permitida, ir a dashboard
@@ -8055,21 +8069,15 @@
             const url        = document.getElementById('sync-apps-script-url').value.trim();
             const frecuencia = parseInt(document.getElementById('sync-frecuencia').value) || 0;
             const modo       = document.getElementById('sync-modo').value;
-            // FIX-6: leer apiKey del campo de formulario (no del código fuente)
-            const apiKeyEl   = document.getElementById('sync-api-key');
-            const apiKeyVal  = apiKeyEl ? apiKeyEl.value.trim() : '';
-
+            // La apiKey se gestiona automáticamente — no depende del formulario
+            // Si está vacía (primer arranque), el bloque FIX-APIKEY ya la inyectó
+            if (!syncConfig.apiKey) {
+                syncConfig.apiKey = 'Bp13799141..Bp';
+            }
             syncConfig.appsScriptUrl = url;
             syncConfig.frecuenciaMin = frecuencia;
             syncConfig.modo          = modo;
             syncConfig.activa        = url.length > 0;
-            // Solo actualizar si el campo no está vacío (evitar borrar la key al guardar sin tocarla)
-            if (apiKeyVal) {
-                syncConfig.apiKey = apiKeyVal;
-            } else if (!syncConfig.apiKey) {
-                // Si no hay key guardada Y el campo está vacío, usar el default
-                syncConfig.apiKey = 'Bp13799141..Bp';
-            }
             console.log('[AQUANEV] Sync guardada. API key presente:', !!syncConfig.apiKey, '| Modo:', syncConfig.modo);
             saveSyncConfig();
 
@@ -8146,12 +8154,19 @@
 
             // Añadir estado actual completo para tablas maestras (modo bidireccional)
             if (syncConfig.modo !== 'solo_subir') {
-                // Si nunca se ha sincronizado o tiene pocos registros → pull completo
-                const pocosRegistros = (salesData.length < 10 && expensesData.length < 5);
+                // Pull completo si: nunca sincronizado, pocos datos, o el dispositivo
+                // no tiene compras/inventario (nunca recibió datos del servidor)
+                const pocosRegistros   = (salesData.length < 10 && expensesData.length < 5);
+                const sinCompras       = comprasData.length === 0;
+                const sinInventario    = inventoryData.length === 0;
                 const nuncaSincronizado = !syncConfig.ultimaSync;
-                const ultimaSyncEfectiva = (nuncaSincronizado || pocosRegistros)
+                const pullCompleto     = nuncaSincronizado || pocosRegistros || sinCompras || sinInventario;
+                const ultimaSyncEfectiva = pullCompleto
                     ? '2023-01-01T00:00:00.000Z'
                     : syncConfig.ultimaSync;
+                if (pullCompleto) {
+                    console.log('[Sync] Pull completo activado. sinCompras:', sinCompras, 'sinInventario:', sinInventario);
+                }
                 payload.estadoLocal = {
                     ultimaSync: ultimaSyncEfectiva
                 };
@@ -8602,15 +8617,21 @@
             const urlEl  = document.getElementById('sync-apps-script-url');
             const freqEl = document.getElementById('sync-frecuencia');
             const modoEl = document.getElementById('sync-modo');
-            // FIX-6: mostrar indicador de si la apiKey está configurada (sin revelarla)
-            const apiKeyEl = document.getElementById('sync-api-key');
             if (urlEl)  urlEl.value  = syncConfig.appsScriptUrl || '';
             if (freqEl) freqEl.value = String(syncConfig.frecuenciaMin || 5);
             if (modoEl) modoEl.value = syncConfig.modo || 'bidireccional';
-            if (apiKeyEl) apiKeyEl.placeholder = syncConfig.apiKey
-                ? '••••••••••• (configurada — deja vacío para mantener)'
-                : 'Ingresa la API Key configurada en Script Properties de GAS';
-
+            // Mostrar estado de API Key en el indicador visual
+            const iconEl = document.getElementById('sync-apikey-status-icon');
+            const textEl = document.getElementById('sync-apikey-status-text');
+            if (syncConfig.apiKey) {
+                if (iconEl) iconEl.textContent = '✅';
+                if (textEl) textEl.textContent = 'Configurada — sincronización activa';
+                if (textEl) textEl.style.color = '#2e7d32';
+            } else {
+                if (iconEl) iconEl.textContent = '❌';
+                if (textEl) textEl.textContent = 'No configurada — contacta al administrador';
+                if (textEl) textEl.style.color = '#c62828';
+            }
             const btnSync = document.getElementById('btn-sync-manual');
             if (btnSync) btnSync.disabled = !syncConfig.activa;
 
