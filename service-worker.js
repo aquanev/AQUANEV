@@ -8,7 +8,7 @@
  * ============================================================
  */
 
-const CACHE_VERSION = 'v39';
+const CACHE_VERSION = 'v40';
 const CACHE_APP     = `aquanev-app-${CACHE_VERSION}`;
 const CACHE_EXT     = `aquanev-ext-${CACHE_VERSION}`;
 
