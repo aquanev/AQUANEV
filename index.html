@@ -4839,7 +4839,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260412-v9';
+        const APP_BUILD = '20260412-v10';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -8601,61 +8601,107 @@
             }).join('');
         }
 
-        // ---- Push Total: encolar TODOS los datos locales para subir a Sheets ----
-        // Usar cuando Sheets está desactualizado respecto al localStorage
+        // ---- Push Total por lotes — tabla por tabla, 200 registros por envío ----
         async function sincronizacionForzadaTotal() {
             if (!esAdmin()) { alert('Solo el administrador puede ejecutar Push Total.'); return; }
             if (!syncConfig.activa || !syncConfig.appsScriptUrl) {
-                alert('Configura primero la URL del Apps Script.'); return;
-            }
+                alert('Configura primero la URL del Apps Script.'); return; }
+
+            // Limpiar la cola antes de empezar — evita acumulación de intentos fallidos
+            syncQueue = [];
+            saveSyncQueue();
 
             const progDiv = document.getElementById('sync-progress-msg');
-            if (progDiv) progDiv.textContent = '🔄 Preparando Push Total...';
+            const TAM_LOTE = 200; // registros por envío — seguro para GAS
+            let totalEnviados = 0;
+            let errores = 0;
 
-            let total = 0;
+            // Función interna: enviar un lote de una tabla y esperar respuesta
+            async function enviarLote(tabla, registros, loteNum, totalLotes) {
+                if (registros.length === 0) return;
+                const msg = tabla + ' ' + loteNum + '/' + totalLotes + ' (' + registros.length + ' reg)';
+                if (progDiv) progDiv.textContent = '🔄 Enviando ' + msg + '...';
+                console.log('[PushTotal] Enviando lote:', msg);
 
-            // Ventas
-            salesData.forEach(v => { encolarSync('ventas', 'upsert', v); total++; });
-            // Gastos (excluir predefinidos)
-            expensesData.filter(g => !g.predefinido).forEach(g => { encolarSync('gastos', 'upsert', g); total++; });
-            // Clientes (excluir predefinidos)
-            clientsData.filter(c => !c.predefinido).forEach(c => { encolarSync('clientes', 'upsert', c); total++; });
-            // Créditos
-            creditsData.forEach(c => { encolarSync('creditos', 'upsert', c); total++; });
-            // Compras
-            comprasData.forEach(c => { encolarSync('compras', 'upsert', c); total++; });
-            // Inventario
-            inventoryData.forEach(i => { encolarSync('inventario', 'upsert', i); total++; });
-            // Consignaciones
-            consignacionesData.forEach(c => { encolarSync('consignaciones', 'upsert', c); total++; });
-            // Proveedores
-            proveedoresData.forEach(p => { encolarSync('proveedores', 'upsert', p); total++; });
-            // Tasas BCV
-            bcvRateHistory.forEach(t => {
-                encolarSync('tasasBCV', 'upsert', {
-                    id: 'tasaBCV-' + t.date, fecha: t.date, tasa: t.rate,
-                    origen: getCurrentUserId(), ts: new Date().toISOString()
-                });
-                total++;
-            });
-            // Préstamos (solo si hay datos locales)
-            if (prestamosData.length > 0) {
-                prestamosData.forEach(p => { encolarSync('prestamos', 'upsert', p); total++; });
+                // Encolar solo este lote
+                registros.forEach(r => encolarSync(tabla, 'upsert', r));
+                saveSyncQueue();
+
+                // Ejecutar sync para vaciar este lote
+                try {
+                    await ejecutarSync();
+                    totalEnviados += registros.length;
+                } catch(e) {
+                    errores++;
+                    console.error('[PushTotal] Error en lote ' + msg + ':', e);
+                }
+
+                // Limpiar cola antes del siguiente lote
+                syncQueue = [];
+                saveSyncQueue();
+
+                // Pausa de 1.5s entre lotes para no saturar el GAS
+                await new Promise(r => setTimeout(r, 1500));
             }
 
-            console.log('[AQUANEV] Push Total: ' + total + ' registros encolados');
-            if (progDiv) progDiv.textContent = '🔄 ' + total + ' registros encolados. Sincronizando...';
+            // Función para dividir array en lotes
+            function enLotes(arr, tam) {
+                const lotes = [];
+                for (let i = 0; i < arr.length; i += tam) lotes.push(arr.slice(i, i + tam));
+                return lotes;
+            }
 
-            // Guardar cola y ejecutar sync
-            saveSyncQueue();
+            if (progDiv) progDiv.textContent = '🔄 Iniciando Push Total...';
+
+            // Tablas pequeñas — 1 lote cada una
+            const tablasSimples = [
+                ['inventario',    inventoryData],
+                ['consignaciones',consignacionesData],
+                ['compras',       comprasData],
+                ['creditos',      creditsData],
+                ['clientes',      clientsData.filter(c => !c.predefinido)],
+                ['proveedores',   proveedoresData],
+                ['tasasBCV',      bcvRateHistory.map(t => ({
+                    id: 'tasaBCV-' + t.date, fecha: t.date, tasa: t.rate,
+                    origen: getCurrentUserId(), ts: new Date().toISOString()
+                }))],
+            ];
+            if (prestamosData.length > 0) tablasSimples.push(['prestamos', prestamosData]);
+
+            for (const [tabla, datos] of tablasSimples) {
+                if (datos.length === 0) continue;
+                const lotes = enLotes(datos, TAM_LOTE);
+                for (let i = 0; i < lotes.length; i++) {
+                    await enviarLote(tabla, lotes[i], i + 1, lotes.length);
+                }
+            }
+
+            // Gastos — puede ser grande
+            const gastosFiltrados = expensesData.filter(g => !g.predefinido);
+            const lotesGastos = enLotes(gastosFiltrados, TAM_LOTE);
+            for (let i = 0; i < lotesGastos.length; i++) {
+                await enviarLote('gastos', lotesGastos[i], i + 1, lotesGastos.length);
+            }
+
+            // Ventas — la tabla más grande, lotes de 200
+            const lotesVentas = enLotes(salesData, TAM_LOTE);
+            for (let i = 0; i < lotesVentas.length; i++) {
+                await enviarLote('ventas', lotesVentas[i], i + 1, lotesVentas.length);
+            }
+
+            if (progDiv) progDiv.textContent = errores === 0
+                ? '✅ Push Total completado: ' + totalEnviados + ' registros'
+                : '⚠️ Push Total con ' + errores + ' errores. ' + totalEnviados + ' enviados.';
+
             loadSyncQueueDisplay();
             actualizarSyncBadge();
 
-            // Ejecutar sync en chunks para no exceder límites del GAS
-            await ejecutarSync();
-
-            alert('✅ Push Total completado.\n' + total + ' registros enviados a Sheets.\n\nEn otros dispositivos, haz sync para recibir los datos.');
+            alert((errores === 0 ? '✅' : '⚠️') + ' Push Total completado.\n' +
+                  totalEnviados + ' registros enviados a Sheets.\n' +
+                  (errores > 0 ? errores + ' lotes fallaron — revisa la consola.\n' : '') +
+                  '\nEn otros dispositivos, haz sync para recibir los datos.');
         }
+
 
         // ---- Limpiar cola (eliminar entradas fallidas o todas) ----
         function limpiarColaSync() {
