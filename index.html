@@ -1874,17 +1874,12 @@
                     <div style="margin-top:14px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                             <span style="font-weight:600; font-size:14px;">📋 Cola de Sincronización</span>
-                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <div style="display:flex; gap:6px;">
                                 <button class="btn btn-small btn-warning" onclick="limpiarColaSync()" title="Limpiar cola">
                                     <i class="fas fa-trash"></i> Limpiar Cola
                                 </button>
                                 <button class="btn btn-small" style="background:#e3f2fd; color:#1565c0;" onclick="loadSyncQueueDisplay()">
                                     <i class="fas fa-refresh"></i>
-                                </button>
-                                <button class="btn btn-small" style="background:#7b1fa2; color:white;"
-                                    onclick="if(confirm('⚠️ Enviará TODOS los datos locales a Sheets.\nUsar cuando Sheets está desactualizado.\n\n¿Continuar?')) sincronizacionForzadaTotal()"
-                                    title="Enviar todos los datos locales a Sheets de una vez">
-                                    🔄 Push Total
                                 </button>
                             </div>
                         </div>
@@ -4839,7 +4834,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260412-v9';
+        const APP_BUILD = '20260411-v8';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -4859,7 +4854,50 @@
             }
         });
 
+
+        // FIX-AUTO: Saneamiento automático de préstamos al iniciar
+        function sanitizarPrestamosAlInicio() {
+            let cambios = false;
+            prestamosData = prestamosData.map(p => {
+                let cuotasReparadas = 0;
+                p.amortizacion = (p.amortizacion || []).map(c => {
+                    const pagado = parseFloat(c.montoPagadoUSD) || 0;
+                    const cuotaVal = parseFloat(c.cuotaUSD) || 0;
+                    if (c.estado === 'pendiente' && pagado > 0) {
+                        c.estado = (cuotaVal - pagado) <= 0.005 ? 'pagado' : 'parcial';
+                        c.saldoPendienteUSD = Math.max(0, cuotaVal - pagado);
+                        cuotasReparadas++;
+                    }
+                    if (c.estado === 'pagado' && pagado <= 0) {
+                        const totalDePagos = (c.pagos || []).reduce((s, pg) => s + (parseFloat(pg.monto) || 0), 0);
+                        if (totalDePagos > 0) {
+                            c.montoPagadoUSD    = parseFloat(totalDePagos.toFixed(2));
+                            c.saldoPendienteUSD = Math.max(0, cuotaVal - c.montoPagadoUSD);
+                            cuotasReparadas++;
+                        }
+                    }
+                    return c;
+                });
+                const todasPagadas = p.amortizacion.length > 0 && p.amortizacion.every(c => c.estado === 'pagado');
+                if (todasPagadas && p.estado !== 'finalizado') {
+                    p.estado = 'finalizado';
+                    p.saldoPendienteUSD = 0;
+                    cuotasReparadas++;
+                }
+                if (cuotasReparadas > 0) {
+                    if (typeof recalcularEstadoPrestamo === 'function') recalcularEstadoPrestamo(p);
+                    cambios = true;
+                    console.log('[AQUANEV] Préstamo saneado:', p.prestamista, '(' + cuotasReparadas + ' cuotas)');
+                }
+                return p;
+            });
+            if (cambios) {
+                localStorage.setItem('prestamosData', JSON.stringify(prestamosData));
+                console.log('[AQUANEV] prestamosData saneado automáticamente.');
+            }
+        }
         function initializeApp() {
+            sanitizarPrestamosAlInicio(); // FIX-AUTO: reparar cuotas con estado inconsistente
             // Sanar adelantos de hielo con saldoDisponibleUSD inválido (negativo/NaN por bug anterior)
             let changed = false;
             adelantosHielo = adelantosHielo.map(a => {
@@ -7951,6 +7989,10 @@
                     u.twoFA = { metodo: metodo2fa, activo: false, secret: null, configuradoEn: null };
                 }
                 u.modificadoEn = new Date().toISOString();
+                // FIX: encolar el usuario EDITADO a Sheets (no solo currentUser)
+                if (syncConfig && syncConfig.activa && syncConfig.appsScriptUrl) {
+                    setTimeout(() => encolarSync('usuarios', 'upsert', u), 500);
+                }
             } else {
                 // Generar secret TOTP si aplica
                 const secret = metodo2fa === 'totp' ? generarTOTPSecret() : null;
@@ -8024,6 +8066,24 @@
         function saveSyncConfig()  { localStorage.setItem('syncConfig', JSON.stringify(syncConfig)); }
         function saveSyncQueue()   { /* IDB maneja persistencia — no-op para compatibilidad */ }
         function saveSyncLog()     { localStorage.setItem('syncLog',    JSON.stringify(syncLog));    }
+        // FIX: función requerida por guardarConfigSync (versiones anteriores la llamaban sin definirla)
+        function actualizarIndicadorApiKey() {
+            try {
+                const icon = document.getElementById('sync-apikey-status-icon');
+                const text = document.getElementById('sync-apikey-status-text');
+                if (icon && text) {
+                    if (syncConfig.apiKey) {
+                        icon.textContent = '✅';
+                        text.textContent = 'Configurada — sincronización activa';
+                        if (icon.parentElement) icon.parentElement.style.background = '#e8f5e9';
+                    } else {
+                        icon.textContent = '❌';
+                        text.textContent = 'Sin API Key — sync rechazado por GAS';
+                        if (icon.parentElement) icon.parentElement.style.background = '#ffebee';
+                    }
+                }
+            } catch(e) {}
+        }
 
         // ---- Encolar operación para sync ----
         // Llamar desde cualquier módulo que guarde datos
@@ -8209,6 +8269,13 @@
                     throw new Error(`HTTP ${resp.status} — ${errText.substring(0,200)}`);
                 }
                 const result = await resp.json();
+                console.log('[Sync] HTTP status:', resp.status, resp.statusText);
+                console.log('[Sync] GAS respuesta: success=', result.success, '| error=', result.error || 'ninguno');
+                if (result.actualizaciones) {
+                    const _tabs = Object.keys(result.actualizaciones);
+                    const _cnt  = _tabs.map(t => t + ':' + (result.actualizaciones[t]||[]).length).join(' | ');
+                    console.log('[Sync] Datos recibidos de Sheets:', _cnt || 'ninguno');
+                }
 
                 if (result.success) {
                     // Marcar como sincronizados
@@ -8599,65 +8666,6 @@
                     [${ts}] ${e.msg || e.accion}
                 </div>`;
             }).join('');
-        }
-
-        // ---- Push Total: encolar TODOS los datos locales para subir a Sheets ----
-        // Usar cuando Sheets está desactualizado respecto al localStorage
-        async function sincronizacionForzadaTotal() {
-            if (!esAdmin()) { alert('Solo el administrador puede ejecutar Push Total.'); return; }
-            if (!syncConfig.activa || !syncConfig.appsScriptUrl) {
-                alert('Configura primero la URL del Apps Script.'); return;
-            }
-
-            const progDiv = document.getElementById('sync-progress-msg');
-            if (progDiv) progDiv.textContent = '🔄 Preparando Push Total...';
-
-            let total = 0;
-
-            // Ventas
-            salesData.forEach(v => { encolarSync('ventas', 'upsert', v); total++; });
-            // Gastos (excluir predefinidos)
-            expensesData.filter(g => !g.predefinido).forEach(g => { encolarSync('gastos', 'upsert', g); total++; });
-            // Clientes (excluir predefinidos)
-            clientsData.filter(c => !c.predefinido).forEach(c => { encolarSync('clientes', 'upsert', c); total++; });
-            // Créditos
-            creditsData.forEach(c => { encolarSync('creditos', 'upsert', c); total++; });
-            // Compras
-            comprasData.forEach(c => { encolarSync('compras', 'upsert', c); total++; });
-            // Inventario
-            inventoryData.forEach(i => { encolarSync('inventario', 'upsert', i); total++; });
-            // Consignaciones
-            consignacionesData.forEach(c => { encolarSync('consignaciones', 'upsert', c); total++; });
-            // Proveedores
-            proveedoresData.forEach(p => { encolarSync('proveedores', 'upsert', p); total++; });
-            // Tasas BCV
-            bcvRateHistory.forEach(t => {
-                encolarSync('tasasBCV', 'upsert', {
-                    id: 'tasaBCV-' + t.date, fecha: t.date, tasa: t.rate,
-                    origen: getCurrentUserId(), ts: new Date().toISOString()
-                });
-                total++;
-            });
-            // Préstamos (solo si hay datos locales)
-            if (prestamosData.length > 0) {
-                prestamosData.forEach(p => { encolarSync('prestamos', 'upsert', p); total++; });
-            }
-
-            console.log('[AQUANEV] Push Total: ' + total + ' registros encolados');
-            if (progDiv) progDiv.textContent = '🔄 ' + total + ' registros encolados. Sincronizando...';
-
-            // Guardar cola y ejecutar sync
-            saveSyncQueue();
-            loadSyncQueueDisplay();
-            actualizarSyncBadge();
-
-            // Ejecutar sync en chunks para no exceder límites del GAS
-            await ejecutarSync();
-
-            alert('✅ Push Total completado.
-' + total + ' registros enviados a Sheets.
-
-En otros dispositivos, haz sync para recibir los datos.');
         }
 
         // ---- Limpiar cola (eliminar entradas fallidas o todas) ----
