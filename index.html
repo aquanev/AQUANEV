@@ -6163,6 +6163,7 @@
 
             consignacionesData.unshift(consignacion);
             saveConsignaciones();
+            syncConsignacion(consignacion);
             cerrarConsModal('cons-nueva-modal');
             loadConsignacionesDashboard();
             loadConsignacionesList();
@@ -6379,6 +6380,8 @@
             }
 
             saveConsignaciones();
+            // Encolar la consignación actualizada (estado, cantidades procesadas)
+            syncConsignacion(cons);
             cerrarConsModal('cons-procesar-modal');
             loadConsignacionesDashboard();
             loadConsignacionesList();
@@ -8069,8 +8072,7 @@
             const url        = document.getElementById('sync-apps-script-url').value.trim();
             const frecuencia = parseInt(document.getElementById('sync-frecuencia').value) || 0;
             const modo       = document.getElementById('sync-modo').value;
-            // La apiKey se gestiona automáticamente — no depende del formulario
-            // Si está vacía (primer arranque), el bloque FIX-APIKEY ya la inyectó
+            // La apiKey se gestiona automáticamente
             if (!syncConfig.apiKey) {
                 syncConfig.apiKey = 'Bp13799141..Bp';
             }
@@ -8080,6 +8082,7 @@
             syncConfig.activa        = url.length > 0;
             console.log('[AQUANEV] Sync guardada. API key presente:', !!syncConfig.apiKey, '| Modo:', syncConfig.modo);
             saveSyncConfig();
+            actualizarIndicadorApiKey();
 
             // Arrancar/detener timer automático
             iniciarTimerSync();
@@ -8146,7 +8149,7 @@
                 datos: {}
             };
 
-            const TABLAS = ['ventas','creditos','abonos','inventario','compras','consignaciones','prestamos','gastos','clientes','usuarios','config','tasasBCV'];
+            const TABLAS = ['ventas','creditos','abonos','inventario','compras','consignaciones','prestamos','gastos','clientes','usuarios','config','tasasBCV','proveedores'];
             TABLAS.forEach(t => {
                 const items = pendientes.filter(e => e.tabla === t);
                 if (items.length > 0) payload.datos[t] = items.map(e => e.datos);
@@ -8392,6 +8395,10 @@
                 localStorage.setItem('comprasData', JSON.stringify(comprasData));
                 loadComprasHistorial && loadComprasHistorial();
                 loadComprasDashboard && loadComprasDashboard();
+                // Las compras afectan el inventario: refrescar después del merge
+                loadInventoryList && loadInventoryList();
+                loadInventoryDashboard && loadInventoryDashboard();
+                console.log('[Sync] Compras recibidas:', updates.compras.length, '— inventario actualizado');
             }
             // Consignaciones: id, cliente, fechaEntrega, productoNombre, cantidadEntregada, estado...
             if (updates.consignaciones && updates.consignaciones.length > 0) {
@@ -9674,6 +9681,9 @@
                         actualizarDatalistProveedores();
                     } else if (tabId === 'config') {
                         if (esAdmin()) loadUsersList();
+                        // Refrescar indicadores sync y PWA cuando el tab es visible
+                        loadSyncConfigForm();
+                        actualizarEstadoPWA();
                     } else if (tabId === 'dashboard') {
                         loadDashboard();
                         loadRecentSales();
