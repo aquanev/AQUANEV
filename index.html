@@ -4839,7 +4839,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260412-v12';
+        const APP_BUILD = '20260413-v13';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -8415,10 +8415,18 @@
             }
             // Préstamos: id, prestamista, tipo, montoOriginalUSD, tasaInteres, plazoMeses, estado...
             if (updates.prestamos && updates.prestamos.length > 0) {
-                const tiposValidos = ['persona','banco','empresa'];
+                // Normalizar tipos: 'Personal'→'persona', 'Bancario'→'banco', etc.
+                const normalizarTipo = t => {
+                    const s = String(t||'').toLowerCase().trim();
+                    if (s === 'personal') return 'persona';
+                    if (s === 'bancario' || s === 'banco') return 'banco';
+                    if (s === 'empresa' || s === 'empresarial') return 'empresa';
+                    return s;
+                };
+                const tiposValidos = ['persona','banco','empresa','personal','bancario','empresarial'];
                 const prestamosSanos = updates.prestamos
-                    .filter(p => p && p.prestamista && tiposValidos.includes(String(p.tipo||'')))
-                    .map(p => ({ ...p, tipo: String(p.tipo) }));
+                    .filter(p => p && p.prestamista && tiposValidos.includes(normalizarTipo(p.tipo)))
+                    .map(p => ({ ...p, tipo: normalizarTipo(p.tipo) }));
                 if (prestamosSanos.length > 0) {
                     count += mergeById(prestamosData, prestamosSanos);
                     localStorage.setItem('prestamosData', JSON.stringify(prestamosData));
