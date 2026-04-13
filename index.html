@@ -4839,7 +4839,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260412-v10';
+        const APP_BUILD = '20260412-v12';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -8165,10 +8165,12 @@
                 // Pull completo si: nunca sincronizado, pocos datos, o el dispositivo
                 // no tiene compras/inventario (nunca recibió datos del servidor)
                 const pocosRegistros   = (salesData.length < 10 && expensesData.length < 5);
-                const sinCompras       = comprasData.length === 0;
-                const sinInventario    = inventoryData.length === 0;
+                const sinCompras       = comprasData.length < 10;
+                const sinInventario    = inventoryData.length < 3;
+                const sinPrestamos     = prestamosData.length === 0;
                 const nuncaSincronizado = !syncConfig.ultimaSync;
-                const pullCompleto     = nuncaSincronizado || pocosRegistros || sinCompras || sinInventario;
+                // Pull completo si el dispositivo no tiene historial completo
+                const pullCompleto     = nuncaSincronizado || pocosRegistros || sinCompras || sinInventario || sinPrestamos;
                 const ultimaSyncEfectiva = pullCompleto
                     ? '2023-01-01T00:00:00.000Z'
                     : syncConfig.ultimaSync;
