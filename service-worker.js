@@ -7,7 +7,7 @@
  *   Ej: 'v42' → 'v43'  El banner de actualización aparece solo.
  * ============================================================
  */
-const CACHE_VERSION = 'v46';
+const CACHE_VERSION = 'v47';
 const CACHE_APP     = `aquanev-app-${CACHE_VERSION}`;
 const CACHE_EXT     = `aquanev-ext-${CACHE_VERSION}`;
 
