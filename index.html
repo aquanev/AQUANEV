@@ -4839,7 +4839,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260414-v15';
+        const APP_BUILD = '20260414-v17';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -5278,7 +5278,8 @@
             const tbody = document.getElementById('inv-movimientos-list');
             const filtroProd = document.getElementById('inv-mov-producto')?.value || 'todos';
             const filtroTipo = document.getElementById('inv-mov-tipo')?.value || 'todos';
-            let movs = [...movimientosData];
+            let movs = [...movimientosData]
+                .sort((a, b) => (b.fecha||b.timestamp||'').localeCompare(a.fecha||a.timestamp||''));
             if (filtroProd !== 'todos') movs = movs.filter(m => m.productoKey === filtroProd);
             if (filtroTipo !== 'todos') movs = movs.filter(m => m.tipo === filtroTipo);
             movs = movs.slice(0, 100); // Mostrar últimos 100
@@ -5516,6 +5517,25 @@
             inventoryData[idx].modificadoEn = new Date().toISOString();
             registrarMovimiento(key, 'ajuste', Math.abs(stockNuevo - stockAnt), stockAnt, stockNuevo, motivo);
             saveInventory();
+
+            // Encolar ajuste para sync — el GAS lo incluye en recalcularStock
+            const cantidadAjuste = tipo === 'salida' ? -(Math.abs(stockNuevo - stockAnt))
+                                 : tipo === 'entrada' ? Math.abs(stockNuevo - stockAnt)
+                                 : (stockNuevo - stockAnt); // absoluto: diferencia neta
+            encolarSync('ajustes', 'upsert', {
+                id:            generarId(),
+                productoKey:   key,
+                nombre:        inventoryData[idx].nombre || '',
+                tipo:          tipo,
+                cantidad:      cantidadAjuste,
+                stockAnterior: stockAnt,
+                stockNuevo:    stockNuevo,
+                motivo:        motivo,
+                usuario:       getCurrentUserId(),
+                fecha:         new Date().toISOString().split('T')[0]
+            });
+            console.log('[Inventario] Ajuste encolado para sync:', inventoryData[idx].nombre, cantidadAjuste);
+
             closeAjusteStockModal();
             loadInventoryList();
             loadMovimientosHistorial();
@@ -8154,7 +8174,7 @@
                 datos: {}
             };
 
-            const TABLAS = ['ventas','creditos','abonos','inventario','compras','consignaciones','prestamos','gastos','clientes','usuarios','config','tasasBCV','proveedores'];
+            const TABLAS = ['ventas','creditos','abonos','inventario','compras','consignaciones','prestamos','gastos','clientes','usuarios','config','tasasBCV','proveedores','ajustes'];
             TABLAS.forEach(t => {
                 const items = pendientes.filter(e => e.tabla === t);
                 if (items.length > 0) payload.datos[t] = items.map(e => e.datos);
