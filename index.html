@@ -4839,7 +4839,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260413-v13';
+        const APP_BUILD = '20260414-v15';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -5843,7 +5843,7 @@
             const desde    = document.getElementById('compras-desde')?.value || '';
             const hasta    = document.getElementById('compras-hasta')?.value || '';
 
-            let lista = [...comprasData];
+            let lista = [...comprasData].sort((a, b) => (b.fecha||b.timestamp||'').localeCompare(a.fecha||a.timestamp||''));
             if (busqueda)          lista = lista.filter(c => (c.proveedor + ' ' + c.factura).toLowerCase().includes(busqueda));
             if (filtPago !== 'todos') lista = lista.filter(c => c.estadoPago === filtPago);
             if (desde)             lista = lista.filter(c => c.fecha >= desde);
@@ -8167,10 +8167,14 @@
                 const pocosRegistros   = (salesData.length < 10 && expensesData.length < 5);
                 const sinCompras       = comprasData.length < 10;
                 const sinInventario    = inventoryData.length < 3;
-                const sinPrestamos     = prestamosData.length === 0;
+                // sinPrestamos NO activa pullCompleto global — el GAS ya hace pull completo
+                // de Prestamos siempre (está en TABLAS_PULL_COMPLETO del GAS)
                 const nuncaSincronizado = !syncConfig.ultimaSync;
-                // Pull completo si el dispositivo no tiene historial completo
-                const pullCompleto     = nuncaSincronizado || pocosRegistros || sinCompras || sinInventario || sinPrestamos;
+                // Pull completo global: solo cuando hay datos operacionales faltantes
+                const pullCompleto     = nuncaSincronizado || pocosRegistros || sinCompras || sinInventario;
+                if (pullCompleto) {
+                    console.log('[Sync] Pull completo activado. Compras:', comprasData.length, 'Inventario:', inventoryData.length);
+                }
                 const ultimaSyncEfectiva = pullCompleto
                     ? '2023-01-01T00:00:00.000Z'
                     : syncConfig.ultimaSync;
@@ -8456,7 +8460,10 @@
                         console.warn('[BCV] Tasa inválida del pull:', JSON.stringify(item));
                         return;
                     }
-                    console.log('[BCV] Recibida del servidor:', fechaTasa, nuevaTasa);
+                    // Solo loguear primeras 3 y última para no saturar consola
+                    if (tasasRecibidas.indexOf(item) < 3 || tasasRecibidas.indexOf(item) === tasasRecibidas.length-1) {
+                        console.log('[BCV] Recibida del servidor:', fechaTasa, nuevaTasa);
+                    }
                     const idx = bcvRateHistory.findIndex(r => r.date === fechaTasa);
                     if (idx !== -1) {
                         if (bcvRateHistory[idx].rate !== nuevaTasa) { bcvRateHistory[idx].rate = nuevaTasa; cambiaron = true; }
@@ -8479,6 +8486,7 @@
                     loadManualRates && loadManualRates();
                     cargarHistorialTasasBCV && cargarHistorialTasasBCV();
                     loadCurrentPrices && loadCurrentPrices();
+                    console.log('[BCV] Total tasas recibidas del pull:', tasasRecibidas.length, '| Historial local ahora:', bcvRateHistory.length);
                 }
             }
             // Proveedores: id, nombre, rif, telefono, tipos, docs, activo...
@@ -8764,6 +8772,15 @@
 
             actualizarSyncBadge();
             actualizarUltimaSync();
+        }
+
+        // ---- Helper: ordenar array por fecha descendente (más nuevo primero) ----
+        function sortByFechaDesc(arr, ...campos) {
+            return [...arr].sort((a, b) => {
+                const fa = a[campos.find(c => a[c])] || '';
+                const fb = b[campos.find(c => b[c])] || '';
+                return fb.localeCompare(fa);
+            });
         }
 
         // ---- Registro de sync en operaciones existentes ----
@@ -11536,10 +11553,12 @@
             // Obtener filtro
             const selectedClient = filterSelect ? filterSelect.value : '';
             
-            // Filtrar ventas
-            const filteredSales = selectedClient 
+            // Filtrar ventas y ordenar más reciente primero
+            const filteredSales = (selectedClient 
                 ? salesData.filter(s => s.customer === selectedClient)
-                : salesData;
+                : salesData)
+                .slice()
+                .sort((a, b) => (b.date||b.timestamp||'').localeCompare(a.date||a.timestamp||''));
             
             if (filteredSales.length === 0) {
                 tbody.innerHTML = `
