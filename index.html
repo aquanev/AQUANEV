@@ -4839,7 +4839,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260414-v17';
+        const APP_BUILD = '20260414-v18';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -8504,6 +8504,7 @@
                     localStorage.setItem('appConfig', JSON.stringify(appConfig));
                     syncRateFromBCV && syncRateFromBCV();
                     loadManualRates && loadManualRates();
+                    loadManualExchangeRates && loadManualExchangeRates(); // actualiza banner header
                     cargarHistorialTasasBCV && cargarHistorialTasasBCV();
                     loadCurrentPrices && loadCurrentPrices();
                     console.log('[BCV] Total tasas recibidas del pull:', tasasRecibidas.length, '| Historial local ahora:', bcvRateHistory.length);
@@ -15865,6 +15866,7 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 loadManualExchangeRates(); // actualiza el header (bcv-rate visual)
                 loadCurrentPrices();       // recalcula precios con la nueva tasa
                 loadCurrentPricesTable && loadCurrentPricesTable();
+                loadManualExchangeRates && loadManualExchangeRates(); // actualiza banner header
             }
 
             // Encolar para sync con otros dispositivos
