@@ -4839,7 +4839,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260414-v18';
+        const APP_BUILD = '20260415-v19';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -6539,6 +6539,13 @@
 
         function saveKits() {
             localStorage.setItem('productosCompuestos', JSON.stringify(productosCompuestos));
+            // Sync kits a Sheets via Config
+            encolarSync('config', 'upsert', {
+                key: 'productosCompuestos',
+                value: JSON.stringify(productosCompuestos),
+                modificadoPor: getCurrentUserId(),
+                timestamp: new Date().toISOString()
+            });
         }
 
         // ---- Calcular stock disponible de un kit ----
@@ -8510,6 +8517,49 @@
                     console.log('[BCV] Total tasas recibidas del pull:', tasasRecibidas.length, '| Historial local ahora:', bcvRateHistory.length);
                 }
             }
+            // Config: waterPrices y productosCompuestos desde servidor
+            if (updates.config && updates.config.length > 0) {
+                updates.config.forEach(entry => {
+                    const key = entry.key || entry.Key || '';
+                    const val = entry.value !== undefined ? entry.value : entry.Value;
+                    const tsRemoto = new Date(entry.timestamp || entry.Timestamp || 0).getTime();
+
+                    if (key === 'waterPrices' && val) {
+                        try {
+                            const preciosRemoto = typeof val === 'string' ? JSON.parse(val) : val;
+                            // Calcular timestamp más reciente de precios locales
+                            const tsLocal = Object.values(waterPrices || {})
+                                .reduce((mx, p) => Math.max(mx, new Date(p.lastUpdate||0).getTime()), 0);
+                            if (tsRemoto > tsLocal) {
+                                waterPrices = { ...waterPrices, ...preciosRemoto };
+                                localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
+                                loadCurrentPrices && loadCurrentPrices();
+                                loadCurrentPricesTable && loadCurrentPricesTable();
+                                loadProductsList && loadProductsList();
+                                count++;
+                                console.log('[Config] waterPrices actualizados desde servidor');
+                            }
+                        } catch(e) { console.warn('[Config] Error parsing waterPrices:', e); }
+                    }
+
+                    if (key === 'productosCompuestos' && val) {
+                        try {
+                            const kitsRemoto = typeof val === 'string' ? JSON.parse(val) : val;
+                            const tsLocal = (productosCompuestos || []).reduce((mx, k) =>
+                                Math.max(mx, new Date(k.modificadoEn || k.creadoEn || 0).getTime()), 0);
+                            if (tsRemoto > tsLocal) {
+                                productosCompuestos = kitsRemoto;
+                                localStorage.setItem('productosCompuestos', JSON.stringify(productosCompuestos));
+                                loadKitsList && loadKitsList();
+                                loadProductsList && loadProductsList();
+                                count++;
+                                console.log('[Config] productosCompuestos actualizados desde servidor');
+                            }
+                        } catch(e) { console.warn('[Config] Error parsing productosCompuestos:', e); }
+                    }
+                });
+            }
+
             // Proveedores: id, nombre, rif, telefono, tipos, docs, activo...
             if (updates.proveedores && updates.proveedores.length > 0) {
                 count += mergeById(proveedoresData, updates.proveedores);
@@ -10068,7 +10118,15 @@
             
             localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
             localStorage.setItem('priceHistory', JSON.stringify(priceHistory));
-            
+
+            // Sync precios a Sheets via Config
+            encolarSync('config', 'upsert', {
+                key: 'waterPrices',
+                value: JSON.stringify(waterPrices),
+                modificadoPor: getCurrentUserId(),
+                timestamp: new Date().toISOString()
+            });
+
             // Actualizar vistas
             loadCurrentPrices();
             loadProductsList();
@@ -10214,7 +10272,15 @@
                 
                 localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
                 localStorage.setItem('priceHistory', JSON.stringify(priceHistory));
-                
+
+                // Sync precios a Sheets via Config
+                encolarSync('config', 'upsert', {
+                    key: 'waterPrices',
+                    value: JSON.stringify(waterPrices),
+                    modificadoPor: getCurrentUserId(),
+                    timestamp: new Date().toISOString()
+                });
+
                 loadCurrentPrices();
                 loadProductsList();
                 loadCurrentPricesTable();
@@ -10222,7 +10288,7 @@
                 loadDashboard();
                 refreshOrderProductSelects();
                 poblarConsProductoSelect();
-                
+
                 alert(`✅ Precio actualizado:\n$${newPriceUSD.toFixed(2)} USD\nIVA: ${newHasIva ? 'SÍ' : 'NO'}`);
             }
         }
