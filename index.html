@@ -4839,7 +4839,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260415-v20';
+        const APP_BUILD = '20260415-v21';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -8527,34 +8527,28 @@
                     if (key === 'waterPrices' && val) {
                         try {
                             const preciosRemoto = typeof val === 'string' ? JSON.parse(val) : val;
-                            // Calcular timestamp más reciente de precios locales
-                            const tsLocal = Object.values(waterPrices || {})
-                                .reduce((mx, p) => Math.max(mx, new Date(p.lastUpdate||0).getTime()), 0);
-                            if (tsRemoto > tsLocal) {
-                                waterPrices = { ...waterPrices, ...preciosRemoto };
-                                localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
-                                loadCurrentPrices && loadCurrentPrices();
-                                loadCurrentPricesTable && loadCurrentPricesTable();
-                                loadProductsList && loadProductsList();
-                                count++;
-                                console.log('[Config] waterPrices actualizados desde servidor');
-                            }
+                            // Precios: el servidor es fuente de verdad — siempre aplicar
+                            // Solo el admin puede cambiar precios, no hay conflicto entre dispositivos
+                            waterPrices = { ...waterPrices, ...preciosRemoto };
+                            localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
+                            loadCurrentPrices && loadCurrentPrices();
+                            loadCurrentPricesTable && loadCurrentPricesTable();
+                            loadProductsList && loadProductsList();
+                            count++;
+                            console.log('[Config] waterPrices actualizados desde servidor:', Object.keys(preciosRemoto).length, 'productos');
                         } catch(e) { console.warn('[Config] Error parsing waterPrices:', e); }
                     }
 
                     if (key === 'productosCompuestos' && val) {
                         try {
                             const kitsRemoto = typeof val === 'string' ? JSON.parse(val) : val;
-                            const tsLocal = (productosCompuestos || []).reduce((mx, k) =>
-                                Math.max(mx, new Date(k.modificadoEn || k.creadoEn || 0).getTime()), 0);
-                            if (tsRemoto > tsLocal) {
-                                productosCompuestos = kitsRemoto;
-                                localStorage.setItem('productosCompuestos', JSON.stringify(productosCompuestos));
-                                loadKitsList && loadKitsList();
-                                loadProductsList && loadProductsList();
-                                count++;
-                                console.log('[Config] productosCompuestos actualizados desde servidor');
-                            }
+                            // Kits: el servidor es fuente de verdad — siempre aplicar
+                            productosCompuestos = Array.isArray(kitsRemoto) ? kitsRemoto : productosCompuestos;
+                            localStorage.setItem('productosCompuestos', JSON.stringify(productosCompuestos));
+                            loadKitsList && loadKitsList();
+                            loadProductsList && loadProductsList();
+                            count++;
+                            console.log('[Config] productosCompuestos actualizados desde servidor:', productosCompuestos.length, 'kits');
                         } catch(e) { console.warn('[Config] Error parsing productosCompuestos:', e); }
                     }
                 });
