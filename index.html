@@ -4839,7 +4839,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260415-v21';
+        const APP_BUILD = '20260417-v22';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -16701,6 +16701,14 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
                 lastUpdate: new Date().toISOString()
             };
             localStorage.setItem('waterPrices', JSON.stringify(waterPrices));
+
+            // Sync precios a Sheets via Config
+            encolarSync('config', 'upsert', {
+                key: 'waterPrices',
+                value: JSON.stringify(waterPrices),
+                modificadoPor: getCurrentUserId(),
+                timestamp: new Date().toISOString()
+            });
 
             cerrarEditProductoModal();
             loadCurrentPrices();
