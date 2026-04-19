@@ -4844,7 +4844,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260417-v23';
+        const APP_BUILD = '20260417-v24';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -7466,14 +7466,13 @@
             localStorage.setItem('usersData', JSON.stringify(usersData));
             // Sync usuarios a Google Sheets — SOLO desde admin, completamente no-bloqueante
             try {
-                const cu = usersData.find(u => u.id === (currentUser ? currentUser.id : ''));
+                const cu = currentUser ? usersData.find(u => u.id === currentUser.id) : null;
                 if (syncConfig && syncConfig.activa && syncConfig.appsScriptUrl && cu && cu.rol === 'admin') {
+                    // Admin: encolar TODOS los usuarios para que Sheets tenga el estado completo
                     setTimeout(() => {
-    			if (currentUser) {
-        		    const u = usersData.find(x => x.id === currentUser.id);
-        		    if (u) encolarSync('usuarios', 'upsert', u);
-    			}
-		    }, 2000);
+                        usersData.forEach(u => encolarSync('usuarios', 'upsert', u));
+                        console.log('[Usuarios] Todos los usuarios encolados para sync:', usersData.length);
+                    }, 2000);
                 }
             } catch(e) { console.log('saveUsers sync error:', e.message); }
         }
@@ -17280,9 +17279,14 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
         // Actualizar en usersData y localStorage
         const idx = usersData.findIndex(u => u.id === currentUser.id);
         if (idx === -1) return showErr('Error: usuario no encontrado.');
-        usersData[idx].pin = pinNuevo;
-        currentUser.pin    = pinNuevo;
+        usersData[idx].pin         = pinNuevo;
+        usersData[idx].modificadoEn = new Date().toISOString();
+        currentUser.pin             = pinNuevo;
         localStorage.setItem('usersData', JSON.stringify(usersData));
+
+        // Sync PIN actualizado a Sheets — cualquier usuario puede cambiar su propio PIN
+        encolarSync('usuarios', 'upsert', usersData[idx]);
+        console.log('[PIN] Cambio de PIN encolado para sync:', usersData[idx].nombre);
 
         okEl.style.display = 'block';
         document.getElementById('mp-pin-actual').value  = '';
