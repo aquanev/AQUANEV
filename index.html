@@ -3970,6 +3970,11 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Monto a Pagar (USD) *</label>
+                    <input type="number" id="prest-pago-monto" step="0.01" min="0.01" placeholder="Dejar vacío para pago total">
+                    <small style="color:#666;">Ingresa un monto menor al total para registrar pago parcial</small>
+                </div>
+                <div class="form-group">
                     <label>Notas</label>
                     <input type="text" id="prest-pago-notas" placeholder="Referencia, comprobante…">
                 </div>
@@ -4839,7 +4844,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260417-v22';
+        const APP_BUILD = '20260417-v23';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -7213,6 +7218,7 @@
                 }`;
 
             document.getElementById('prest-pago-fecha').value  = new Date().toISOString().split('T')[0];
+            document.getElementById('prest-pago-monto').value  = _pagSald.toFixed(2);
             document.getElementById('prest-pago-notas').value  = '';
             document.getElementById('prest-pago-modal').style.display = 'flex';
         }
@@ -7228,18 +7234,33 @@
             const notas    = document.getElementById('prest-pago-notas').value.trim();
             if (!fecha) { alert('Ingresa la fecha de pago'); return; }
 
-            // Calcular saldo real antes de marcar pagado
+            // Saldo real pendiente de esta cuota
             const saldoAntes = (cuota.estado === 'parcial' && cuota.saldoPendienteUSD != null)
                 ? cuota.saldoPendienteUSD : cuota.cuotaUSD;
 
-            cuota.estado            = 'pagado';
-            cuota.fechaPago         = fecha;
-            cuota.metodoPago        = metodo;
-            cuota.notas             = notas || null;
-            cuota.montoPagadoUSD    = cuota.cuotaUSD;
-            cuota.saldoPendienteUSD = 0;
+            // Monto ingresado — si está vacío o igual al saldo = pago total
+            const montoInput = parseFloat(document.getElementById('prest-pago-monto').value);
+            const montoPago  = (!montoInput || isNaN(montoInput) || montoInput >= saldoAntes)
+                ? saldoAntes   // pago total
+                : montoInput;  // pago parcial
+
+            const esParcialNuevo = montoPago < saldoAntes;
+
             if (!cuota.pagos) cuota.pagos = [];
-            (cuota.pagos = cuota.pagos || []).push({ fecha, monto: saldoAntes, tipo: 'completo_desde_tabla' });
+            cuota.pagos.push({ fecha, monto: montoPago, metodo, notas: notas || null });
+
+            if (esParcialNuevo) {
+                cuota.estado            = 'parcial';
+                cuota.montoPagadoUSD    = (cuota.montoPagadoUSD || 0) + montoPago;
+                cuota.saldoPendienteUSD = Math.max(0, saldoAntes - montoPago);
+            } else {
+                cuota.estado            = 'pagado';
+                cuota.fechaPago         = fecha;
+                cuota.metodoPago        = metodo;
+                cuota.notas             = notas || null;
+                cuota.montoPagadoUSD    = (cuota.montoPagadoUSD || 0) + montoPago;
+                cuota.saldoPendienteUSD = 0;
+            }
 
             recalcularEstadoPrestamo(p);
             savePrestamos();
