@@ -1173,9 +1173,7 @@
             <div id="meta-diaria-card" class="stat-card" style="margin-bottom:14px; border-left:4px solid #9e9e9e; transition:border-color .4s, background .4s;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
                     <div>
-                        <div class="stat-title">🎯 Meta de Venta Diaria
-                            <span onclick="abrirEditarMeta()" style="margin-left:8px; cursor:pointer; font-size:12px; color:#888; font-weight:400;">✏️ editar</span>
-                        </div>
+                        <div class="stat-title">🎯 Meta de Venta Diaria</div>
                         <div style="display:flex; align-items:baseline; gap:8px; margin-top:4px;">
                             <span class="stat-value" id="meta-progreso-usd" style="font-size:22px; transition:color .4s;">$0.00</span>
                             <span style="color:#888; font-size:14px;">/ <strong id="meta-objetivo-label">$30.00</strong> USD</span>
@@ -1232,39 +1230,6 @@
                 </div>
             </div>
             
-            <!-- CRÉDITOS VENCIDOS -->
-            <div class="card" id="dash-creditos-card">
-                <div class="card-header">
-                    <div class="card-title">🔴 Créditos Vencidos</div>
-                    <button class="btn btn-primary" onclick="showTab('credits')">Ver Todos</button>
-                </div>
-                <div id="dash-creditos-body">
-                    <p style="color:#999; text-align:center; padding:12px;">Calculando...</p>
-                </div>
-            </div>
-
-            <!-- PEDIDOS PENDIENTES -->
-            <div class="card" id="dash-pedidos-card">
-                <div class="card-header">
-                    <div class="card-title">📦 Pedidos Pendientes</div>
-                    <button class="btn btn-primary" onclick="showTab('orders')">Ver Todos</button>
-                </div>
-                <div id="dash-pedidos-body">
-                    <p style="color:#999; text-align:center; padding:12px;">Calculando...</p>
-                </div>
-            </div>
-
-            <!-- INVENTARIO — ALERTA 15 DÍAS -->
-            <div class="card" id="dash-inventario-card">
-                <div class="card-header">
-                    <div class="card-title">📊 Estado de Inventario</div>
-                    <button class="btn btn-primary" onclick="showTab('inventory')">Ver Inventario</button>
-                </div>
-                <div id="dash-inventario-body">
-                    <p style="color:#999; text-align:center; padding:12px;">Calculando...</p>
-                </div>
-            </div>
-
             <div class="contact-buttons">
                 <button class="contact-btn whatsapp" onclick="openWhatsApp()">
                     <i class="fab fa-whatsapp"></i> WhatsApp
@@ -4879,7 +4844,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260425-v26';
+        const APP_BUILD = '20260417-v24';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -5671,189 +5636,6 @@
                 }
             });
             return alertas;
-        }
-
-                // ---- Editar meta diaria ----
-        function abrirEditarMeta() {
-            // Solo el administrador puede modificar la meta
-            if (!currentUser || currentUser.rol !== 'admin') {
-                alert('Solo el administrador puede modificar la meta diaria.');
-                return;
-            }
-            const actual = parseFloat(localStorage.getItem('metaDiariaUSD') || '30');
-            const nueva  = prompt('Meta de venta diaria (USD):', actual.toFixed(2));
-            if (nueva === null) return;
-            const val = parseFloat(nueva);
-            if (isNaN(val) || val <= 0) { alert('Ingresa un valor válido mayor a 0'); return; }
-            localStorage.setItem('metaDiariaUSD', val.toFixed(2));
-
-            // Sync a Sheets via Config — se replica a todos los dispositivos
-            encolarSync('config', 'upsert', {
-                key:          'metaDiariaUSD',
-                value:        val.toFixed(2),
-                modificadoPor: getCurrentUserId(),
-                timestamp:    new Date().toISOString()
-            });
-            console.log('[Meta] Meta diaria actualizada y encolada para sync: $' + val.toFixed(2));
-            loadDashboard();
-        }
-
-        // ---- Dashboard: Créditos vencidos ----
-        function cargarDashCreditos() {
-            const el = document.getElementById('dash-creditos-body');
-            if (!el) return;
-            if (!Array.isArray(creditsData) || creditsData.length === 0) {
-                el.innerHTML = '<p style="color:#999; text-align:center; padding:12px;">Sin créditos registrados</p>';
-                return;
-            }
-            const vencidos = creditsData.filter(c => {
-                if (!c.fechaVencimiento) return false;
-                const est = calcularEstadoCredito(c);
-                return est.estado === 'vencido';
-            }).sort((a, b) => (a.fechaVencimiento||'').localeCompare(b.fechaVencimiento||''));
-
-            if (vencidos.length === 0) {
-                el.innerHTML = '<p style="color:#4caf50; text-align:center; padding:12px;">✅ Sin créditos vencidos</p>';
-                return;
-            }
-            const rows = vencidos.slice(0, 8).map(c => {
-                const est    = getEstadoVencimiento(c);
-                const saldo  = parseFloat(c.balanceUSD || c.balance || 0);
-                return `<tr style="background:rgba(244,67,54,0.04);">
-                    <td style="padding:8px 10px; font-size:13px;">${c.customer||'—'}</td>
-                    <td style="padding:8px 10px; font-size:13px; color:#f44336;">${est.label}</td>
-                    <td style="padding:8px 10px; font-size:13px; font-weight:600; color:#f44336;">$${saldo.toFixed(2)}</td>
-                </tr>`;
-            }).join('');
-            const total = vencidos.reduce((s, c) => s + parseFloat(c.balanceUSD || c.balance || 0), 0);
-            el.innerHTML = `
-                <div style="background:#ffebee; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; color:#c62828;">
-                    ${vencidos.length} crédito(s) vencido(s) · Total: <strong>$${total.toFixed(2)}</strong>
-                </div>
-                <div class="table-container" style="margin:0;">
-                    <table><thead><tr>
-                        <th>Cliente</th><th>Vencimiento</th><th>Saldo USD</th>
-                    </tr></thead><tbody>${rows}</tbody></table>
-                </div>
-                ${vencidos.length > 8 ? `<p style="color:#888; font-size:12px; text-align:center; margin-top:6px;">+${vencidos.length-8} más — ver módulo Créditos</p>` : ''}`;
-        }
-
-        // ---- Dashboard: Pedidos pendientes ----
-        function cargarDashPedidos() {
-            const el = document.getElementById('dash-pedidos-body');
-            if (!el) return;
-            if (!Array.isArray(ordersData) || ordersData.length === 0) {
-                el.innerHTML = '<p style="color:#999; text-align:center; padding:12px;">Sin pedidos registrados</p>';
-                return;
-            }
-            const pendientes = ordersData.filter(o => {
-                const est = (o.estado || o.status || '').toLowerCase();
-                return est !== 'entregado' && est !== 'cancelado' && est !== 'completado';
-            }).sort((a, b) => (a.date||a.fecha||'').localeCompare(b.date||b.fecha||''));
-
-            if (pendientes.length === 0) {
-                el.innerHTML = '<p style="color:#4caf50; text-align:center; padding:12px;">✅ Sin pedidos pendientes</p>';
-                return;
-            }
-            const rows = pendientes.slice(0, 8).map(o => {
-                const estado = o.estado || o.status || 'Pendiente';
-                const color  = estado.toLowerCase().includes('proceso') ? '#ff9800' : '#2196f3';
-                const total  = parseFloat(o.totalUSD || o.total || 0);
-                return `<tr>
-                    <td style="padding:8px 10px; font-size:13px;">${o.date||o.fecha||'—'}</td>
-                    <td style="padding:8px 10px; font-size:13px;">${o.customer||o.cliente||'—'}</td>
-                    <td style="padding:8px 10px;"><span style="background:${color}22; color:${color}; border-radius:4px; padding:2px 7px; font-size:12px;">${estado}</span></td>
-                    <td style="padding:8px 10px; font-size:13px; font-weight:600;">$${total.toFixed(2)}</td>
-                </tr>`;
-            }).join('');
-            el.innerHTML = `
-                <div style="background:#e3f2fd; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; color:#1565c0;">
-                    ${pendientes.length} pedido(s) por entregar
-                </div>
-                <div class="table-container" style="margin:0;">
-                    <table><thead><tr>
-                        <th>Fecha</th><th>Cliente</th><th>Estado</th><th>Total USD</th>
-                    </tr></thead><tbody>${rows}</tbody></table>
-                </div>
-                ${pendientes.length > 8 ? `<p style="color:#888; font-size:12px; text-align:center; margin-top:6px;">+${pendientes.length-8} más</p>` : ''}`;
-        }
-
-        // ---- Dashboard: Inventario con alerta 15 días ----
-        function cargarDashInventario() {
-            const el = document.getElementById('dash-inventario-body');
-            if (!el) return;
-            if (!Array.isArray(inventoryData) || inventoryData.length === 0) {
-                el.innerHTML = '<p style="color:#999; text-align:center; padding:12px;">Sin productos en inventario</p>';
-                return;
-            }
-
-            // Calcular consumo diario promedio (últimos 30 días) por producto
-            const hoy     = new Date();
-            const hace30  = new Date(hoy); hace30.setDate(hace30.getDate() - 30);
-            const hace30s = hace30.toISOString().split('T')[0];
-
-            const consumo = {}; // productoKey → unidades consumidas en 30 días
-            (salesData || []).filter(v => v.date >= hace30s).forEach(v => {
-                (v.items || []).forEach(item => {
-                    const k = item.productKey || '';
-                    if (k) consumo[k] = (consumo[k] || 0) + (parseFloat(item.quantity) || 0);
-                });
-            });
-
-            const filas = inventoryData.map(prod => {
-                const stock      = parseFloat(prod.stockActual) || 0;
-                const stockMin   = parseFloat(prod.stockMinimo || prod.stockMin) || 0;
-                const key        = prod.productoKey || prod.id || '';
-                const vinculo    = prod.vinculadoA || key;
-                const cons30     = consumo[key] || consumo[vinculo] || 0;
-                const consDiario = cons30 / 30;
-                const diasStock  = consDiario > 0 ? Math.floor(stock / consDiario) : null;
-
-                // Estado
-                let estado, color, icono;
-                if (stock === 0) {
-                    estado = 'Agotado'; color = '#f44336'; icono = '🔴';
-                } else if (stockMin > 0 && stock <= stockMin) {
-                    estado = 'Stock mínimo'; color = '#ff9800'; icono = '🟡';
-                } else if (diasStock !== null && diasStock <= 15) {
-                    estado = `${diasStock}d restantes`; color = '#ff9800'; icono = '⚠️';
-                } else if (diasStock !== null) {
-                    estado = `~${diasStock}d`; color = '#4caf50'; icono = '🟢';
-                } else {
-                    estado = 'Sin historial'; color = '#9e9e9e'; icono = '⚪';
-                }
-
-                const urgente = stock === 0 || (stockMin > 0 && stock <= stockMin) || (diasStock !== null && diasStock <= 15);
-                return { prod, stock, stockMin, diasStock, consDiario, estado, color, icono, urgente };
-            }).sort((a, b) => {
-                // Urgentes primero
-                if (a.urgente !== b.urgente) return a.urgente ? -1 : 1;
-                if (a.diasStock !== null && b.diasStock !== null) return a.diasStock - b.diasStock;
-                return 0;
-            });
-
-            const rows = filas.map(f => `
-                <tr style="${f.urgente ? 'background:rgba(255,152,0,0.06);' : ''}">
-                    <td style="padding:8px 10px; font-size:13px;">${f.prod.nombre || '—'}</td>
-                    <td style="padding:8px 10px; font-size:13px; font-weight:600;">${f.stock}</td>
-                    <td style="padding:8px 10px; font-size:12px; color:#888;">${f.stockMin || '—'}</td>
-                    <td style="padding:8px 10px; font-size:12px; color:#888;">${f.consDiario > 0 ? f.consDiario.toFixed(1)+'/día' : '—'}</td>
-                    <td style="padding:8px 10px;">
-                        <span style="background:${f.color}22; color:${f.color}; border-radius:4px; padding:2px 7px; font-size:12px;">
-                            ${f.icono} ${f.estado}
-                        </span>
-                    </td>
-                </tr>`).join('');
-
-            const urgentes = filas.filter(f => f.urgente).length;
-            el.innerHTML = `
-                ${urgentes > 0 ? `<div style="background:#fff3e0; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; color:#e65100;">⚠️ ${urgentes} producto(s) requieren atención</div>` : '<div style="background:#e8f5e9; border-radius:8px; padding:8px 12px; margin-bottom:8px; font-size:13px; color:#2e7d32;">✅ Inventario en niveles normales</div>'}
-                <div class="table-container" style="margin:0;">
-                    <table><thead><tr>
-                        <th>Producto</th><th>Stock</th><th>Mín.</th><th>Consumo</th><th>Estado</th>
-                    </tr></thead><tbody>${rows}</tbody></table>
-                </div>
-                <p style="color:#aaa; font-size:11px; margin-top:6px; text-align:right;">Consumo calculado sobre los últimos 30 días</p>`;
         }
 
         // ========== FIN B2: MÓDULO DE INVENTARIO ==========
@@ -8761,19 +8543,6 @@
                     const key = entry.key || entry.Key || '';
                     const val = entry.value !== undefined ? entry.value : entry.Value;
                     const tsRemoto = new Date(entry.timestamp || entry.Timestamp || 0).getTime();
-
-                    if (key === 'metaDiariaUSD' && val) {
-                        try {
-                            const metaVal = parseFloat(typeof val === 'string' ? val : JSON.stringify(val));
-                            if (!isNaN(metaVal) && metaVal > 0) {
-                                localStorage.setItem('metaDiariaUSD', metaVal.toFixed(2));
-                                count++;
-                                console.log('[Config] metaDiariaUSD actualizada desde servidor: $' + metaVal.toFixed(2));
-                                // Refrescar dashboard si está activo
-                                if (document.getElementById('dashboard')?.classList.contains('active')) loadDashboard();
-                            }
-                        } catch(e) { console.warn('[Config] Error parsing metaDiariaUSD:', e); }
-                    }
 
                     if (key === 'waterPrices' && val) {
                         try {
@@ -11733,18 +11502,9 @@
             balEl.textContent = '$' + (isNaN(dailyBalanceUSD) ? '0.00' : dailyBalanceUSD.toFixed(2));
             balEl.style.color = dailyBalanceUSD >= 0 ? '#2e7d32' : '#f44336';
 
-            // ---- META DE VENTA DIARIA (configurable) ----
-            const META_USD = parseFloat(localStorage.getItem('metaDiariaUSD') || '30');
+            // ---- META DE VENTA DIARIA ----
+            const META_USD = 30;
             actualizarMetaDiaria(todayIncomeUSD, META_USD);
-
-            // ---- CRÉDITOS VENCIDOS ----
-            cargarDashCreditos();
-
-            // ---- PEDIDOS PENDIENTES ----
-            cargarDashPedidos();
-
-            // ---- INVENTARIO — alerta 15 días ----
-            cargarDashInventario();
 
             // ---- Alertas de inventario ----
             const invAlertas = getInventarioAlertas();
