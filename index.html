@@ -5708,7 +5708,7 @@
             }
             const vencidos = creditsData.filter(c => {
                 if (!c.fechaVencimiento) return false;
-                const est = getEstadoVencimiento(c);
+                const est = calcularEstadoCredito(c);
                 return est.estado === 'vencido';
             }).sort((a, b) => (a.fechaVencimiento||'').localeCompare(b.fechaVencimiento||''));
 
