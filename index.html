@@ -5152,7 +5152,13 @@
         function descontarStockPorVenta(saleItems, saleId) {
             let alertas = [];
             saleItems.forEach(item => {
-                const inv = inventoryData.find(i => i.vinculadoA === item.productKey || i.productoKey === item.productKey);
+                // Buscar producto en inventario por vinculadoA, productoKey
+                // o por inventarioKey definido en waterPrices (para productos con precio diferente del mismo físico)
+                let inv = inventoryData.find(i => i.vinculadoA === item.productKey || i.productoKey === item.productKey);
+                if (!inv && waterPrices && waterPrices[item.productKey] && waterPrices[item.productKey].inventarioKey) {
+                    const invKey = waterPrices[item.productKey].inventarioKey;
+                    inv = inventoryData.find(i => i.vinculadoA === invKey || i.productoKey === invKey);
+                }
                 if (!inv) return;
                 const stockAnt = inv.stockActual;
                 const cant = item.quantity || 1;
@@ -5615,10 +5621,16 @@
         // Esta función es llamada desde saveSale() después de guardar la venta
         function integrarInventarioConVenta(saleItems, saleId, saleDate) {
             // Productos simples vinculados al inventario
-            const itemsSimples = saleItems.filter(item =>
-                !item.esKit &&
-                inventoryData.some(i => i.vinculadoA === item.productKey || i.productoKey === item.productKey)
-            );
+            const itemsSimples = saleItems.filter(item => {
+                if (item.esKit) return false;
+                if (inventoryData.some(i => i.vinculadoA === item.productKey || i.productoKey === item.productKey)) return true;
+                // Verificar inventarioKey en waterPrices
+                if (waterPrices && waterPrices[item.productKey] && waterPrices[item.productKey].inventarioKey) {
+                    const invKey = waterPrices[item.productKey].inventarioKey;
+                    return inventoryData.some(i => i.vinculadoA === invKey || i.productoKey === invKey);
+                }
+                return false;
+            });
             if (itemsSimples.length > 0) descontarStockPorVenta(saleItems, saleId);
 
             // B5: Kits - descontar componentes
