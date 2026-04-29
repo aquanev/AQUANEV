@@ -4871,7 +4871,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260426-v25';
+        const APP_BUILD = '20260429-v26';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -5162,11 +5162,11 @@
                 if (!inv) return;
                 const stockAnt = inv.stockActual;
                 const cant = item.quantity || 1;
-                if (inv.stockActual < cant) {
+                if (cant > 0 && inv.stockActual < cant) {
                     alertas.push(`⚠️ Stock insuficiente de "${inv.nombre}". Disponible: ${inv.stockActual}`);
                     return;
                 }
-                inv.stockActual = Math.max(0, inv.stockActual - cant);
+                inv.stockActual = Math.max(0, inv.stockActual - cant); // cant negativo = restaurar stock
                 inv.totalVentas = (inv.totalVentas || 0) + cant;
                 inv.ultimaVenta = new Date().toISOString().split('T')[0];
                 inv.diasSinMovimiento = 0;
@@ -8639,7 +8639,14 @@
 
             // Ventas: id, date, customer, items, subtotal, iva, total, totalUSD, paymentMethod, documentType
             if (updates.ventas && updates.ventas.length > 0) {
-                count += mergeById(salesData, updates.ventas);
+                // Procesar eliminaciones primero
+                updates.ventas.filter(v => v.eliminado).forEach(v => {
+                    const idx = salesData.findIndex(s => s.id === v.id);
+                    if (idx >= 0) salesData.splice(idx, 1);
+                });
+                // Merge solo ventas activas
+                const ventasActivas = updates.ventas.filter(v => !v.eliminado);
+                count += mergeById(salesData, ventasActivas);
                 localStorage.setItem('salesData', JSON.stringify(salesData));
                 loadSalesHistory && loadSalesHistory();
                 loadRecentSales && loadRecentSales();
@@ -12203,20 +12210,33 @@
             // Eliminar venta
             const index = salesData.findIndex(s => s.id == saleId);
             if (index > -1) {
+                // Marcar como eliminada antes de borrar — para sync
+                const ventaEliminada = { ...salesData[index], eliminado: true, modificadoEn: new Date().toISOString() };
+                encolarSync('ventas', 'upsert', ventaEliminada); // propaga eliminación a Sheets
+
+                // Restaurar inventario si el producto está vinculado
+                integrarInventarioConVenta(
+                    (ventaEliminada.items||[]).map(i => ({...i, quantity: -(i.quantity||0)})),
+                    ventaEliminada.id + '-restore',
+                    ventaEliminada.date
+                );
+
                 salesData.splice(index, 1);
                 localStorage.setItem('salesData', JSON.stringify(salesData));
-                
+
                 // Si era crédito, eliminar el crédito también
                 const creditIndex = creditsData.findIndex(c => c.id == saleId);
                 if (creditIndex > -1) {
                     if (creditsData[creditIndex].paid > 0) {
                         alert('⚠️ Este crédito tiene abonos registrados. Solo se eliminará la venta, el crédito permanecerá.');
                     } else {
+                        const creditoEliminado = { ...creditsData[creditIndex], eliminado: true, modificadoEn: new Date().toISOString() };
+                        encolarSync('creditos', 'upsert', creditoEliminado);
                         creditsData.splice(creditIndex, 1);
                         localStorage.setItem('creditsData', JSON.stringify(creditsData));
                     }
                 }
-                
+
                 loadSalesHistory();
                 loadDashboard();
                 loadPendingCredits();
