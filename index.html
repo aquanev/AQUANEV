@@ -4946,6 +4946,7 @@
             
             // Cargar datos iniciales
             reconstruirMovimientos(); // reconstruye si movimientosData está vacío
+            verificarVersionServidor(); // verificar versión contra servidor
             loadDashboard();
             loadEcuadorView();
             loadCurrentPrices();
@@ -5897,6 +5898,47 @@
             movimientosData = movs;
             localStorage.setItem('movimientosData', JSON.stringify(movimientosData));
             console.log('[Movimientos] Reconstruidos:', movimientosData.length, 'desde ventas y compras');
+        }
+
+        // ---- Control de versión ----
+        let _versionAlertaMostrada = false;
+
+        function mostrarAlertaVersionDesactualizada(requiredVersion) {
+            if (_versionAlertaMostrada) return;
+            _versionAlertaMostrada = true;
+
+            // Bloquear la UI con overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'version-outdated-overlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;';
+            overlay.innerHTML = `
+                <div style="background:white;border-radius:16px;padding:32px;max-width:360px;text-align:center;margin:20px;">
+                    <div style="font-size:48px;margin-bottom:16px;">🔄</div>
+                    <h2 style="color:#c62828;margin:0 0 12px;">Actualización Requerida</h2>
+                    <p style="color:#555;margin:0 0 8px;">Tu versión <strong>${APP_BUILD}</strong> está desactualizada.</p>
+                    <p style="color:#555;margin:0 0 24px;">Se requiere la versión <strong>${requiredVersion}</strong> para continuar.</p>
+                    <button onclick="window.location.reload(true)" 
+                        style="background:#1565c0;color:white;border:none;padding:14px 28px;border-radius:8px;font-size:16px;cursor:pointer;width:100%;">
+                        🔄 Actualizar Ahora
+                    </button>
+                    <p style="color:#999;font-size:12px;margin-top:12px;">Si persiste, limpia el caché del navegador.</p>
+                </div>`;
+            document.body.appendChild(overlay);
+
+            console.warn('[VERSION] Cliente desactualizado. Build local:', APP_BUILD, '| Requerido:', requiredVersion);
+        }
+
+        function verificarVersionServidor() {
+            if (!syncConfig || !syncConfig.appsScriptUrl) return;
+            const url = syncConfig.appsScriptUrl + '?action=getVersion';
+            fetch(url)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ok && data.requiredVersion && APP_BUILD < data.requiredVersion) {
+                        mostrarAlertaVersionDesactualizada(data.requiredVersion);
+                    }
+                })
+                .catch(() => {}); // silencioso — no bloquear si falla la red
         }
 
         // ========== FIN B2: MÓDULO DE INVENTARIO ==========
@@ -8450,18 +8492,18 @@
             // INSTRUCCIÓN DE MIGRACIÓN: en el panel de Configuración > Sincronización,
             // ingresa tu API key en el nuevo campo "API Key". Solo el admin puede hacerlo.
             const payload = {
-                k:          syncConfig.apiKey || '',
-                usuario:    getCurrentUserId(),
-                timestamp:  new Date().toISOString(),
-                modo:       syncConfig.modo,
-                // FIX-7: payloadID único e idempotente por intento de sync.
-                // El servidor registra este ID para evitar procesar el mismo payload
+            const payload = {
+                k:             syncConfig.apiKey || '',
+                clientVersion: APP_BUILD,
+                usuario:       getCurrentUserId(),
+                timestamp:     new Date().toISOString(),
+                modo:          syncConfig.modo,
                 // dos veces si la red cae después de que GAS procesó pero antes de
                 // que el cliente recibió confirmación (escenario de retry-duplication).
                 payloadID:  generarId(),
                 datos: {}
+                datos: {}
             };
-
             const TABLAS = ['ventas','creditos','abonos','inventario','compras','consignaciones','prestamos','gastos','clientes','usuarios','config','tasasBCV','proveedores','ajustes'];
             TABLAS.forEach(t => {
                 const items = pendientes.filter(e => e.tabla === t);
@@ -8524,6 +8566,14 @@
                 }
                 const result = await resp.json();
 
+
+                // Verificar si el cliente está desactualizado
+                if (result.error === 'VERSION_OUTDATED') {
+                    mostrarAlertaVersionDesactualizada(result.requiredVersion || '');
+                    syncEnCurso = false;
+                    actualizarSyncBadge();
+                    return;
+                }
                 if (result.success) {
                     // Marcar como sincronizados
                     const idsEnviados = new Set(pendientes.map(e => e.id));
@@ -17929,14 +17979,14 @@ Saldo Pendiente Total: ${fmtUSD(totalBalance)} USD
 
                 try {
                     const payload = {
-                        k:         syncConfig.apiKey || '',
-                        usuario:   getCurrentUserId(),
-                        timestamp: new Date().toISOString(),
-                        modo:      'carga_inicial',
-                        datos:     {}
+                    const payload = {
+                        k:             syncConfig.apiKey || '',
+                        clientVersion: APP_BUILD,
+                        usuario:       getCurrentUserId(),
+                        timestamp:     new Date().toISOString(),
+                        modo:          'carga_inicial',
+                        datos:         {}
                     };
-                    payload.datos[modulo.tabla] = lote;
-
                     const resp = await fetch(syncConfig.appsScriptUrl, {
                         method:  'POST',
                         headers: { 'Content-Type': 'text/plain' },
