@@ -8760,16 +8760,16 @@
             // INSTRUCCIÓN DE MIGRACIÓN: en el panel de Configuración > Sincronización,
             // ingresa tu API key en el nuevo campo "API Key". Solo el admin puede hacerlo.
             const payload = {
-            const payload = {
                 k:             syncConfig.apiKey || '',
                 clientVersion: APP_BUILD,
                 usuario:       getCurrentUserId(),
                 timestamp:     new Date().toISOString(),
                 modo:          syncConfig.modo,
+                // FIX-7: payloadID único e idempotente por intento de sync.
+                // El servidor registra este ID para evitar procesar el mismo payload
                 // dos veces si la red cae después de que GAS procesó pero antes de
                 // que el cliente recibió confirmación (escenario de retry-duplication).
                 payloadID:  generarId(),
-                datos: {}
                 datos: {}
             };
             const TABLAS = ['ventas','creditos','abonos','inventario','compras','consignaciones','prestamos','gastos','clientes','usuarios','config','tasasBCV','proveedores','ajustes'];
