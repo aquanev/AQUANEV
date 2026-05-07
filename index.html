@@ -4927,7 +4927,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260504-v30';
+        const APP_BUILD = '20260506-v31';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -8772,7 +8772,7 @@
                 payloadID:  generarId(),
                 datos: {}
             };
-            const TABLAS = ['ventas','creditos','abonos','inventario','compras','consignaciones','prestamos','gastos','clientes','usuarios','config','tasasBCV','proveedores','ajustes'];
+            const TABLAS = ['ventas','creditos','abonos','inventario','compras','consignaciones','prestamos','gastos','clientes','usuarios','config','tasasBCV','proveedores','ajustes','adelantosClientes','adelantosHielo'];
             TABLAS.forEach(t => {
                 const items = pendientes.filter(e => e.tabla === t);
                 if (items.length > 0) payload.datos[t] = items.map(e => e.datos);
@@ -9184,6 +9184,22 @@
                 }
             }
             // Config: waterPrices y productosCompuestos desde servidor
+            if (updates.adelantosClientes && updates.adelantosClientes.length > 0) {
+                mergeById(adelantosClientes, updates.adelantosClientes);
+                localStorage.setItem('adelantosClientes', JSON.stringify(adelantosClientes));
+            }
+            if (updates.AdelantosClientes && updates.AdelantosClientes.length > 0) {
+                mergeById(adelantosClientes, updates.AdelantosClientes);
+                localStorage.setItem('adelantosClientes', JSON.stringify(adelantosClientes));
+            }
+            if (updates.adelantosHielo && updates.adelantosHielo.length > 0) {
+                mergeById(adelantosHielo, updates.adelantosHielo);
+                localStorage.setItem('adelantosHielo', JSON.stringify(adelantosHielo));
+            }
+            if (updates.AdelantosHielo && updates.AdelantosHielo.length > 0) {
+                mergeById(adelantosHielo, updates.AdelantosHielo);
+                localStorage.setItem('adelantosHielo', JSON.stringify(adelantosHielo));
+            }
             if (updates.config && updates.config.length > 0) {
                 updates.config.forEach(entry => {
                     const key = entry.key || entry.Key || '';
