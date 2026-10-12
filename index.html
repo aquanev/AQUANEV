@@ -4541,6 +4541,19 @@
                     </label>
                     <textarea id="payment-notes" rows="3" placeholder="Notas adicionales..." style="width: 100%; padding: 12px; font-size: 14px; border: 2px solid #e0e0e0; border-radius: 8px;"></textarea>
                 </div>
+                <!-- Sección adelanto cliente en crédito -->
+                <div id="credito-adelanto-section" style="display:none; background:#e8f5e9; border-radius:10px; padding:15px; margin-bottom:16px; border:1px solid #a5d6a7;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                        <input type="checkbox" id="usar-adelanto-credito" onchange="toggleAdelantoCredito()" style="width:18px;height:18px;">
+                        <label for="usar-adelanto-credito" style="font-weight:600; color:#2e7d32; cursor:pointer;">
+                            💰 Usar adelanto disponible del cliente
+                        </label>
+                    </div>
+                    <div style="font-size:13px; color:#388e3c; padding-left:28px;">
+                        Saldo disponible: <strong id="credito-adelanto-saldo">$0.00 USD</strong>
+                    </div>
+                </div>
+
                 
                 <!-- Botones -->
                 <div style="display: flex; gap: 15px; margin-top: 30px;">
@@ -4927,7 +4940,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20260507-v32';
+        const APP_BUILD = '20261011-v33';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -6096,6 +6109,73 @@
 
         function cerrarPagoMultiple() {
             document.getElementById('pago-multiple-modal').style.display = 'none';
+        }
+
+        // Pago de crédito usando adelanto disponible del cliente
+        function procesarAbonoCreditoConAdelanto(creditId, date, paymentMethod, notes) {
+            const credit = creditsData.find(c => c.id === creditId);
+            if (!credit) return { ok: false, error: 'Crédito no encontrado' };
+
+            const saldoPendienteUSD = credit.balanceUSD != null
+                ? credit.balanceUSD
+                : Math.max(0, (credit.amountUSD || credit.amount || 0) - (credit.paidUSD || 0));
+
+            if (saldoPendienteUSD <= 0.005) return { ok: false, error: 'Crédito ya pagado' };
+
+            const cliente = credit.customer;
+            // Verificar adelanto disponible
+            const adelantosDisp = adelantosClientes.filter(a =>
+                a.cliente === cliente && a.status === 'Activo' && a.saldo > 0
+            );
+            const totalAdelantoDispUSD = adelantosDisp.reduce((s, a) =>
+                s + (a.saldoUSD != null ? a.saldoUSD : convertBStoUSD(a.saldo || 0)), 0
+            );
+
+            if (totalAdelantoDispUSD <= 0.005) {
+                return { ok: false, error: 'No hay adelanto disponible para ' + cliente };
+            }
+
+            // Usar el menor entre saldo del crédito y adelanto disponible
+            const montoAUsar = Math.min(saldoPendienteUSD, totalAdelantoDispUSD);
+
+            // Descontar del adelanto
+            let restante = montoAUsar;
+            adelantosDisp.forEach(adelanto => {
+                if (restante <= 0) return;
+                const saldoUSD = adelanto.saldoUSD != null ? adelanto.saldoUSD : convertBStoUSD(adelanto.saldo || 0);
+                const aUsar = Math.min(saldoUSD, restante);
+                const aUsarBS = convertUSDtoBS(aUsar);
+                adelanto.saldo = Math.max(0, (adelanto.saldo || 0) - aUsarBS);
+                adelanto.saldoUSD = Math.max(0, saldoUSD - aUsar);
+                adelanto.usado = (adelanto.usado || 0) + aUsarBS;
+                adelanto.usadoUSD = (adelanto.usadoUSD || 0) + aUsar;
+                if (adelanto.saldo <= 0.01) adelanto.status = 'Agotado';
+                if (!adelanto.usos) adelanto.usos = [];
+                adelanto.usos.push({
+                    fecha: date,
+                    monto: aUsarBS,
+                    montoUSD: aUsar,
+                    concepto: 'Pago crédito #' + creditId.slice(0, 8),
+                    saldoRestante: adelanto.saldo
+                });
+                restante -= aUsar;
+                encolarSync('adelantosClientes', 'upsert', adelanto);
+            });
+            localStorage.setItem('adelantosClientes', JSON.stringify(adelantosClientes));
+
+            // Registrar el abono en el crédito
+            const res = procesarAbonoCredito(creditId, montoAUsar, date,
+                paymentMethod || 'Adelanto Cliente', notes || 'Pago desde adelanto');
+
+            if (res.ok) {
+                loadAdelantosClientesList && loadAdelantosClientesList();
+            }
+
+            return {
+                ...res,
+                montoDescontadoDeAdelanto: montoAUsar,
+                adelantoRestanteUSD: totalAdelantoDispUSD - montoAUsar
+            };
         }
 
         function cargarCreditosPagoMultiple() {
@@ -11438,6 +11518,17 @@
         }
 
         // ── Controla visibilidad del IVA en gastos según categoría Y tipo de documento ──
+        function onGastosProveedorChange() {
+            // Autocompletar campos al seleccionar proveedor en gastos
+            const nombre = document.getElementById('expense-supplier')?.value?.trim();
+            if (!nombre) return;
+            const proveedor = proveedoresData.find(p => p.nombre === nombre);
+            if (proveedor) {
+                // Si tiene RIF o datos adicionales, se pueden autocompletar aquí
+                console.log('[Gastos] Proveedor seleccionado:', proveedor.nombre);
+            }
+        }
+
         function actualizarIvaGastos() {
             const cat  = document.getElementById('expense-category')?.value || '';
             const doc  = document.getElementById('expense-document-type')?.value || '';
@@ -12071,6 +12162,10 @@
                         .reduce((sum, a) => sum + a.saldo, 0);
                     
                     localStorage.setItem('adelantosClientes', JSON.stringify(adelantosClientes));
+                    // Encolar cada adelanto modificado para sync
+                    adelantosClientes
+                        .filter(a => a.cliente === customer)
+                        .forEach(a => encolarSync('adelantosClientes', 'upsert', a));
                     loadAdelantosClientesList();
                 }
             }
@@ -14013,6 +14108,43 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
             console.log('Mostrando modal...');
             document.getElementById('payment-modal').style.display = 'flex';
             console.log('=== MODAL ABIERTO ===');
+
+            // Verificar adelanto disponible para este cliente
+            const sectionAdelanto = document.getElementById('credito-adelanto-section');
+            const saldoEl = document.getElementById('credito-adelanto-saldo');
+            if (sectionAdelanto && credit) {
+                const adelantosDisp = adelantosClientes.filter(a =>
+                    a.cliente === credit.customer && a.status === 'Activo' && a.saldo > 0
+                );
+                const totalUSD = adelantosDisp.reduce((s, a) =>
+                    s + (a.saldoUSD != null ? a.saldoUSD : convertBStoUSD(a.saldo || 0)), 0
+                );
+                if (totalUSD > 0.005) {
+                    sectionAdelanto.style.display = 'block';
+                    if (saldoEl) saldoEl.textContent = fmtUSD(totalUSD) + ' USD';
+                    document.getElementById('usar-adelanto-credito').checked = false;
+                } else {
+                    sectionAdelanto.style.display = 'none';
+                }
+            }
+        }
+
+        function toggleAdelantoCredito() {
+            const usarAdelanto = document.getElementById('usar-adelanto-credito')?.checked;
+            const methodEl = document.getElementById('payment-method-abono');
+            const amountEl = document.getElementById('payment-amount');
+            if (usarAdelanto) {
+                if (methodEl) methodEl.value = 'Adelanto Cliente';
+                // Sugerir el monto del saldo pendiente
+                const credit = creditsData.find(c => c.id === currentCreditId);
+                if (credit && amountEl) {
+                    const saldo = credit.balanceUSD != null
+                        ? credit.balanceUSD
+                        : Math.max(0, (credit.amountUSD || credit.amount || 0) - (credit.paidUSD || 0));
+                    amountEl.value = saldo.toFixed(2);
+                    actualizarValoresConTasaBCV && actualizarValoresConTasaBCV();
+                }
+            }
         }
         
         function actualizarValoresConTasaBCV() {
@@ -14109,6 +14241,25 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
         
         function savePayment() {
             if (!currentCreditId) return;
+
+            // Si se seleccionó usar adelanto — procesar con descuento de adelanto
+            const usarAdelanto = document.getElementById('usar-adelanto-credito')?.checked;
+            if (usarAdelanto) {
+                const date  = document.getElementById('payment-date').value;
+                const notes = document.getElementById('payment-notes')?.value || '';
+                if (!date) { alert('Ingresa la fecha del pago'); return; }
+                const res = procesarAbonoCreditoConAdelanto(currentCreditId, date, 'Adelanto Cliente', notes);
+                if (res.ok) {
+                    alert(`✅ Abono registrado desde adelanto: ${fmtUSD(res.montoDescontadoDeAdelanto)} USD\nSaldo adelanto restante: ${fmtUSD(res.adelantoRestanteUSD)} USD`);
+                    closePaymentModal();
+                    loadPendingCredits();
+                    loadEcuadorView && loadEcuadorView();
+                    loadDashboard && loadDashboard();
+                } else {
+                    alert('❌ Error: ' + res.error);
+                }
+                return;
+            }
 
             const amountUSD     = parseFloat(document.getElementById('payment-amount').value);
             const date          = document.getElementById('payment-date').value;
