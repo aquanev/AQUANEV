@@ -4940,7 +4940,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20261011-v33';
+        const APP_BUILD = '20261011-v34';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -12137,19 +12137,31 @@
                         if (adelanto.cliente === customer && adelanto.status === 'Activo' && adelanto.saldo > 0 && restante > 0) {
                             const aUsar = Math.min(adelanto.saldo, restante);
                             
-                            adelanto.saldo -= aUsar;
-                            adelanto.usado += aUsar;
-                            
-                            if (adelanto.saldo <= 0) {
+                            // Calcular equivalente USD del monto a usar
+                            const tasaHoy = getBCVRateForDate(sale.date) || 1;
+                            const aUsarUSD = parseFloat((aUsar / tasaHoy).toFixed(2));
+
+                            adelanto.saldo  -= aUsar;
+                            adelanto.usado  += aUsar;
+                            adelanto.saldoUSD  = parseFloat(Math.max(0,
+                                (adelanto.saldoUSD != null ? adelanto.saldoUSD : convertBStoUSD(adelanto.saldo + aUsar)) - aUsarUSD
+                            ).toFixed(2));
+                            adelanto.usadoUSD  = parseFloat(((adelanto.usadoUSD || 0) + aUsarUSD).toFixed(2));
+
+                            if (adelanto.saldo <= 0.01) {
                                 adelanto.status = 'Agotado';
+                                adelanto.saldo = 0;
+                                adelanto.saldoUSD = 0;
                             }
-                            
+
                             if (!adelanto.usos) adelanto.usos = [];
                             adelanto.usos.push({
                                 fecha: sale.date,
                                 monto: aUsar,
+                                montoUSD: aUsarUSD,
                                 concepto: `Venta #${sale.id}`,
-                                saldoRestante: adelanto.saldo
+                                saldoRestante: adelanto.saldo,
+                                saldoRestanteUSD: adelanto.saldoUSD
                             });
                             
                             restante -= aUsar;
