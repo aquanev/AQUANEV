@@ -4940,7 +4940,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20261011-v34';
+        const APP_BUILD = '20261011-v35';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -13346,7 +13346,7 @@ Saldo préstamo: $${p.saldoPendienteUSD.toFixed(2)} USD${mensajeExcedente}`;
                 if (cr.status === 'partial' || cr.status === 'Partial')               cr.status = 'Parcial';
             });
             const estadoOrder = { vencido: 0, por_vencer: 1, vigente: 2, sin_vencimiento: 3 };
-            const sortedCredits = [...creditsData].sort((a, b) => {
+            sortedCredits = creditsData.filter(c => !c.eliminado).sort((a, b) => {
                 if (a.status === 'Pagado' && b.status !== 'Pagado') return 1;
                 if (b.status === 'Pagado' && a.status !== 'Pagado') return -1;
                 const ea = calcularEstadoCredito(a);
