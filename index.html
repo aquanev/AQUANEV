@@ -4940,7 +4940,7 @@
 
         // ========== VERSIÓN DE BUILD ==========
         // Cambiar este número en cada deploy para confirmar que el SW actualizó
-        const APP_BUILD = '20261011-v35';
+        const APP_BUILD = '20261014-v36';
 
         // ========== INICIALIZACIÓN COMPLETA ==========
         document.addEventListener('DOMContentLoaded', function() {
@@ -6075,6 +6075,12 @@
                     syncStatus:    'pending'
                 };
                 syncAbono(abono);
+
+                // Guardar en localStorage para persistir inmediatamente
+                localStorage.setItem('creditsData', JSON.stringify(creditsData));
+                if (!Array.isArray(window.abonosData)) window.abonosData = [];
+                window.abonosData.push(abono);
+                localStorage.setItem('abonosData', JSON.stringify(window.abonosData));
 
                 return { ok: true, credit, abono, abonoEfectivoUSD, bcvRate, abonoBS };
             } catch(e) {
